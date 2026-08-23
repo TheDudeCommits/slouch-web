@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#05060f">
+<title>SLOUCH — neck-controlled space dodger</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<video id="cam" playsinline muted autoplay></video>
+
+<!-- ══════════ LOADING ══════════ -->
+<div id="screen-loading" class="screen active">
+  <div class="loading-wrap">
+    <h1 class="logo glitch">SLOUCH</h1>
+    <p class="tagline">fix your neck. save the galaxy.</p>
+    <div class="loader-bar"><div id="loader-fill"></div></div>
+    <p id="loader-msg" class="dim">warming up engines…</p>
+  </div>
+</div>
+
+<!-- ══════════ MENU ══════════ -->
+<div id="screen-menu" class="screen">
+  <div class="menu-top">
+    <div class="chip" id="chip-streak" title="Daily streak">🔥 <span id="streak-count">0</span></div>
+    <div class="chip" id="chip-points">✦ <span id="points-count">0</span></div>
+  </div>
+  <div class="menu-center">
+    <h1 class="logo">SLOUCH</h1>
+    <p class="tagline">fix your neck. save the galaxy.</p>
+    <div class="best-line dim">BEST <span id="menu-best">0</span></div>
+    <button class="btn btn-primary" id="btn-play-techneck">▶ TECH NECK MODE</button>
+    <button class="btn" id="btn-play-casual">▶ CASUAL MODE</button>
+    <div class="menu-row">
+      <button class="btn btn-small" id="btn-store">STORE</button>
+      <button class="btn btn-small" id="btn-leaderboard">RANKS</button>
+      <button class="btn btn-small" id="btn-settings">SETTINGS</button>
+    </div>
+  </div>
+  <p class="menu-foot dim">head-tracked · camera never leaves your phone</p>
+</div>
+
+<!-- ══════════ CALIBRATION ══════════ -->
+<div id="screen-calibrate" class="screen">
+  <div class="cal-wrap">
+    <h2>CALIBRATE</h2>
+    <div class="cal-cam-frame">
+      <canvas id="cal-preview"></canvas>
+      <div class="cal-reticle"></div>
+    </div>
+    <p id="cal-msg">Sit tall. Stack your head over your shoulders.<br>Look straight at the screen.</p>
+    <div class="cal-count" id="cal-count"></div>
+    <button class="btn btn-primary" id="btn-cal-start">HOLD STILL & CALIBRATE</button>
+    <button class="btn btn-small" id="btn-cal-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ GAME HUD ══════════ -->
+<div id="hud" class="screen">
+  <div class="hud-top">
+    <div class="hud-score"><span id="hud-score">0</span></div>
+    <div class="hud-mult" id="hud-mult">×1</div>
+    <button id="btn-pause" aria-label="Pause">Ⅱ</button>
+  </div>
+  <div id="hud-shield" class="hud-shield"><div id="hud-shield-fill"></div></div>
+  <div id="hud-gate" class="hud-gate hidden"></div>
+  <div id="hud-slouch" class="hud-slouch hidden">⚠ SLOUCH DETECTED — sit tall!</div>
+  <div id="hud-toast" class="hud-toast hidden"></div>
+  <div id="hud-face-lost" class="hud-face-lost hidden">😶 face lost — center yourself</div>
+</div>
+
+<!-- ══════════ PAUSE ══════════ -->
+<div id="screen-pause" class="screen overlay">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <button class="btn btn-primary" id="btn-resume">RESUME</button>
+    <button class="btn" id="btn-recal-pause">RECALIBRATE</button>
+    <button class="btn" id="btn-quit">QUIT TO MENU</button>
+  </div>
+</div>
+
+<!-- ══════════ GAME OVER ══════════ -->
+<div id="screen-gameover" class="screen overlay">
+  <div class="panel">
+    <h2 id="go-title">SHIP DOWN</h2>
+    <div class="go-score" id="go-score">0</div>
+    <div id="go-best" class="go-best hidden">★ NEW BEST ★</div>
+    <p class="dim">✦ <span id="go-points">0</span> stardust earned</p>
+    <div id="go-name-entry" class="hidden">
+      <p>Top 10! Enter your tag:</p>
+      <input id="go-name" maxlength="8" placeholder="ACE" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="btn-retry">FLY AGAIN</button>
+    <button class="btn" id="btn-go-menu">MENU</button>
+  </div>
+</div>
+
+<!-- ══════════ SETTINGS ══════════ -->
+<div id="screen-settings" class="screen">
+  <div class="panel scroll">
+    <h2>SETTINGS</h2>
+    <label class="setting"><span>Music</span>
+      <input type="range" id="set-music" min="0" max="100" value="60"></label>
+    <label class="setting"><span>Sound FX</span>
+      <input type="range" id="set-sfx" min="0" max="100" value="80"></label>
+    <label class="setting"><span>Sensitivity</span>
+      <input type="range" id="set-sens" min="30" max="200" value="100"></label>
+    <label class="setting"><span>Mirror controls</span>
+      <input type="checkbox" id="set-mirror" checked></label>
+    <button class="btn" id="btn-recalibrate">📷 RECALIBRATE CAMERA</button>
+    <button class="btn" id="btn-lore">📖 LORE / ABOUT</button>
+    <button class="btn btn-danger" id="btn-reset">RESET ALL DATA</button>
+    <button class="btn btn-primary" id="btn-settings-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ STORE ══════════ -->
+<div id="screen-store" class="screen">
+  <div class="panel scroll">
+    <h2>STORE</h2>
+    <p class="dim">balance ✦ <span id="store-points">0</span></p>
+    <div id="store-items"></div>
+    <button class="btn btn-primary" id="btn-store-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ LEADERBOARD ══════════ -->
+<div id="screen-leaderboard" class="screen">
+  <div class="panel scroll">
+    <h2>RANKS</h2>
+    <div class="tabs">
+      <button class="tab active" data-board="techneck">TECH NECK</button>
+      <button class="tab" data-board="casual">CASUAL</button>
+    </div>
+    <ol id="board-list"></ol>
+    <button class="btn btn-primary" id="btn-board-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ LORE ══════════ -->
+<div id="screen-lore" class="screen">
+  <div class="panel scroll">
+    <h2>THE LORE</h2>
+    <div class="lore-text">
+      <p>Year 2184. Humanity finally left its screens — because the screens left first.</p>
+      <p>The <b>Cervical Belt</b>: a drifting graveyard of dead satellites, doom-scrolled
+      servers and fossilized office chairs, orbiting a collapsed data-star. Somewhere
+      inside it lies the <b>Atlas Core</b>, the last machine that remembers how humans
+      stood upright.</p>
+      <p>You fly the <b>S.S. Posture</b>, the only ship steered not by stick or thruster —
+      but by the pilot's own spine. The straighter you sit, the truer she flies.
+      Slouch, and she sputters.</p>
+      <p>Every tilt of your head banks her wings. Every chin tuck raises her shields.
+      Every look over your shoulder opens a Stretch Gate.</p>
+      <p><b>Fly far. Sit tall. The galaxy is watching your posture.</b></p>
+      <hr>
+      <p class="dim">Slouch turns evidence-based tech-neck exercises into flight controls.
+      All face tracking runs on-device — no video ever leaves your phone.
+      Not medical advice; stop if anything hurts. See TECHNECK.md in the repo for
+      the movement science.</p>
+    </div>
+    <button class="btn btn-primary" id="btn-lore-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ CAMERA PERMISSION / ERROR ══════════ -->
+<div id="screen-camerr" class="screen overlay">
+  <div class="panel">
+    <h2>CAMERA NEEDED</h2>
+    <p id="camerr-msg" class="dim">Slouch steers with your head. Allow camera access —
+    all tracking runs on-device, nothing is uploaded.</p>
+    <button class="btn btn-primary" id="btn-cam-retry">TRY AGAIN</button>
+    <button class="btn" id="btn-cam-touch">PLAY WITH TOUCH INSTEAD</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
