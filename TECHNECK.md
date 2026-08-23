@@ -29,13 +29,15 @@ dive. Extension reverses the constant downward gaze of phone use.
 - **Therapeutic dose:** climbing lanes require sustained extension — the single most
   under-used direction for phone users.
 
-### 3. Chin tuck — "make a double chin" (TUCK SHIELD)
+### 3. Chin tuck — "make a double chin" (HYPERDRIVE)
 Glide your head straight backward, keeping your eyes level — as if a string pulled
 the back of your skull to the wall behind you. The canonical tech-neck corrective:
 it strengthens the deep cervical flexors and re-stacks the head over the spine.
 
-- **In game:** activates the **Tuck Shield** — a short invulnerability bubble with a
-  2× score multiplier. Hold the tuck to keep it up (capped, with cooldown).
+- **In game:** slams the ship into **HYPERDRIVE** — a huge speed surge with 2×
+  scoring, and you smash straight through asteroids while it lasts. Hold the tuck
+  to keep it burning (energy meter drains, then a short cooldown). Available in
+  both modes.
 - **Detection:** the head's Z-translation moving *backward* past a threshold while
   pitch stays roughly level (distinguishes a true retraction from just looking down).
 

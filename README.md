@@ -31,8 +31,8 @@ unavailable, a touch-control fallback kicks in.
   [TECHNECK.md](TECHNECK.md)):
   - **Ear-to-shoulder tilt** → steer left/right
   - **Chin up / down** → climb / dive
-  - **Chin tuck** (glide head straight back) → **TUCK SHIELD**: invulnerable, smash
-    asteroids for points
+  - **Chin tuck** (glide head straight back) → **HYPERDRIVE**: massive speed surge,
+    2× score, smash straight through asteroids (works in Casual too)
   - **Look over your shoulder & hold** → pass golden **Stretch Gates** for big bonuses
   - **Slouch forward** and the ship sputters and your multiplier drains —
     *SLOUCH DETECTED*

@@ -7,7 +7,12 @@ import { state } from './state.js';
 const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
-const SMOOTH = 0.35; // EMA factor per detection frame
+// Adaptive smoothing: barely-moving poses get heavy smoothing (no jitter),
+// fast deliberate movements pass through almost raw (low latency).
+function ema(cur, target, gain) {
+  const a = Math.min(0.85, 0.2 + Math.abs(target - cur) * gain);
+  return cur + (target - cur) * a;
+}
 
 export const head = {
   ready: false,        // tracker initialized
@@ -77,9 +82,10 @@ function matrixToPose(m) {
 // Call once per rAF from the game loop. Cheap when no new video frame.
 export function updateHead() {
   if (head.usingTouch) {
-    head.rYaw = head.touchX * 30;
+    // match camera sign conventions: rYaw>0 = left, rRoll>0 = right, rPitch>0 = down
+    head.rYaw = -head.touchX * 30;
     head.rRoll = head.touchX * 30;
-    head.rPitch = head.touchY * 20;
+    head.rPitch = -head.touchY * 20;
     head.rZ = 0;
     head.hasFace = true;
     return;
@@ -102,10 +108,10 @@ export function updateHead() {
   head.hasFace = true;
 
   const p = matrixToPose(mat);
-  head.yaw += (p.yaw - head.yaw) * SMOOTH;
-  head.pitch += (p.pitch - head.pitch) * SMOOTH;
-  head.roll += (p.roll - head.roll) * SMOOTH;
-  head.z += (p.z - head.z) * SMOOTH;
+  head.yaw = ema(head.yaw, p.yaw, 0.06);
+  head.pitch = ema(head.pitch, p.pitch, 0.06);
+  head.roll = ema(head.roll, p.roll, 0.06);
+  head.z = ema(head.z, p.z, 0.14);
 
   const n = head.neutral;
   head.rYaw = head.yaw - n.yaw;

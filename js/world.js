@@ -17,6 +17,7 @@ export const world = {
 };
 
 let engineMat, trailPts, trailGeo, shieldMat, warpStars;
+let hyperLevel = 0, hyperTarget = 0;
 let nebulaSprites = [];
 let explosion = null;
 let themedMats = {};
@@ -336,12 +337,21 @@ export function updateWorld(dt, speed, shipVel) {
   ship.userData.glow.scale.set(1.6 * flicker, 1.6 * flicker, 1);
   ship.userData.engineLight.intensity = 2 * flicker + speed * 0.008;
 
+  // hyperdrive: FOV punch + subtle shake
+  hyperLevel += (hyperTarget - hyperLevel) * Math.min(1, dt * 5);
+  const fov = 72 + hyperLevel * 16;
+  if (Math.abs(fov - world.camera.fov) > 0.05) {
+    world.camera.fov = fov;
+    world.camera.updateProjectionMatrix();
+  }
+
   // camera chase with lag + banking
   const cam = world.camera;
+  const shake = hyperLevel * 0.09;
   const targetX = ship.position.x * 0.86;
   const targetY = ship.position.y * 0.82 + 2.6;
-  cam.position.x += (targetX - cam.position.x) * Math.min(1, dt * 6);
-  cam.position.y += (targetY - cam.position.y) * Math.min(1, dt * 6);
+  cam.position.x += (targetX - cam.position.x) * Math.min(1, dt * 6) + (Math.random() - 0.5) * shake;
+  cam.position.y += (targetY - cam.position.y) * Math.min(1, dt * 6) + (Math.random() - 0.5) * shake;
   cam.position.z = ship.position.z + 9;
   cam.lookAt(ship.position.x * 0.5, ship.position.y * 0.5, ship.position.z - 30);
   cam.rotation.z += -shipVel.x * 0.006;
@@ -362,6 +372,8 @@ export function updateWorld(dt, speed, shipVel) {
     explosion.pts.visible = false;
   }
 }
+
+export function setHyper(active) { hyperTarget = active ? 1 : 0; }
 
 export function setShieldVisual(strength) {
   shieldMat.opacity = strength * 0.4;

@@ -115,7 +115,7 @@ function launch() {
   startMusic();
   $('hud-slouch').classList.add('hidden');
   $('hud-gate').classList.add('hidden');
-  $('hud-shield').style.display = pendingMode === 'techneck' ? 'block' : 'none';
+  $('hud-shield').style.display = 'block'; // hyperdrive meter, both modes
   startGame(pendingMode, hooks);
 }
 

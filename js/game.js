@@ -1,7 +1,7 @@
 // SLOUCH — core game loop: control mapping (Casual / Tech Neck), spawning,
 // collisions, scoring, tuck shield, slouch watchdog and stretch gates.
 
-import { world, updateWorld, render, explodeAt, setShieldVisual } from './world.js';
+import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper } from './world.js';
 import { head, updateHead } from './head.js';
 import { state } from './state.js';
 import { sfx } from './audio.js';
@@ -70,26 +70,29 @@ function readControls(dt) {
   const mir = s.mirror ? 1 : -1;
   let tx = 0, ty = 0;
 
+  // Sign convention (verified on device): rYaw>0 = head turned LEFT,
+  // rPitch>0 = head DOWN, rRoll>0 = head tilted RIGHT. Ship mirrors the
+  // player: head right → ship right, head down → ship down.
   if (game.mode === 'casual') {
     // ship follows the head: small yaw/pitch movements, narrow deadzone
-    tx = clampMap(head.rYaw * mir, 2, 16 / sens);
-    ty = clampMap(head.rPitch, 2, 13 / sens);
+    tx = clampMap(-head.rYaw * mir, 1.2, 13 / sens);
+    ty = clampMap(-head.rPitch, 1.2, 11 / sens);
   } else {
     // tech neck: lateral tilt steers (ear→shoulder), extension/flexion climbs.
     // Wide deadzones make you commit to a real stretch, not a twitch.
-    tx = clampMap(-head.rRoll * mir, 6, 24 / sens);
-    ty = clampMap(head.rPitch, 5, 19 / sens);
+    tx = clampMap(head.rRoll * mir, 4.5, 20 / sens);
+    ty = clampMap(-head.rPitch, 4, 16 / sens);
   }
 
   const targX = tx * world.bounds.x;
   const targY = ty * world.bounds.y;
-  const accel = game.mode === 'casual' ? 10 : 7.5;
-  ship.vx += (targX - ship.x) * accel * dt;
-  ship.vy += (targY - ship.y) * accel * dt;
-  ship.vx *= Math.pow(0.0015, dt);
-  ship.vy *= Math.pow(0.0015, dt);
-  ship.x = clamp(ship.x + ship.vx * dt, -world.bounds.x, world.bounds.x);
-  ship.y = clamp(ship.y + ship.vy * dt, -world.bounds.y, world.bounds.y);
+  // exponential approach: fluid, fast, and cannot overshoot or oscillate
+  const rate = Math.min(1, (game.mode === 'casual' ? 11 : 8.5) * dt);
+  const nx = clamp(ship.x + (targX - ship.x) * rate, -world.bounds.x, world.bounds.x);
+  const ny = clamp(ship.y + (targY - ship.y) * rate, -world.bounds.y, world.bounds.y);
+  ship.vx = (nx - ship.x) / Math.max(dt, 1e-4);
+  ship.vy = (ny - ship.y) / Math.max(dt, 1e-4);
+  ship.x = nx; ship.y = ny;
 }
 
 function damp(dt) {
@@ -107,26 +110,29 @@ function clampMap(v, dead, full) {
   return Math.sign(v) * Math.min(1, (a - dead) / (full - dead));
 }
 
-// ── tech-neck specials ──
-function updateTechNeck(dt) {
-  // Tuck Shield: head glides BACK (rZ negative) with level chin
+// ── HYPERDRIVE: hold a chin tuck (head glides straight BACK, chin level) to
+// surge forward — big speed boost, 2× scoring, and you smash through rocks.
+// Available in both modes; it's the game's signature move.
+function updateHyper(dt) {
   const zBack = -head.rZ;
-  const tucking = zBack > 3.2 && Math.abs(head.rPitch) < 14;
+  const tucking = zBack > 2.8 && Math.abs(head.rPitch) < 14;
   if (tucking && shield.cooldown <= 0 && shield.energy > 0.05) {
-    if (!shield.active) { shield.active = true; sfx.shieldUp(); game.hooks.onToast?.('TUCK SHIELD ⛨'); }
-    shield.energy = Math.max(0, shield.energy - dt / 4);
-    if (shield.energy <= 0.01) { shield.active = false; shield.cooldown = 5; sfx.shieldDown(); }
+    if (!shield.active) { shield.active = true; sfx.shieldUp(); game.hooks.onToast?.('⚡ HYPERDRIVE ⚡'); }
+    shield.energy = Math.max(0, shield.energy - dt / 4.5);
+    if (shield.energy <= 0.01) { shield.active = false; shield.cooldown = 4; sfx.shieldDown(); }
   } else if (shield.active) {
     shield.active = false;
-    shield.cooldown = 2;
+    shield.cooldown = 1.5;
     sfx.shieldDown();
   } else {
     shield.cooldown = Math.max(0, shield.cooldown - dt);
     if (shield.cooldown <= 0) shield.energy = Math.min(1, shield.energy + dt / 6);
   }
   game.hooks.onShield?.(shield.energy, shield.active);
+}
 
-  // Slouch watchdog: head creeping FORWARD of neutral
+// ── slouch watchdog (Tech Neck mode): head creeping FORWARD of neutral ──
+function updateSlouch(dt) {
   const slouching = head.rZ > 4.2;
   slouch.t = slouching ? slouch.t + dt : Math.max(0, slouch.t - dt * 2);
   const wasActive = slouch.active;
@@ -137,10 +143,11 @@ function updateTechNeck(dt) {
 }
 
 // ── stretch gates ──
+// rYaw>0 = head turned LEFT, rPitch>0 = head DOWN (see readControls)
 const GATE_POSES = [
-  { id: 'left', label: 'LOOK LEFT ⟲ & HOLD', test: () => head.rYaw < -20 },
-  { id: 'right', label: 'LOOK RIGHT ⟳ & HOLD', test: () => head.rYaw > 20 },
-  { id: 'up', label: 'CHIN UP ↑ & HOLD', test: () => head.rPitch > 16 },
+  { id: 'left', label: 'LOOK LEFT ⟲ & HOLD', test: () => head.rYaw > 20 },
+  { id: 'right', label: 'LOOK RIGHT ⟳ & HOLD', test: () => head.rYaw < -20 },
+  { id: 'up', label: 'CHIN UP ↑ & HOLD', test: () => head.rPitch < -16 },
 ];
 
 function spawnGate() {
@@ -279,7 +286,7 @@ function collideCheck(o, sx, sy, shipR, dt) {
         const pts = Math.round(100 * game.mult);
         game.score += pts;
         sfx.crash();
-        game.hooks.onToast?.(`SHIELD SMASH +${pts}`);
+        game.hooks.onToast?.(`HYPER SMASH +${pts}`);
         return;
       }
       die();
@@ -322,12 +329,14 @@ function loop(t) {
     // difficulty ramp: 60 → 150 over ~3.5 min
     game.speed = 60 + Math.min(90, game.time * 0.45);
     readControls(dt);
-    if (game.mode === 'techneck') updateTechNeck(dt);
-    else game.hooks.onShield?.(0, false);
+    updateHyper(dt);
+    if (game.mode === 'techneck') updateSlouch(dt);
+    if (shield.active) game.speed *= 1.75; // HYPERDRIVE
+    setHyper(shield.active);
 
-    // distance score
+    // distance score (doubled while in hyperdrive)
     game.dist += game.speed * dt;
-    game.score += game.speed * dt * 0.18 * game.mult;
+    game.score += game.speed * dt * 0.18 * game.mult * (shield.active ? 2 : 1);
     game.hooks.onScore?.(Math.floor(game.score), game.mult);
 
     // spawn cadence
@@ -356,6 +365,7 @@ function loop(t) {
     updateGate(dt);
   } else {
     deathT += dt;
+    setHyper(false);
     game.speed = Math.max(10, game.speed - dt * 60);
     if (deathT > 1.4) {
       stopGame();
