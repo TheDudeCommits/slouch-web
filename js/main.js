@@ -657,14 +657,16 @@ function renderStore() {
     for (const [id, u] of Object.entries(ST.UPGRADES)) {
       const lvl = s.upgrades[id];
       const maxed = lvl >= u.prices.length;
-      const pips = `<span class="pips">${u.prices.map((_, i) =>
+      // visual-first: the pip bar IS the upgrade state
+      const pips = `<span class="pips xl">${u.prices.map((_, i) =>
         `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</span>`;
       const btn = maxed ? mkBtn('MAX', 'owned', null, true)
         : mkBtn(price(u.prices[lvl]), '', () => {
           if (ST.buyUpgrade(id)) sfx.buy(); else sfx.denied();
           renderStore(); refreshMenu();
         }, s.points < u.prices[lvl]);
-      addRow(icon(ICONS[id]), u.name + pips, u.desc, btn);
+      addRow(icon(ICONS[id], 'ic xl'), u.name, `${u.desc}<br>${pips}`, btn);
+      wrap.lastChild.classList.add('big');
     }
   } else {
     const ICONS = { freeze: 'i-freeze', revive: 'i-revive' };

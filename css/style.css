@@ -232,6 +232,13 @@ footer.iconrow { position: absolute; bottom: calc(16px + var(--sab)); }
 .pips { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
 .pips i { width: 6px; height: 6px; border-radius: 50%; background: rgba(92, 106, 138, 0.4); }
 .pips i.on { background: var(--acc); box-shadow: 0 0 6px var(--acc); }
+.pips.xl { margin: 6px 0 0; gap: 6px; }
+.pips.xl i { width: 22px; height: 8px; border-radius: 4px; }
+.ic.xl { width: 30px; height: 30px; }
+.row.big { padding: 16px 2px; }
+.row.big .name { font-size: 15px; }
+.row.big .desc { font-size: 12.5px; margin-top: 4px; }
+.row.big .act { font-size: 14px; }
 
 /* ── tabs ── */
 .tabs { display: flex; gap: 22px; justify-content: center; margin: 6px 0 4px; }

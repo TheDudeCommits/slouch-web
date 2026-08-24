@@ -43,9 +43,10 @@ export const PACKS = {
       bg: ['#b8f0fa', '#5fd0ea', '#1e9ac4', '#0a6a92'],
       fogColor: 0x3fb0d4, fogDensity: 0.0038,
       floor: 'floor.jpg', floorTint: 0xffedc0, floorY: -12,
-      ray: 0xffffff, particle: 0xe8fbff, accent: 0x3fd4ff,
+      ray: 0xffffff, rayOpacity: 0.16, particle: 0xe8fbff, accent: 0x3fd4ff,
       hemi: [0xf0ffff, 0x3a7a90, 1.5],
-      exposure: 1.3,
+      exposure: 1.24,
+      decorCount: 24, sway: true, swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
     },
     heroes: {
       hero_clown: { file: 'hero_clown.glb', len: 3.6, yaw: Math.PI },
@@ -78,14 +79,15 @@ export const PACKS = {
     grounded: true,
     groundY: -6.5,
     env: {
-      // sunny storybook jungle: blue sky, golden light, lush green
-      bg: ['#aee6ff', '#eaf7c8', '#a8dd7a', '#5fae54'],
+      // pleasant storybook daylight: readable, lush, never blinding
+      bg: ['#9fd8f2', '#cfeab8', '#96cf70', '#5fae54'],
       treeline: true,
-      fogColor: 0xbfe49a, fogDensity: 0.0024,
-      floor: 'floor.jpg', floorTint: 0xb8e878, floorY: -7.2,
-      ray: 0xfff6d0, particle: 0xffe9a0, accent: 0x7ddf4a,
-      hemi: [0xfff8dc, 0x5a8a3a, 1.6],
-      exposure: 1.32,
+      fogColor: 0x9fcc80, fogDensity: 0.0026,
+      floor: 'floor.jpg', floorTint: 0x9ed468, floorY: -7.2,
+      ray: 0xfff6d0, rayOpacity: 0.09, particle: 0xffe9a0, accent: 0x7ddf4a,
+      hemi: [0xfff4d0, 0x5a8a3a, 1.35],
+      exposure: 1.18,
+      decorCount: 24, canopy: true, path: true,
     },
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
@@ -174,9 +176,12 @@ export function spawnCreature(packId, file, { clip = null, len = null, r = null,
     if (o.isMesh) {
       o.frustumCulled = false;
       const m = o.material;
-      if (m?.emissive && !m.userData._lit) {
+      if (m && !m.userData._lit) {
         m.userData._lit = true;
-        m.emissive.copy(m.color).multiplyScalar(0.35);
+        // matte and soft — creatures should look fluffy/organic, never metallic
+        if ('metalness' in m) m.metalness = 0;
+        if ('roughness' in m) m.roughness = Math.max(0.85, m.roughness ?? 1);
+        if (m.emissive) m.emissive.copy(m.color).multiplyScalar(0.18);
       }
     }
   });

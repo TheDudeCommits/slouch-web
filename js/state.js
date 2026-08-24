@@ -118,19 +118,19 @@ export const BOOMS = {
 };
 
 export const UPGRADES = {
-  hyperdur: { name: 'Hyper Capacity', icon: '⚡', desc: 'Hyperdrive drains slower. Longer burns per tuck.',
+  hyperdur: { name: 'Hyper Capacity', icon: '⚡', desc: 'Longer boost burns',
     prices: [800, 2000, 4500] },
-  hyperregen: { name: 'Hyper Recharge', icon: '🔋', desc: 'Hyperdrive energy refills faster between tucks.',
+  hyperregen: { name: 'Hyper Recharge', icon: '🔋', desc: 'Faster boost refills',
     prices: [700, 1800, 4000] },
-  magnet: { name: 'Magnet Core', icon: '🧲', desc: 'Magnet power-ups last longer and pull from farther away.',
+  magnet: { name: 'Magnet Core', icon: '🧲', desc: 'Stronger coin pull',
     prices: [600, 1500, 3500] },
 };
 
 export const STORE_EXTRAS = [
   { id: 'freeze', name: 'Streak Freeze', icon: '🧊', price: 500, repeat: true,
-    desc: 'Miss a day without losing your streak. Consumed automatically.' },
+    desc: 'Protects one missed day' },
   { id: 'revive', name: 'Emergency Revive', icon: '💠', price: 1200, repeat: true, max: 3,
-    desc: 'Auto-resurrect once per run when you crash. Stock up to 3.' },
+    desc: 'One auto-rescue per run' },
 ];
 
 // Seasonal events: [monthStart, dayStart, monthEnd, dayEnd] inclusive

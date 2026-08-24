@@ -240,6 +240,13 @@ export async function loadHeroShip() {
     const def = pack.heroes[heroId] || Object.values(pack.heroes)[0];
     const c = spawnCreature(world.packMode, def.file, { clip: pack.heroClips.base, len: def.len, yaw: def.yaw });
     if (!c) return;
+    // the hero is always center-frame in its own shadow — give it extra fill
+    c.obj.traverse(o => {
+      if (o.isMesh && o.material?.emissive) {
+        o.material = o.material.clone();
+        o.material.emissive.copy(o.material.color).multiplyScalar(0.32);
+      }
+    });
     shipModelRoot.clear();
     shipModelRoot.add(c.obj);
     heroMixer = c.mixer;
@@ -756,15 +763,31 @@ export function updateWorld(dt, speed, shipVel) {
     packEnv.floor.material.map.offset.y -= speed * dt * 0.0011;
   }
   if (packEnv.rays) {
+    const base = packEnv.rays.userData.baseOpacity ?? 0.14;
     for (const r of packEnv.rays.children) {
-      r.material.opacity = 0.16 + Math.abs(Math.sin(now * 0.0003 + r.userData.phase)) * 0.18;
+      r.material.opacity = base + Math.abs(Math.sin(now * 0.0003 + r.userData.phase)) * base;
     }
   }
   for (const d of packEnv.decor) {
+    if (d.userData.isPath) continue;
+    if (d.userData.swim) {
+      // background fish cruise across and loop around
+      d.position.x += d.userData.swim.vx * dt;
+      d.position.y += Math.sin(now * 0.001 + d.userData.swim.phase) * dt * 1.2;
+      d.position.z += speed * dt * 0.25;
+      if (d.position.x > 45 || d.position.z > 0) {
+        d.position.set(-35 - Math.random() * 15, -6 + Math.random() * 14, -80 - Math.random() * 200);
+      }
+      continue;
+    }
+    if (d.userData.sway != null) {
+      d.rotation.z = Math.sin(now * 0.0008 + d.userData.sway) * 0.07;
+    }
     d.position.z += speed * dt;
     if (d.position.z > 20) {
       d.position.z -= 460;
-      d.position.x = (d.position.x < 0 ? -1 : 1) * (17 + Math.random() * 9);
+      const high = d.position.y > world.groundY + 5;
+      d.position.x = (d.position.x < 0 ? -1 : 1) * (high ? 13 + Math.random() * 4 : 16 + Math.random() * 14);
     }
   }
   // gentle bob for static pack creatures (keeps them feeling alive)
@@ -953,6 +976,7 @@ export async function applyWorldPack(onProgress) {
   packEnv.floor = floor;
 
   const rays = buildRays(env.ray);
+  rays.userData.baseOpacity = env.rayOpacity ?? 0.14;
   world.scene.add(rays);
   packEnv.rays = rays;
 
@@ -961,15 +985,64 @@ export async function applyWorldPack(onProgress) {
   world.scene.add(hemi);
   packEnv.hemi = hemi;
 
-  for (let i = 0; i < 12; i++) {
+  // dense roadside scenery in two depth rows — the corridor should feel ALIVE
+  const decorCount = env.decorCount ?? 12;
+  for (let i = 0; i < decorCount; i++) {
     const file = pack.decor[i % pack.decor.length];
-    const c = spawnCreature(target, file, { len: 6 + Math.random() * 5 });
+    const c = spawnCreature(target, file, { len: 4.5 + Math.random() * 7 });
     if (!c) continue;
     const side = i % 2 === 0 ? -1 : 1;
-    c.obj.position.set(side * (17 + Math.random() * 9), env.floorY + 3.2, -40 - i * 38);
+    const nearRow = i % 4 < 2;
+    c.obj.position.set(
+      side * (nearRow ? 16 + Math.random() * 5 : 26 + Math.random() * 12),
+      env.floorY + 2.6, -20 - i * (440 / decorCount));
     c.obj.rotation.y = Math.random() * Math.PI * 2;
+    c.obj.userData.sway = env.sway ? Math.random() * Math.PI * 2 : null;
     world.scene.add(c.obj);
     packEnv.decor.push(c.obj);
+  }
+
+  // jungle canopy: huge crowns leaning over the track form a leafy tunnel
+  if (env.canopy) {
+    for (let i = 0; i < 8; i++) {
+      const c = spawnCreature(target, pack.decor[i % 4], { len: 16 + Math.random() * 6 });
+      if (!c) continue;
+      const side = i % 2 === 0 ? -1 : 1;
+      c.obj.position.set(side * (13 + Math.random() * 4), env.floorY + 9 + Math.random() * 4, -30 - i * 58);
+      c.obj.rotation.z = -side * (0.5 + Math.random() * 0.25);
+      c.obj.rotation.y = Math.random() * Math.PI * 2;
+      world.scene.add(c.obj);
+      packEnv.decor.push(c.obj);
+    }
+  }
+
+  // worn dirt path under the runner
+  if (env.path) {
+    const pathTex = texLoader.load(pack.base + env.floor);
+    pathTex.wrapS = pathTex.wrapT = THREE.RepeatWrapping;
+    pathTex.repeat.set(1.4, 120);
+    pathTex.colorSpace = THREE.SRGBColorSpace;
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(9, 1200),
+      new THREE.MeshStandardMaterial({ map: pathTex, color: 0xb08a52, roughness: 1 }));
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, env.floorY + 0.05, -400);
+    world.scene.add(path);
+    packEnv.decor.push(path);
+    path.userData.isPath = true;
+  }
+
+  // ocean ambience: schools of small fish cruising the background
+  if (env.swimmers) {
+    for (let i = 0; i < 7; i++) {
+      const file = env.swimmers[i % env.swimmers.length];
+      const c = spawnCreature(target, file, { clip: 'Swimming_Normal', len: 1.4 + Math.random() * 1.2, yaw: Math.PI / 2 });
+      if (!c) continue;
+      c.obj.position.set(-30 - Math.random() * 20, -6 + Math.random() * 14, -60 - Math.random() * 220);
+      c.obj.userData.swim = { vx: 3 + Math.random() * 3, phase: Math.random() * Math.PI * 2 };
+      world.scene.add(c.obj);
+      packEnv.decor.push(c.obj);
+      if (c.mixer) packMixers.push(c.mixer);
+    }
   }
 
   for (const a of world.asteroids) {
