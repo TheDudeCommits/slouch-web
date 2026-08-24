@@ -1,7 +1,7 @@
 // SLOUCH — core game loop: control mapping, sectors, power-ups, boss fights,
 // flow/graze trains, slow-mo, boons, mutators, missions, ghost racing.
 
-import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, setGateArrow, randomizeBackdrop, POWERUP_TYPES } from './world.js';
+import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, setGateArrow, randomizeBackdrop, setHeroMotion, setHeroSpeed, POWERUP_TYPES } from './world.js';
 import { head, updateHead } from './head.js';
 import { state, activeEvent } from './state.js';
 import { sfx, setMusicIntensity, musicEvent } from './audio.js';
@@ -136,13 +136,44 @@ function readControls(dt) {
   }
 
   const targX = tx * world.bounds.x;
-  const targY = ty * world.bounds.y;
   const rate = Math.min(1, (game.mode === 'casual' ? 11 : 8.5) * dt);
   const nx = clamp(ship.x + (targX - ship.x) * rate, -world.bounds.x, world.bounds.x);
-  const ny = clamp(ship.y + (targY - ship.y) * rate, -world.bounds.y, world.bounds.y);
+
+  let ny;
+  if (world.grounded) {
+    // runner physics: chin up = jump height, gravity pulls back to the ground
+    const ground = world.groundY + 1.1;
+    const jump = Math.max(0, ty);
+    const targY = ground + jump * 10.5;
+    const yRate = Math.min(1, (targY > ship.y ? 13 : 6.5) * dt); // spring up, fall slower
+    ny = clamp(ship.y + (targY - ship.y) * yRate, ground, ground + 11);
+    heroState.ducking = ty < -0.35 && ship.y < ground + 0.5;
+  } else {
+    const targY = ty * world.bounds.y;
+    ny = clamp(ship.y + (targY - ship.y) * rate, -world.bounds.y, world.bounds.y);
+  }
   ship.vx = (nx - ship.x) / Math.max(dt, 1e-4);
   ship.vy = (ny - ship.y) / Math.max(dt, 1e-4);
   ship.x = nx; ship.y = ny;
+}
+
+// hero animation state machine (pack worlds)
+const heroState = { airborne: false, ducking: false };
+function updateHeroAnim() {
+  if (world.packMode === 'space') return;
+  if (world.grounded) {
+    const ground = world.groundY + 1.1;
+    const inAir = ship.y > ground + 0.9;
+    if (inAir && !heroState.airborne) setHeroMotion('jump');
+    else if (!inAir && heroState.airborne) setHeroMotion('land');
+    else if (!inAir && heroState.ducking) setHeroMotion('duck');
+    else if (!inAir) setHeroMotion('base');
+    heroState.airborne = inAir;
+    setHeroSpeed(0.8 + game.speed / 90);
+  } else {
+    setHeroMotion(shield.active ? 'fast' : 'base');
+    setHeroSpeed(shield.active ? 1.8 : 0.9 + game.speed / 160);
+  }
 }
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -242,7 +273,7 @@ function spawnGate() {
   const pose = poses[Math.floor(R() * poses.length)];
   g.userData.active = true;
   g.userData.passed = false;
-  g.position.set(0, 0, world.spawnZ);
+  g.position.set(0, world.grounded ? world.groundY + 5.4 : 0, world.spawnZ);
   g.visible = true;
   setGateArrow(g, pose.id);
   gate.obj = g; gate.pose = pose; gate.dwell = 0; gate.announced = false;
@@ -395,7 +426,7 @@ function bossActive() { return boss.phase !== 'idle'; }
 function spawnWall(fromBoss) {
   const w = world.walls.find(o => !o.userData.active);
   if (!w) return;
-  const gapAxis = R() < 0.55 ? 'x' : 'y';
+  const gapAxis = world.grounded ? 'x' : (R() < 0.55 ? 'x' : 'y');
   const gapCenter = gapAxis === 'x' ? (R() * 2 - 1) * 10 : (R() * 2 - 1) * 5.5;
   armWall(w, gapAxis, gapCenter);
   if (game.mutator?.id === 'thicket') w.userData.gapHalf = 2.4;
@@ -454,7 +485,8 @@ function spawnPowerup(forceType) {
   p.userData.setType(type);
   p.userData.mat.color.setHex(def.color);
   p.userData.glowMat.color.setHex(def.color);
-  p.position.set((R() * 2 - 1) * 11, (R() * 2 - 1) * 6, world.spawnZ);
+  const py = world.grounded ? world.groundY + 1.6 + R() * 6 : (R() * 2 - 1) * 6;
+  p.position.set((R() * 2 - 1) * 11, py, world.spawnZ);
   p.visible = true;
 }
 
@@ -533,13 +565,18 @@ function placeRock(x, y, dz, opts = {}) {
   if (!a) return;
   a.userData.active = true;
   a.visible = true;
+  if (world.grounded) {
+    // everything grows from the jungle floor: trees block tall, logs block low
+    y = world.groundY + (a.userData.tall ? a.userData.radius * 1.6 : a.userData.radius * 0.75);
+  }
   a.position.set(x, y, world.spawnZ - dz);
-  let driftMul = opts.drift ? (game.sector === 'debris' ? 2.2 : 1) : 0.15;
+  let driftMul = (opts.drift && !world.grounded) ? (game.sector === 'debris' ? 2.2 : 1) : 0.12;
   if (game.boons.greed) driftMul *= 1.15;
   a.userData.vx = (R() - 0.5) * 2.5 * driftMul;
-  a.userData.vy = (R() - 0.5) * 1.5 * driftMul;
+  a.userData.vy = world.grounded ? 0 : (R() - 0.5) * 1.5 * driftMul;
   a.userData.missed = false;
-  a.rotation.set(R() * 3, R() * 3, 0);
+  if (world.spinObstacles) a.rotation.set(R() * 3, R() * 3, 0);
+  else a.rotation.set(0, R() * Math.PI * 2, 0);
 }
 
 // ── rock choreography: formations that prescribe real neck movement.
@@ -601,9 +638,10 @@ function spawnEnemy() {
   e.userData.active = true;
   e.visible = true;
   const side = R() < 0.5 ? -1 : 1;
-  e.position.set(side * 20, (R() - 0.5) * 12, world.spawnZ * 0.7);
+  const y = world.grounded ? world.groundY + 1.2 : (R() - 0.5) * 12;
+  e.position.set(side * 20, y, world.spawnZ * 0.7);
   e.userData.vx = -side * (6 + R() * 5);
-  e.userData.vy = (R() - 0.5) * 2;
+  e.userData.vy = world.grounded ? 0 : (R() - 0.5) * 2;
   e.userData.missed = false;
   e.lookAt(e.position.x + e.userData.vx, e.position.y, e.position.z + game.speed);
 }
@@ -611,7 +649,8 @@ function spawnEnemy() {
 // crystal lines spawn near the obstacle bias — greed lives on the dangerous side
 function spawnCrystalLine() {
   const x = clamp(bias.x * 6 + (R() - 0.5) * 14, -10, 10);
-  const y = clamp(bias.y * 3 + (R() - 0.5) * 8, -6, 6);
+  let y = clamp(bias.y * 3 + (R() - 0.5) * 8, -6, 6);
+  if (world.grounded) y = world.groundY + 1.4 + R() * 6.5;
   let placed = 0;
   for (const c of world.crystals) {
     if (c.userData.active || placed >= 5) continue;
@@ -647,8 +686,10 @@ function updateObstacles(dt) {
     a.position.z += game.speed * dt;
     a.position.x += a.userData.vx * dt;
     a.position.y += a.userData.vy * dt;
-    a.rotation.x += a.userData.rx * dt;
-    a.rotation.y += a.userData.ry * dt;
+    if (world.spinObstacles) {
+      a.rotation.x += a.userData.rx * dt;
+      a.rotation.y += a.userData.ry * dt;
+    }
     collideCheck(a, sx, sy, shipR);
   }
   for (const e of world.enemies) {
@@ -783,6 +824,7 @@ function loop(t) {
     if (game.sector === 'wormhole') game.speed *= 1.3;
     if (game.mutator?.id === 'meteor') game.speed *= 1.25;
     readControls(rawDt);       // controls always run at real time
+    updateHeroAnim();
     updateHyper(rawDt);
     if (techStyle()) updateSlouch(rawDt);
     updateFlow(dt);
@@ -891,9 +933,16 @@ function loop(t) {
 
   const S = world.ship;
   S.position.set(ship.x, ship.y, 0);
-  S.rotation.z = clamp(-ship.vx * 0.06, -0.7, 0.7);
-  S.rotation.x = clamp(-ship.vy * 0.035, -0.45, 0.45);
-  S.rotation.y = clamp(-ship.vx * 0.02, -0.3, 0.3);
+  if (world.grounded) {
+    // runners lean into turns and pitch through jumps, but never roll like a ship
+    S.rotation.z = clamp(-ship.vx * 0.012, -0.2, 0.2);
+    S.rotation.x = clamp(-ship.vy * 0.015, -0.3, 0.15);
+    S.rotation.y = clamp(-ship.vx * 0.03, -0.5, 0.5);
+  } else {
+    S.rotation.z = clamp(-ship.vx * 0.06, -0.7, 0.7);
+    S.rotation.x = clamp(-ship.vy * 0.035, -0.45, 0.45);
+    S.rotation.y = clamp(-ship.vx * 0.02, -0.3, 0.3);
+  }
   world.shipShield.visible = shield.active;
   if (shield.active) setShieldVisual(shield.energy);
 
@@ -923,7 +972,7 @@ export function startIdle() {
     const dt = Math.min(0.05, (t - last) / 1000);
     last = t;
     ship.x = Math.sin(t * 0.0004) * 3;
-    ship.y = Math.cos(t * 0.0006) * 1.5;
+    ship.y = world.grounded ? world.groundY + 1.1 : Math.cos(t * 0.0006) * 1.5;
     world.ship.position.set(ship.x, ship.y, 0);
     world.ship.rotation.z = Math.sin(t * 0.0004 + 1) * 0.15;
     world.ship.visible = true;

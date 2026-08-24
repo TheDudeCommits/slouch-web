@@ -1,6 +1,6 @@
 // SLOUCH — app shell: screens, HUD wiring, store, ranks, missions, codex.
 
-import { initWorld, applyTheme, loadHeroShip } from './world.js';
+import { initWorld, applyTheme, loadHeroShip, applyWorldPack } from './world.js';
 import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head, updateHead } from './head.js';
 import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon } from './game.js';
 import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx } from './audio.js';
@@ -30,6 +30,7 @@ let duelIncoming = null;
 // ── boot ──
 async function boot() {
   initWorld();
+  if (ST.currentWorld() !== 'space') applyWorldPack();
   startIdle();
   ST.tickStreak(false);
   refreshMenu();
@@ -563,15 +564,60 @@ function renderStore() {
   };
 
   if (storeCat === 'themes') {
+    // expansion worlds first: full visual swaps, downloaded on purchase
+    const equipWorldNow = async (worldId) => {
+      ST.equipWorld(worldId);
+      sfx.buy();
+      renderStore();
+      hooks.onToast?.('loading world…');
+      await applyWorldPack();
+      renderStore();
+    };
+    const spaceOn = ST.currentWorld() === 'space';
+    addRow(icon('i-ship'), 'Deep Space', 'The original belt. Base game.',
+      spaceOn ? mkBtn('ON', 'equipped') : mkBtn('EQUIP', 'owned', () => equipWorldNow('space')));
+    for (const [id, wp] of Object.entries(ST.WORLD_PACKS)) {
+      const owned = s.owned.includes(id);
+      const on = ST.currentWorld() === wp.world;
+      let btn;
+      if (on) btn = mkBtn('ON', 'equipped');
+      else if (owned) btn = mkBtn('EQUIP', 'owned', () => equipWorldNow(wp.world));
+      else btn = mkBtn(price(wp.price), '', () => {
+        if (ST.buy(id, wp.price)) equipWorldNow(wp.world);
+        else { sfx.denied(); renderStore(); }
+        refreshMenu();
+      }, s.points < wp.price);
+      addRow(icon('i-star'), `${wp.name} · ${wp.size}`, wp.desc, btn);
+    }
+    // hero fish variants once the ocean is owned
+    if (s.owned.includes('world_ocean')) {
+      for (const [id, h] of Object.entries(ST.OCEAN_HEROES)) {
+        const owned = s.owned.includes(id);
+        const on = s.oceanHero === id;
+        let btn;
+        if (on) btn = mkBtn('ON', 'equipped');
+        else if (owned) btn = mkBtn('EQUIP', 'owned', () => {
+          s.oceanHero = id; ST.save(); sfx.buy();
+          if (ST.currentWorld() === 'ocean') loadHeroShip();
+          renderStore();
+        });
+        else btn = mkBtn(price(h.price), '', () => {
+          if (ST.buy(id, h.price)) {
+            s.oceanHero = id; ST.save(); sfx.buy();
+            if (ST.currentWorld() === 'ocean') loadHeroShip();
+          } else sfx.denied();
+          renderStore(); refreshMenu();
+        }, s.points < h.price);
+        addRow(icon('i-ship'), h.name, h.desc, btn);
+      }
+    }
+    // space palettes (style the space world only)
     for (const [id, t] of Object.entries(ST.THEMES)) {
-      const art = t.colors
-        ? `<span class="swatch duo" style="--c1:${hex(t.colors.accent)};--c2:${hex(t.colors.fog)}"></span>`
-        : icon('i-lock');
+      const art = `<span class="swatch duo" style="--c1:${hex(t.colors.accent)};--c2:${hex(t.colors.fog)}"></span>`;
       const owned = s.owned.includes(id);
       const equipped = s.equippedTheme === id;
       let btn;
-      if (t.soon) btn = mkBtn('SOON', '', null, true);
-      else if (equipped) btn = mkBtn('ON', 'equipped');
+      if (equipped) btn = mkBtn('ON', 'equipped');
       else if (owned) btn = mkBtn('EQUIP', 'owned', () => {
         ST.equipTheme(id); applyTheme(); sfx.buy(); renderStore();
       });
@@ -579,7 +625,7 @@ function renderStore() {
         if (ST.buy(id, t.price)) { ST.equipTheme(id); applyTheme(); sfx.buy(); } else sfx.denied();
         renderStore(); refreshMenu();
       }, s.points < t.price);
-      addRow(art, t.name, t.desc, btn, !!t.soon);
+      addRow(art, t.name + ' · palette', t.desc, btn);
     }
   } else if (storeCat === 'ship') {
     for (const [id, item] of Object.entries(ST.SKINS)) {

@@ -22,3 +22,10 @@ Sound effects:
 - "The Essential Retro Video Game Sound Effects Collection" by Juhani Junkala
   / SubspaceAudio — OpenGameArt (CC0)
 - Kenney Interface Sounds — kenney.nl (CC0)
+Expansion packs (poly.pizza community models):
+- Ocean: animated fish (clownfish/tang/mandarin/anglerfish) + sharks + octopuses
+  + whale + corals + urchin + pufferfish + kelp — by dook (CC0/CC-BY) and
+  Google Poly contributors (CC-BY)
+- Jungle: animated bunny + wolf by dook (CC0/CC-BY); tiger, jaguar, cheetah,
+  lion, bear, snake, trees, log, stump, carrot — Google Poly contributors (CC-BY)
+- Floors: ambientCG Grass001 + Ground054 (CC0)

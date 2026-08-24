@@ -9,7 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
-import { THEMES, themeColors, cosmetics, state } from './state.js';
+import { THEMES, themeColors, cosmetics, state, currentWorld, OCEAN_HEROES } from './state.js';
+import { PACKS, loadPack, packLoaded, spawnCreature, gradientTexture, treelineTexture, buildRays } from './packs.js';
 
 export const world = {
   scene: null, camera: null, renderer: null, composer: null,
@@ -18,6 +19,10 @@ export const world = {
   boss: null,
   bounds: { x: 13, y: 7.5 },
   spawnZ: -420, killZ: 14,
+  packMode: 'space',      // space | ocean | jungle
+  grounded: false,
+  groundY: -6.5,
+  spinObstacles: true,
 };
 
 export const POWERUP_TYPES = {
@@ -226,6 +231,24 @@ async function loadModel(name) {
 }
 
 export async function loadHeroShip() {
+  // pack worlds use a living creature as the hero
+  if (world.packMode !== 'space') {
+    const pack = PACKS[world.packMode];
+    const heroId = world.packMode === 'ocean' ? (state().oceanHero || 'hero_clown') : 'hero_bunny';
+    const def = pack.heroes[heroId] || Object.values(pack.heroes)[0];
+    const c = spawnCreature(world.packMode, def.file, { clip: pack.heroClips.base, len: def.len, yaw: def.yaw });
+    if (!c) return;
+    shipModelRoot.clear();
+    shipModelRoot.add(c.obj);
+    heroMixer = c.mixer;
+    heroActions = c.actions;
+    heroAction = null;
+    setHeroMotion('base');
+    engineFx.visible = world.packMode === 'ocean'; // bubble trail underwater, nothing in jungle
+    if (world.packMode === 'ocean') engineFx.position.set(0, 0, def.len / 2 + 0.4);
+    return;
+  }
+  engineFx.visible = true;
   const skin = cosmetics().skin;
   const name = skin.model || 'talon';
   try {
@@ -362,9 +385,9 @@ async function loadRockGeometries() {
     if (!geos.length) return;
     rockGeos = geos;
     // swap pooled asteroid geometries in place
-    world.asteroids.forEach((m, i) => {
-      m.geometry = geos[i % geos.length];
-      m.scale.setScalar(m.userData.radius);
+    world.asteroids.forEach((g, i) => {
+      g.userData.rockMesh.geometry = geos[i % geos.length];
+      g.userData.rockMesh.scale.setScalar(g.userData.size);
     });
   } catch (e) { console.warn('rock glb load failed', e); }
 }
@@ -380,37 +403,48 @@ function buildAsteroids() {
   const sizes = [1.5, 2.4, 3.6, 5.2];
   for (let i = 0; i < 64; i++) {
     const size = sizes[Math.floor(Math.random() * sizes.length)];
-    const m = new THREE.Mesh(makeFallbackRockGeo(1), mat);
-    m.scale.setScalar(size);
-    m.visible = false;
-    m.userData = { active: false, radius: size * 1.05, vz: 0, vx: 0, vy: 0,
+    const g = new THREE.Group();
+    const holder = new THREE.Group();
+    const rockMesh = new THREE.Mesh(makeFallbackRockGeo(1), mat);
+    rockMesh.scale.setScalar(size);
+    holder.add(rockMesh);
+    g.add(holder);
+    g.visible = false;
+    g.userData = { active: false, radius: size * 1.05, size, holder, rockMesh, vz: 0, vx: 0, vy: 0,
       rx: (Math.random() - 0.5) * 1.4, ry: (Math.random() - 0.5) * 1.4 };
-    world.scene.add(m);
-    world.asteroids.push(m);
+    world.scene.add(g);
+    world.asteroids.push(g);
   }
 }
 
-// ── enemy darts ──
+// ── enemy darts (holder swaps to pack creatures) ──
+function makeDart() {
+  const holder = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x662233, metalness: 0.8, roughness: 0.3, flatShading: true });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 4), mat);
+  body.rotation.x = Math.PI / 2;
+  holder.add(body);
+  for (const s of [-1, 1]) {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.07, 0.7), mat);
+    w.position.set(s * 0.95, 0, 0.5);
+    holder.add(w);
+  }
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture('rgba(255,120,120,1)'), color: 0xff3c5a,
+    blending: THREE.AdditiveBlending, depthWrite: false }));
+  glow.scale.set(1.4, 1.4, 1);
+  glow.position.z = -1.4;
+  holder.add(glow);
+  return holder;
+}
+
 function buildEnemies() {
   for (let i = 0; i < 6; i++) {
     const g = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0x662233, metalness: 0.8, roughness: 0.3, flatShading: true });
-    const body = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 4), mat);
-    body.rotation.x = Math.PI / 2;
-    g.add(body);
-    for (const s of [-1, 1]) {
-      const w = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.07, 0.7), mat);
-      w.position.set(s * 0.95, 0, 0.5);
-      g.add(w);
-    }
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTexture('rgba(255,120,120,1)'), color: 0xff3c5a,
-      blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(1.4, 1.4, 1);
-    glow.position.z = -1.4;
-    g.add(glow);
+    const holder = makeDart();
+    g.add(holder);
     g.visible = false;
-    g.userData = { active: false, radius: 1.5, vz: 0, vx: 0, vy: 0 };
+    g.userData = { active: false, radius: 1.5, holder, vz: 0, vx: 0, vy: 0 };
     world.scene.add(g);
     world.enemies.push(g);
   }
@@ -606,28 +640,36 @@ export function armWall(g, gapAxis, gapCenter) {
   g.userData.gapHalf = 3.2;
 }
 
-function buildBoss() {
-  const g = new THREE.Group();
+function makeDreadnought() {
+  const holder = new THREE.Group();
   const hull = new THREE.MeshStandardMaterial({ color: 0x3a2a3a, metalness: 0.85, roughness: 0.4, flatShading: true });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 6, 26, 8), hull);
   body.rotation.z = Math.PI / 2;
-  g.add(body);
+  holder.add(body);
   for (const s of [-1, 1]) {
     const tower = new THREE.Mesh(new THREE.BoxGeometry(3, 7, 3), hull);
     tower.position.set(s * 8, 5, 0);
-    g.add(tower);
+    holder.add(tower);
     const engine = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture('rgba(255,90,90,1)'), color: 0xff3c5a,
       blending: THREE.AdditiveBlending, depthWrite: false }));
     engine.scale.set(5, 5, 1);
     engine.position.set(s * 11, -1, 3);
-    g.add(engine);
+    holder.add(engine);
   }
   const eye = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8),
     new THREE.MeshBasicMaterial({ color: 0xff3c5a }));
   eye.position.set(0, 0, 6);
-  g.add(eye);
-  g.userData = { eye };
+  holder.add(eye);
+  holder.userData.eye = eye;
+  return holder;
+}
+
+function buildBoss() {
+  const g = new THREE.Group();
+  const holder = makeDreadnought();
+  g.add(holder);
+  g.userData = { eye: holder.userData.eye, holder };
   g.visible = false;
   world.scene.add(g);
   world.boss = g;
@@ -680,21 +722,58 @@ export function updateWorld(dt, speed, shipVel) {
   }
   tp.needsUpdate = true;
 
-  const sp = warpStars.geometry.attributes.position;
-  for (let i = 0; i < sp.count; i++) {
-    let z = sp.getZ(i) + speed * dt * 1.35;
-    if (z > 60) z -= 650;
-    sp.setZ(i, z);
+  if (warpStars.visible) {
+    const sp = warpStars.geometry.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      let z = sp.getZ(i) + speed * dt * 1.35;
+      if (z > 60) z -= 650;
+      sp.setZ(i, z);
+    }
+    sp.needsUpdate = true;
   }
-  sp.needsUpdate = true;
 
+  // dust doubles as bubbles (ocean, rising) and fireflies (jungle, drifting)
   const dp = dust.geometry.attributes.position;
+  const rise = world.packMode === 'ocean' ? 2.2 : world.packMode === 'jungle' ? 0.35 : 0;
   for (let i = 0; i < dp.count; i++) {
-    let z = dp.getZ(i) + speed * dt * 1.6;
+    let z = dp.getZ(i) + speed * dt * (world.packMode === 'space' ? 1.6 : 1.1);
     if (z > 12) z -= 240;
     dp.setZ(i, z);
+    if (rise) {
+      let y = dp.getY(i) + rise * dt * (0.6 + (i % 5) * 0.2);
+      if (y > 14) y -= 26;
+      dp.setY(i, y);
+    }
   }
   dp.needsUpdate = true;
+
+  // pack scenery: animation mixers, scrolling floor, god rays, looping decor
+  for (const m of packMixers) m.update(dt);
+  if (heroMixer) heroMixer.update(dt);
+  if (packEnv.floor) {
+    packEnv.floor.material.map.offset.y -= speed * dt * 0.0011;
+  }
+  if (packEnv.rays) {
+    for (const r of packEnv.rays.children) {
+      r.material.opacity = 0.1 + Math.abs(Math.sin(now * 0.0003 + r.userData.phase)) * 0.12;
+    }
+  }
+  for (const d of packEnv.decor) {
+    d.position.z += speed * dt;
+    if (d.position.z > 20) {
+      d.position.z -= 460;
+      d.position.x = (d.position.x < 0 ? -1 : 1) * (17 + Math.random() * 9);
+    }
+  }
+  // gentle bob for static pack creatures (keeps them feeling alive)
+  if (world.packMode !== 'space') {
+    for (const e of world.enemies) {
+      if (e.userData.active && e.userData.bob) {
+        e.userData.holder.position.y = Math.sin(now * 0.004 + e.id) * 0.35;
+        e.userData.holder.rotation.z = Math.sin(now * 0.003 + e.id) * 0.08;
+      }
+    }
+  }
 
   const flicker = 0.85 + Math.random() * 0.3;
   ship.userData.glow.scale.set(0.95 * flicker, 0.95 * flicker, 1);
@@ -710,8 +789,13 @@ export function updateWorld(dt, speed, shipVel) {
 
   if (world.boss.visible) {
     world.boss.position.x = Math.sin(now * 0.0004) * 6;
-    world.boss.position.y = Math.cos(now * 0.0005) * 3 + 2;
-    world.boss.userData.eye.scale.setScalar(1 + Math.sin(now * 0.006) * 0.25);
+    world.boss.position.y = world.grounded
+      ? world.groundY + 4
+      : Math.cos(now * 0.0005) * 3 + 2;
+    world.boss.userData.eye?.scale.setScalar(1 + Math.sin(now * 0.006) * 0.25);
+    if (!world.boss.userData.eye) {
+      world.boss.userData.holder.position.y = Math.sin(now * 0.0016) * 0.8;
+    }
   }
 
   planet.rotation.y += dt * 0.008;
@@ -763,11 +847,172 @@ export function setShieldVisual(strength) {
   world.shipShield.scale.setScalar(1 + Math.sin(performance.now() * 0.01) * 0.03);
 }
 
+// ── hero animation control (pack worlds) ──
+let heroMixer = null, heroActions = null, heroAction = null;
+
+export function setHeroMotion(name) {
+  if (!heroActions) return;
+  const pack = PACKS[world.packMode];
+  if (!pack) return;
+  const clipName = pack.heroClips[name] || pack.heroClips.base;
+  const next = heroActions[clipName] ||
+    heroActions[Object.keys(heroActions).find(k => k.includes(clipName))];
+  if (!next || next === heroAction) return;
+  next.reset();
+  next.setLoop(name === 'jump' || name === 'land' ? THREE.LoopOnce : THREE.LoopRepeat);
+  next.clampWhenFinished = true;
+  next.play();
+  if (heroAction) heroAction.crossFadeTo(next, 0.15, false);
+  heroAction = next;
+}
+export function setHeroSpeed(mult) { if (heroMixer) heroMixer.timeScale = mult; }
+
+// ── pack world application ──
+const packMixers = [];
+const packEnv = { floor: null, rays: null, decor: [] };
+
+function clearPackEnv() {
+  for (const key of ['floor', 'rays']) {
+    if (packEnv[key]) { world.scene.remove(packEnv[key]); packEnv[key] = null; }
+  }
+  for (const d of packEnv.decor) world.scene.remove(d);
+  packEnv.decor = [];
+  packMixers.length = 0;
+}
+
+export async function applyWorldPack(onProgress) {
+  const target = currentWorld();
+  if (target !== 'space' && !packLoaded(target)) {
+    await loadPack(target, onProgress);
+  }
+  world.packMode = target;
+  const pack = PACKS[target];
+  world.grounded = !!pack?.grounded;
+  world.groundY = pack?.groundY ?? -6.5;
+  world.spinObstacles = target === 'space';
+  clearPackEnv();
+  heroMixer = null; heroActions = null; heroAction = null;
+
+  if (target === 'space') {
+    currentSky = null;
+    planet.visible = true;
+    sunLight.visible = true;
+    warpStars.visible = true;
+    trailPts.visible = true;
+    for (const a of world.asteroids) {
+      a.userData.holder.clear();
+      a.userData.holder.add(a.userData.rockMesh);
+    }
+    for (const e of world.enemies) {
+      e.userData.holder.clear();
+      const dart = makeDart();
+      for (const ch of [...dart.children]) e.userData.holder.add(ch);
+      e.userData.bob = false;
+    }
+    world.boss.userData.holder.clear();
+    const dn = makeDreadnought();
+    world.boss.userData.eye = dn.userData.eye;
+    for (const ch of [...dn.children]) world.boss.userData.holder.add(ch);
+    dust.material.color.setHex(0x8fb8ff);
+    for (const w of world.walls) w.userData.mat.color.setHex(0xff3c5a);
+    applyTheme();
+    loadHeroShip();
+    return;
+  }
+
+  trailPts.visible = target !== 'jungle';
+  if (target === 'ocean') trailPts.material.color.setHex(0xcfeaff);
+
+  const env = pack.env;
+  world.scene.background = env.treeline ? treelineTexture(env.bg) : gradientTexture(env.bg);
+  world.scene.environment = null;
+  world.scene.fog = new THREE.FogExp2(env.fogColor, env.fogDensity);
+  planet.visible = false; planetRing.visible = false;
+  sunLight.visible = false; warpStars.visible = false;
+  dust.material.color.setHex(env.particle);
+
+  const floorTex = texLoader.load(pack.base + env.floor);
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+  floorTex.repeat.set(10, 120);
+  floorTex.colorSpace = THREE.SRGBColorSpace;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 1200),
+    new THREE.MeshStandardMaterial({ map: floorTex, color: env.floorTint, roughness: 1 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, env.floorY, -400);
+  world.scene.add(floor);
+  packEnv.floor = floor;
+
+  const rays = buildRays(env.ray);
+  world.scene.add(rays);
+  packEnv.rays = rays;
+
+  // pack lighting: bright hemisphere so creatures and floor read clearly
+  const hemi = new THREE.HemisphereLight(env.hemi[0], env.hemi[1], env.hemi[2]);
+  world.scene.add(hemi);
+  packEnv.decor.push(hemi); // cleaned up with decor
+
+  for (let i = 0; i < 12; i++) {
+    const file = pack.decor[i % pack.decor.length];
+    const c = spawnCreature(target, file, { len: 6 + Math.random() * 5 });
+    if (!c) continue;
+    const side = i % 2 === 0 ? -1 : 1;
+    c.obj.position.set(side * (17 + Math.random() * 9), env.floorY + 3.2, -40 - i * 38);
+    c.obj.rotation.y = Math.random() * Math.PI * 2;
+    world.scene.add(c.obj);
+    packEnv.decor.push(c.obj);
+  }
+
+  for (const a of world.asteroids) {
+    const def = pack.obstacles[Math.floor(Math.random() * pack.obstacles.length)];
+    const size = a.userData.size;
+    const c = spawnCreature(target, def.file, def.tall
+      ? { len: size * 3.2 } : { r: def.low ? size * 0.8 : size });
+    if (!c) continue;
+    a.userData.holder.clear();
+    a.userData.holder.add(c.obj);
+    a.userData.tall = !!def.tall;
+    a.userData.low = !!def.low;
+  }
+
+  for (const e of world.enemies) {
+    const def = pack.enemies[Math.floor(Math.random() * pack.enemies.length)];
+    const c = spawnCreature(target, def.file, { clip: def.clip, len: def.len, yaw: def.yaw });
+    if (!c) continue;
+    e.userData.holder.clear();
+    e.userData.holder.add(c.obj);
+    e.userData.bob = !!def.bob;
+    if (c.mixer) packMixers.push(c.mixer);
+  }
+
+  const b = spawnCreature(target, pack.boss.file, { len: pack.boss.len, yaw: pack.boss.yaw });
+  if (b) {
+    world.boss.userData.holder.clear();
+    world.boss.userData.holder.add(b.obj);
+    world.boss.userData.eye = null;
+    if (b.mixer) packMixers.push(b.mixer);
+  }
+
+  if (pack.coin) {
+    const proto = spawnCreature(target, pack.coin.file, { r: pack.coin.r });
+    if (proto) {
+      for (const cr of world.crystals) {
+        cr.remove(cr.children[0]);
+        cr.add(proto.obj.clone());
+      }
+    }
+  }
+
+  for (const w of world.walls) w.userData.mat.color.setHex(pack.wallColor);
+
+  loadHeroShip();
+}
+
 let rainbowTrail = false;
 
 // Pick a fresh sky variant + planet arrangement. Called on theme change AND at
 // the start of every run so the belt never looks the same twice.
 export function randomizeBackdrop() {
+  if (world.packMode !== 'space') return;
   const t = THEMES[state().equippedTheme] ?? THEMES.theme_space;
 
   const skyList = t.sky;
@@ -823,6 +1068,7 @@ export function randomizeBackdrop() {
 }
 
 export function applyTheme() {
+  if (world.packMode !== 'space') return; // palettes only style the space world
   const t = THEMES[state().equippedTheme] ?? THEMES.theme_space;
   const c = t.colors;
   const cos = cosmetics();

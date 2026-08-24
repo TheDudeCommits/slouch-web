@@ -7,8 +7,10 @@ const DEFAULTS = {
   points: 0,
   settings: { music: 60, sfx: 80, sensitivity: 100, mirror: true, ghost: true, reminders: false },
   streak: { count: 0, lastDay: null, freezes: 0 },
-  owned: ['theme_space', 'skin_crosswing', 'trail_theme', 'boom_ember'],
+  owned: ['theme_space', 'skin_crosswing', 'trail_theme', 'boom_ember', 'hero_clown', 'hero_bunny'],
   equippedTheme: 'theme_space',
+  equippedWorld: 'space',            // space | ocean | jungle
+  oceanHero: 'hero_clown',
   equipped: { skin: 'skin_crosswing', trail: 'trail_theme', boom: 'boom_ember' },
   upgrades: { hyperdur: 0, hyperregen: 0, magnet: 0 },   // levels 0..3
   revives: 0,                                            // consumable stock
@@ -66,11 +68,25 @@ export const THEMES = {
     colors: { ship: 0xc0f0ff, engine: 0x2ca0ff, accent: 0x40c8ff, fog: 0x02121f,
       rock: 0xd8ecf8, rockEmissive: 0x3a6a90 },
   },
-  theme_jungle: {
-    name: 'Jungle Rush 🐇', icon: '🌴', price: 0, soon: true,
-    desc: 'COMING SOON — a rabbit, a jungle, and everything that eats rabbits.',
-    colors: null,
+};
+
+// ── expansion worlds: full visual swaps, downloaded only after purchase ──
+export const WORLD_PACKS = {
+  world_ocean: {
+    name: 'Open Ocean', price: 2500, world: 'ocean', size: '2 MB',
+    desc: 'Swim the reef as a clownfish. Sharks, octopuses, and a whale with opinions.',
   },
+  world_jungle: {
+    name: 'Jungle Rush', price: 3000, world: 'jungle', size: '4 MB',
+    desc: 'Run the undergrowth as a bunny. Everything here is faster than you.',
+  },
+};
+
+// buyable hero fish once Open Ocean is owned
+export const OCEAN_HEROES = {
+  hero_clown: { name: 'Clownfish', price: 0, model: 'hero_clown', desc: 'The reef\'s bravest stripe.' },
+  hero_tang: { name: 'Yellow Tang', price: 1200, model: 'hero_tang', desc: 'A lemon with attitude.' },
+  hero_mandarin: { name: 'Mandarin', price: 1800, model: 'hero_mandarin', desc: 'Psychedelic royalty of the reef.' },
 };
 
 // glTF hero starfighters (poly.pizza community models, CC-BY — see assets/ATTRIBUTION.txt)
@@ -315,6 +331,14 @@ export function equipTheme(id) {
   if (S.owned.includes(id)) { S.equippedTheme = id; save(); return true; }
   return false;
 }
+export function equipWorld(world) {
+  if (world === 'space' ||
+      S.owned.includes(Object.keys(WORLD_PACKS).find(k => WORLD_PACKS[k].world === world))) {
+    S.equippedWorld = world; save(); return true;
+  }
+  return false;
+}
+export function currentWorld() { return S.equippedWorld || 'space'; }
 export function equipCosmetic(slot, id) {
   if (S.owned.includes(id)) { S.equipped[slot] = id; save(); return true; }
   return false;
