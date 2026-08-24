@@ -1,13 +1,13 @@
-// SLOUCH — app shell: screens, calibration, HUD wiring, store, leaderboards,
-// trophies, posture reports, daily challenge, duels, goals, reminders.
+// SLOUCH — app shell: screens, HUD wiring, store, ranks, missions, codex.
 
-import { initWorld, applyTheme } from './world.js';
+import { initWorld, applyTheme, loadHeroShip } from './world.js';
 import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head } from './head.js';
-import { startGame, stopGame, pauseGame, startIdle, stopIdle, game } from './game.js';
+import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon } from './game.js';
 import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx } from './audio.js';
-import { todaySeed, hashSeed } from './rng.js';
+import { todaySeed, hashSeed, mulberry32 } from './rng.js';
 import { shareCard, weeklyTrend } from './report.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
+import { MISSION_POOL, MUTATORS, LORE, levelFromXp } from './content.js';
 import * as ST from './state.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,32 +16,35 @@ const screens = [...document.querySelectorAll('.screen')];
 function show(...ids) {
   for (const s of screens) s.classList.toggle('active', ids.includes(s.id));
 }
+function icon(name, cls = 'ic') {
+  return `<svg class="${cls}"><use href="#${name}"/></svg>`;
+}
+const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 
 let pendingMode = 'techneck';
 let pendingOpts = {};
 let calibratedThisSession = false;
 let camPreviewRaf = 0;
-let duelIncoming = null; // {seed, score, tag} parsed from URL
+let duelIncoming = null;
 
 // ── boot ──
 async function boot() {
   initWorld();
   startIdle();
-  const streakInfo = ST.tickStreak(false);
+  ST.tickStreak(false);
   refreshMenu();
-  $('streak-count').textContent = streakInfo.count;
   parseDuelLink();
   registerSW();
 
   const fill = $('loader-fill'), msg = $('loader-msg');
   fill.style.width = '30%';
+  msg.textContent = 'warming up engines';
   try {
     await initHead((m) => { msg.textContent = m; fill.style.width = '65%'; });
     fill.style.width = '100%';
-    msg.textContent = 'ready';
   } catch (e) {
     console.error(e);
-    msg.textContent = 'face tracking unavailable — touch mode enabled';
+    msg.textContent = 'face tracking unavailable — touch mode on';
     enableTouchFallback();
   }
   setTimeout(() => {
@@ -50,44 +53,77 @@ async function boot() {
   }, 400);
 }
 
+// ── daily missions ──
+function missionsToday() {
+  const s = ST.state();
+  const today = ST.dayStamp();
+  if (s.missions.day !== today) {
+    const rand = mulberry32(todaySeed() ^ 0x9e37);
+    const pool = [...MISSION_POOL];
+    const ids = [];
+    for (let i = 0; i < 3; i++) ids.push(pool.splice(Math.floor(rand() * pool.length), 1)[0].id);
+    s.missions = { day: today, ids, done: {} };
+    ST.save();
+  }
+  return s.missions;
+}
+
+function renderMissions(el, runStats = null) {
+  const m = missionsToday();
+  el.innerHTML = m.ids.map(id => {
+    const def = MISSION_POOL.find(x => x.id === id);
+    const done = !!m.done[id];
+    const cur = runStats ? Math.min(def.target, runStats[def.stat] ?? 0) : null;
+    return `<div class="mission ${done ? 'done' : ''}"><span class="dot"></span>
+      <span>${def.desc}</span>
+      <span class="prog">${done ? '' : cur != null ? `${cur}/${def.target}` : ''}</span></div>`;
+  }).join('');
+}
+
+// ── menu ──
 function refreshMenu() {
   const s = ST.state();
   $('points-count').textContent = s.points;
   $('streak-count').textContent = s.streak.count;
-  $('menu-best').textContent = Math.max(s.best.techneck, s.best.casual);
-  const set = s.settings;
-  $('set-music').value = set.music;
-  $('set-sfx').value = set.sfx;
-  $('set-sens').value = set.sensitivity;
-  $('set-mirror').checked = set.mirror;
-  $('set-ghost').checked = set.ghost;
-  $('set-reminders').checked = set.reminders;
+  const bestAll = Math.max(s.best.techneck, s.best.casual);
+  $('menu-best').textContent = bestAll > 0 ? bestAll.toLocaleString() : '';
+  $('set-music').value = s.settings.music;
+  $('set-sfx').value = s.settings.sfx;
+  $('set-sens').value = s.settings.sensitivity;
+  $('set-mirror').checked = s.settings.mirror;
+  $('set-ghost').checked = s.settings.ghost;
+  $('set-reminders').checked = s.settings.reminders;
 
-  // event banner
+  const lv = levelFromXp(s.xp);
+  $('rank-chevrons').innerHTML = '<i></i>'.repeat(Math.min(5, 1 + Math.floor(lv.level / 5)));
+  $('rank-name').textContent = `${lv.rank} · LV ${lv.level}`;
+
   const ev = ST.activeEvent();
   const banner = $('event-banner');
   banner.classList.toggle('hidden', !ev);
-  if (ev) banner.textContent = `${ev.icon} ${ev.name} — ${ev.desc}`;
+  if (ev) banner.textContent = `${ev.name} — ${ev.desc}`;
 
-  // daily status
   const daily = ST.dailyToday();
-  $('daily-status').textContent = daily.best > 0 ? `· best ${daily.best.toLocaleString()}` : '';
+  const mut = MUTATORS[new Date().getDay()];
+  $('daily-label').textContent = mut.name;
+  $('daily-status').textContent = daily.best > 0 ? `best ${daily.best.toLocaleString()}` : mut.desc;
 
-  // goal rings
   const g = ST.goalsToday(), T = ST.GOAL_TARGETS;
   setRing('ring-move', 17, Math.min(1, g.moveSec / T.moveSec));
   setRing('ring-tuck', 12, Math.min(1, g.tucks / T.tucks));
   setRing('ring-stretch', 7, Math.min(1, g.stretches / T.stretches));
+
+  renderMissions($('menu-missions'));
 }
 
 function setRing(id, r, frac) {
   const c = 2 * Math.PI * r;
   const el = $(id);
   el.style.strokeDasharray = c;
-  el.style.strokeDashoffset = c * (1 - frac);
+  el.style.strokeDashoffset = c * (1 - Math.min(1, frac));
 }
 
-// ── duel links: ?duel=<seed>&s=<score>&by=<tag> ──
+// ── duel links ──
 function parseDuelLink() {
   const p = new URLSearchParams(location.search);
   if (p.has('duel')) {
@@ -116,8 +152,8 @@ async function requestPlay(mode, opts = {}) {
     try { await startCamera(); }
     catch (e) {
       $('camerr-msg').textContent = e.name === 'NotAllowedError'
-        ? 'Camera access was denied. Enable it in Settings → Safari → Camera, or play with touch.'
-        : 'Could not start the camera on this device. You can still play with touch.';
+        ? 'Camera denied. Enable in Settings › Safari › Camera — or fly with touch. Nothing is ever uploaded.'
+        : 'Camera unavailable on this device. You can still fly with touch.';
       show('screen-camerr');
       return;
     }
@@ -130,7 +166,7 @@ async function requestPlay(mode, opts = {}) {
 function openCalibration() {
   show('screen-calibrate');
   $('cal-count').textContent = '';
-  $('cal-msg').innerHTML = 'Sit tall. Stack your head over your shoulders.<br>Look straight at the screen.';
+  $('cal-msg').textContent = 'sit tall · look straight ahead';
   const canvas = $('cal-preview');
   cancelAnimationFrame(camPreviewRaf);
   (function draw() {
@@ -146,12 +182,12 @@ async function runCalibration() {
     count.textContent = n;
     await new Promise(r => setTimeout(r, 650));
   }
-  count.textContent = '●';
-  $('cal-msg').textContent = 'Hold still…';
+  count.textContent = '·';
+  $('cal-msg').textContent = 'hold still';
   const ok = await calibrate(1500);
   if (!ok) {
     count.textContent = '';
-    $('cal-msg').textContent = "Couldn't see your face — get centered in the frame and try again.";
+    $('cal-msg').textContent = 'no face found — center yourself, add light';
     sfx.denied();
     return;
   }
@@ -167,13 +203,11 @@ function launch() {
   stopIdle();
   show('hud');
   startMusic();
-  $('hud-slouch').classList.add('hidden');
-  $('hud-gate').classList.add('hidden');
-  $('hud-boss').classList.add('hidden');
+  for (const id of ['hud-slouch', 'hud-gate', 'hud-boss', 'boon-offer', 'hud-pace']) $(id).classList.add('hidden');
   $('hud-powerups').innerHTML = '';
   const duel = pendingMode === 'duel';
   $('hud-duel-target').classList.toggle('hidden', !duel);
-  if (duel) $('hud-duel-target').textContent = `⚔️ beat ${pendingOpts.duelTarget.toLocaleString()}`;
+  if (duel) $('hud-duel-target').textContent = `BEAT ${pendingOpts.duelTarget.toLocaleString()}`;
   startGame(pendingMode, hooks, pendingOpts);
 }
 
@@ -186,16 +220,24 @@ const hooks = {
   },
   onShield(energy, active) {
     $('hud-shield-fill').style.width = (energy * 100) + '%';
-    $('hud-shield-fill').style.background = active ? 'var(--gold)' : 'var(--accent)';
+    $('hud-shield-fill').style.background = active ? 'var(--ink)' : 'var(--acc)';
   },
   onFlow(flow) { $('hud-flow-fill').style.width = (flow * 100) + '%'; },
+  onPace(ghostScore, score) {
+    const el = $('hud-pace');
+    if (ghostScore == null) { el.classList.add('hidden'); return; }
+    const d = score - Math.round(ghostScore);
+    el.classList.remove('hidden');
+    el.classList.toggle('behind', d < 0);
+    el.textContent = (d >= 0 ? '+' : '') + d.toLocaleString() + ' GHOST';
+  },
   onPowerups(power) {
     const parts = [];
-    if (power.magnet > 0) parts.push(`🧲 ${Math.ceil(power.magnet)}`);
-    if (power.focus > 0) parts.push(`🕰 ${Math.ceil(power.focus)}`);
-    if (power.doubler > 0) parts.push(`×2 ${Math.ceil(power.doubler)}`);
-    const el = $('hud-powerups');
+    if (power.magnet > 0) parts.push(icon('i-magnet', 'ic tiny') + Math.ceil(power.magnet));
+    if (power.focus > 0) parts.push(icon('i-clock', 'ic tiny') + Math.ceil(power.focus));
+    if (power.doubler > 0) parts.push(icon('i-double', 'ic tiny') + Math.ceil(power.doubler));
     const html = parts.map(p => `<span class="pu">${p}</span>`).join('');
+    const el = $('hud-powerups');
     if (el.innerHTML !== html) el.innerHTML = html;
   },
   onBoss(label) {
@@ -213,6 +255,25 @@ const hooks = {
   onGateProgress(f) {
     if (f > 0) $('hud-gate').style.opacity = String(0.6 + f * 0.4);
   },
+  onBoonOffer(a, b) {
+    const el = $('boon-offer');
+    if (!a) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    for (const [side, boonDef] of [['boon-left', a], ['boon-right', b]]) {
+      const card = $(side);
+      card.querySelector('b').textContent = boonDef.name;
+      card.querySelector('span').textContent = boonDef.desc;
+      card.querySelector('i').style.setProperty('--p', '0');
+    }
+  },
+  onBoonLean(dir, frac) {
+    const l = $('boon-left'), r = $('boon-right');
+    l.classList.toggle('leaning', dir < 0);
+    r.classList.toggle('leaning', dir > 0);
+    l.querySelector('i').firstElementChild ?? null;
+    l.querySelector('i').style.cssText = dir < 0 ? `background:linear-gradient(90deg,var(--acc) ${frac * 100}%,rgba(92,106,138,.4) 0)` : '';
+    r.querySelector('i').style.cssText = dir > 0 ? `background:linear-gradient(90deg,var(--acc) ${frac * 100}%,rgba(92,106,138,.4) 0)` : '';
+  },
   onToast(text) {
     const el = $('hud-toast');
     el.textContent = text;
@@ -223,36 +284,69 @@ const hooks = {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.add('hidden'), 1300);
   },
-  onGameOver(score, report) {
+  onGameOver(score, report, extra) {
     stopMusic();
-    finishRun(score, report);
+    finishRun(score, report, extra || {});
   },
 };
 
+// touch fallback for boon choice
+addEventListener('touchstart', (e) => {
+  if (!$('boon-offer').classList.contains('hidden')) {
+    chooseBoon(e.touches[0].clientX < innerWidth / 2 ? 0 : 1);
+  }
+}, { passive: true });
+
 // ── game over ──
 let lastRun = { score: 0, mode: 'techneck', submitted: false, report: null };
-function finishRun(score, report) {
+function finishRun(score, report, extra) {
   const mode = game.mode;
   const s = ST.state();
   s.totals.runs++;
 
-  // stardust with event multiplier
   const ev = ST.activeEvent();
   const evMult = ev?.stardustMult ?? 1;
-  const earned = Math.round(score / 10) * evMult;
-  ST.addPoints(earned);
-  $('go-event-bonus').textContent = evMult > 1 ? `(${ev.icon} ×${evMult})` : '';
-
+  let earned = Math.round(score / 10) * evMult;
   ST.tickStreak(true);
   lastRun = { score, mode, submitted: false, report };
 
-  // daily goals fed by the posture report
   if (report && !report.touch) {
     ST.addGoalProgress({ moveSec: report.moveSec, tucks: report.tucks, stretches: report.gates });
   }
   if (report) ST.addReport(report);
 
-  // board bookkeeping per mode family
+  // missions
+  const m = missionsToday();
+  let missionBonus = 0;
+  const freshMissions = [];
+  for (const id of m.ids) {
+    if (m.done[id]) continue;
+    const def = MISSION_POOL.find(x => x.id === id);
+    if ((extra.runStats?.[def.stat] ?? 0) >= def.target) {
+      m.done[id] = true;
+      missionBonus += 150;
+      freshMissions.push(def);
+    }
+  }
+  earned += missionBonus;
+  ST.addPoints(earned);
+  $('go-event-bonus').textContent = (evMult > 1 ? `(×${evMult} event)` : '') +
+    (missionBonus ? ` +${missionBonus} missions` : '');
+
+  // XP + rank
+  const before = levelFromXp(s.xp);
+  const xpGain = Math.round(score / 100) + freshMissions.length * 50;
+  ST.addXp(xpGain);
+  const after = levelFromXp(s.xp);
+  $('go-xp').textContent = '+' + xpGain;
+  const ranked = after.level > before.level;
+  $('go-rankup').classList.toggle('hidden', !ranked);
+  if (ranked) {
+    $('go-rankup').textContent = `LEVEL ${after.level} · ${after.rank}`;
+    sfx.levelup();
+  }
+
+  // boards
   const boardMode = mode === 'casual' ? 'casual' : mode === 'techneck' ? 'techneck' : null;
   let isBest = false;
   if (boardMode) {
@@ -267,7 +361,36 @@ function finishRun(score, report) {
     d.list.sort((a, b) => b.score - a.score);
     d.list = d.list.slice(0, 10);
     ST.save();
+  } else if (mode === 'weekly') {
+    const w = ST.weeklyNow();
+    isBest = score > w.best;
+    if (isBest) w.best = score;
+    w.list.push({ tag: s.lastTag, score });
+    w.list.sort((a, b) => b.score - a.score);
+    w.list = w.list.slice(0, 10);
+    ST.save();
   }
+
+  // "so close" framing
+  const best = boardMode ? s.best[boardMode] : mode === 'daily' ? ST.dailyToday().best : ST.weeklyNow().best;
+  const closeEl = $('go-close');
+  if (!isBest && best > 0 && score > best * 0.35) {
+    closeEl.classList.remove('hidden');
+    const pct = Math.min(99, Math.round(score / best * 100));
+    $('go-close-text').textContent = `${pct}% OF YOUR BEST`;
+    requestAnimationFrame(() => { $('go-close-fill').style.width = pct + '%'; });
+  } else closeEl.classList.add('hidden');
+
+  // ghost pace at death
+  const paceEl = $('go-pace');
+  if (extra.pace != null && !isBest) {
+    const d = score - Math.round(extra.pace);
+    paceEl.classList.remove('hidden');
+    paceEl.style.color = d >= 0 ? 'var(--acc)' : 'var(--mut)';
+    paceEl.textContent = d >= 0
+      ? `${d.toLocaleString()} AHEAD OF YOUR GHOST AT THE END`
+      : `${Math.abs(d).toLocaleString()} BEHIND YOUR GHOST`;
+  } else paceEl.classList.add('hidden');
 
   // duel outcome
   const duelEl = $('go-duel-result');
@@ -275,22 +398,22 @@ function finishRun(score, report) {
   if (mode === 'duel') {
     const won = score > (game.duelTarget || 0);
     if (won) { s.totals.duelsWon++; ST.save(); }
-    duelEl.textContent = won ? '⚔️ DUEL WON!' : '⚔️ duel lost — rematch?';
+    duelEl.textContent = won ? 'DUEL WON' : 'DUEL LOST — REMATCH?';
     duelEl.className = won ? 'win' : 'lose';
     duelEl.classList.remove('hidden');
   }
 
-  // achievements
   const fresh = checkAchievements({ score, stretchScore: report?.stretchScore ?? 0 });
   $('go-unlocks').innerHTML = fresh.map(a =>
-    `<div class="unlock">🏆 ${a.icon} ${a.name}</div>`).join('');
+    `<div class="unlock">${icon('i-trophy', 'ic tiny')}${a.name}</div>`).join('');
   if (fresh.length) sfx.levelup();
+
+  renderMissions($('go-missions'), extra.runStats);
 
   $('go-score').textContent = score.toLocaleString();
   $('go-points').textContent = earned;
   $('go-best').classList.toggle('hidden', !isBest);
-  $('go-title').textContent = mode === 'daily' ? 'DAILY RUN COMPLETE'
-    : mode === 'duel' ? 'DUEL OVER' : 'SHIP DOWN';
+  $('go-title').textContent = { daily: 'DAILY RUN COMPLETE', duel: 'DUEL OVER', weekly: 'WEEKLY RUN LOGGED' }[mode] || 'SHIP DOWN';
 
   const qualifies = boardMode && ST.qualifiesForBoard(boardMode, score);
   $('go-name-entry').classList.toggle('hidden', !qualifies);
@@ -313,26 +436,26 @@ function submitPendingScore() {
   }
 }
 
-// ── posture report screen ──
+// ── posture report ──
 function renderReport() {
   const r = lastRun.report;
   if (!r) return;
-  setRingEl('report-ring', 52, (r.stretchScore || 0) / 100);
+  setRing('report-ring', 52, (r.stretchScore || 0) / 100);
   $('report-stretch').textContent = r.stretchScore ?? 0;
   const trend = weeklyTrend();
   $('report-trend').textContent = trend == null ? 'fly more runs to unlock weekly trends'
-    : trend >= 0 ? `▲ +${trend} vs last week — keep it up` : `▼ ${trend} vs last week`;
+    : trend >= 0 ? `+${trend} VS LAST WEEK` : `${trend} VS LAST WEEK`;
 
-  const rows = r.touch ? [['Touch mode — no posture data', '', 0]] : [
-    ['Rotation L', `${r.rom.yawL}°`, r.rom.yawL / 40],
-    ['Rotation R', `${r.rom.yawR}°`, r.rom.yawR / 40],
-    ['Chin up', `${r.rom.pitchU}°`, r.rom.pitchU / 30],
-    ['Chin down', `${r.rom.pitchD}°`, r.rom.pitchD / 30],
-    ['Side bend L', `${r.rom.rollL}°`, r.rom.rollL / 30],
-    ['Side bend R', `${r.rom.rollR}°`, r.rom.rollR / 30],
-    ['Time in neutral', `${r.neutralPct}%`, r.neutralPct / 100],
-    ['Active movement', `${r.moveSec}s`, Math.min(1, r.moveSec / 120)],
-    ['Hyperdrive time', `${r.hyperSec}s`, Math.min(1, r.hyperSec / 60)],
+  const rows = r.touch ? [['touch mode — no posture data', '', 0]] : [
+    ['ROTATION L', `${r.rom.yawL}°`, r.rom.yawL / 40],
+    ['ROTATION R', `${r.rom.yawR}°`, r.rom.yawR / 40],
+    ['CHIN UP', `${r.rom.pitchU}°`, r.rom.pitchU / 30],
+    ['CHIN DOWN', `${r.rom.pitchD}°`, r.rom.pitchD / 30],
+    ['SIDE BEND L', `${r.rom.rollL}°`, r.rom.rollL / 30],
+    ['SIDE BEND R', `${r.rom.rollR}°`, r.rom.rollR / 30],
+    ['IN NEUTRAL', `${r.neutralPct}%`, r.neutralPct / 100],
+    ['MOVING', `${r.moveSec}s`, Math.min(1, r.moveSec / 120)],
+    ['HYPERDRIVE', `${r.hyperSec}s`, Math.min(1, r.hyperSec / 60)],
   ];
   $('report-rows').innerHTML = rows.map(([k, v, f]) => `
     <div class="report-row"><span class="k">${k}</span>
@@ -341,29 +464,40 @@ function renderReport() {
 
   const g = ST.goalsToday(), T = ST.GOAL_TARGETS;
   const goal = (label, val, target) => `
-    <div class="g ${val >= target ? 'done' : ''}"><b>${Math.min(val, target)}/${target}</b>${label}</div>`;
+    <div class="g ${val >= target ? 'done' : ''}"><b>${Math.min(Math.round(val), target)}/${target}</b>${label}</div>`;
   $('report-goals').innerHTML =
-    goal('MOVE SEC', Math.round(g.moveSec), T.moveSec) +
-    goal('TUCKS', g.tucks, T.tucks) +
-    goal('STRETCHES', g.stretches, T.stretches);
-}
-function setRingEl(id, r, frac) {
-  const c = 2 * Math.PI * r;
-  const el = $(id);
-  el.style.strokeDasharray = c;
-  el.style.strokeDashoffset = c * (1 - Math.min(1, frac));
+    goal('MOVE', g.moveSec, T.moveSec) + goal('TUCKS', g.tucks, T.tucks) + goal('STRETCH', g.stretches, T.stretches);
 }
 
-// ── run history ──
+// ── flight log + ROM progress ──
 function renderHistory() {
   const h = ST.state().history;
+  // range-of-motion progress: newest 5 runs vs oldest 5 on record
+  const romEl = $('rom-progress');
+  const camRuns = h.filter(r => !r.touch);
+  if (camRuns.length >= 6) {
+    const newest = camRuns.slice(0, 5), oldest = camRuns.slice(-5);
+    const avg = (arr, k) => arr.reduce((a, r) => a + r.rom[k], 0) / arr.length;
+    const lines = [
+      ['ROTATION', ['yawL', 'yawR']], ['EXTENSION', ['pitchU']], ['SIDE BEND', ['rollL', 'rollR']],
+    ].map(([label, keys]) => {
+      const d = keys.reduce((a, k) => a + (avg(newest, k) - avg(oldest, k)), 0) / keys.length;
+      const cls = d >= 0 ? '' : 'down';
+      return `<div class="rom-line"><span class="mut">${label}</span>
+        <span class="delta ${cls}">${d >= 0 ? '+' : ''}${d.toFixed(1)}° since your first flights</span></div>`;
+    }).join('');
+    romEl.innerHTML = lines;
+  } else {
+    romEl.innerHTML = '<div class="rom-line"><span class="mut">RANGE-OF-MOTION TREND</span><span class="mut">needs 6+ camera runs</span></div>';
+  }
+
   $('history-list').innerHTML = h.length === 0
-    ? '<p class="dim">no flights logged yet</p>'
+    ? '<p class="mut small center">no flights logged</p>'
     : h.map(r => `<div class="hist-row">
         <span class="h-date">${r.date}</span>
-        <span class="h-mode">${{ techneck: '🧘', casual: '🎮', daily: '🗓', duel: '⚔️' }[r.mode] || '·'}</span>
+        <span class="h-mode">${{ techneck: 'NECK', casual: 'CASUAL', daily: 'DAILY', duel: 'DUEL', weekly: 'WEEK' }[r.mode] || ''}</span>
         <span class="h-score">${r.score.toLocaleString()}</span>
-        <span class="h-stretch">${r.touch ? '—' : r.stretchScore + '/100'}</span>
+        <span class="h-stretch">${r.touch ? '—' : r.stretchScore}</span>
       </div>`).join('');
 }
 
@@ -375,84 +509,97 @@ function renderStore() {
   wrap.innerHTML = '';
   const s = ST.state();
 
-  const addRow = (icon, name, desc, btn) => {
+  const addRow = (art, name, desc, btn, soon = false) => {
     const div = document.createElement('div');
-    div.className = 'store-item';
-    div.innerHTML = `<div class="icon">${icon}</div>
+    div.className = 'row' + (soon ? ' soon' : '');
+    div.innerHTML = `<div class="art">${art}</div>
       <div class="info"><div class="name">${name}</div><div class="desc">${desc}</div></div>`;
     div.appendChild(btn);
     wrap.appendChild(div);
-    return div;
   };
   const mkBtn = (label, cls, onclick, disabled = false) => {
     const b = document.createElement('button');
-    b.textContent = label;
-    if (cls) b.className = cls;
+    b.className = 'act' + (cls ? ' ' + cls : '');
+    b.innerHTML = label;
     b.disabled = disabled;
     if (onclick) b.onclick = onclick;
     return b;
   };
-  const cosmeticRow = (slot, id, item) => {
+  const price = (p) => `${icon('i-star', 'ic tiny')} ${p}`;
+
+  const cosmeticRow = (slot, id, item, art) => {
     const owned = s.owned.includes(id);
     const equipped = s.equipped[slot] === id;
+    const equipIt = () => {
+      ST.equipCosmetic(slot, id); applyTheme();
+      if (slot === 'skin') loadHeroShip();
+    };
     let btn;
-    if (equipped) btn = mkBtn('EQUIPPED', 'equipped');
-    else if (owned) btn = mkBtn('EQUIP', 'owned', () => {
-      ST.equipCosmetic(slot, id); applyTheme(); sfx.buy(); renderStore();
-    });
-    else btn = mkBtn(`✦ ${item.price}`, '', () => {
-      if (ST.buy(id, item.price)) { ST.equipCosmetic(slot, id); applyTheme(); sfx.buy(); }
-      else sfx.denied();
+    if (equipped) btn = mkBtn('ON', 'equipped');
+    else if (owned) btn = mkBtn('EQUIP', 'owned', () => { equipIt(); sfx.buy(); renderStore(); });
+    else btn = mkBtn(price(item.price), '', () => {
+      if (ST.buy(id, item.price)) { equipIt(); sfx.buy(); } else sfx.denied();
       renderStore(); refreshMenu();
     }, s.points < item.price);
-    addRow(item.icon, item.name, item.desc, btn);
+    addRow(art, item.name, item.desc, btn);
   };
 
   if (storeCat === 'themes') {
     for (const [id, t] of Object.entries(ST.THEMES)) {
+      const art = t.colors
+        ? `<span class="swatch duo" style="--c1:${hex(t.colors.accent)};--c2:${hex(t.colors.fog)}"></span>`
+        : icon('i-lock');
       const owned = s.owned.includes(id);
       const equipped = s.equippedTheme === id;
       let btn;
       if (t.soon) btn = mkBtn('SOON', '', null, true);
-      else if (equipped) btn = mkBtn('EQUIPPED', 'equipped');
+      else if (equipped) btn = mkBtn('ON', 'equipped');
       else if (owned) btn = mkBtn('EQUIP', 'owned', () => {
         ST.equipTheme(id); applyTheme(); sfx.buy(); renderStore();
       });
-      else btn = mkBtn(`✦ ${t.price}`, '', () => {
-        if (ST.buy(id, t.price)) { ST.equipTheme(id); applyTheme(); sfx.buy(); }
-        else sfx.denied();
+      else btn = mkBtn(price(t.price), '', () => {
+        if (ST.buy(id, t.price)) { ST.equipTheme(id); applyTheme(); sfx.buy(); } else sfx.denied();
         renderStore(); refreshMenu();
       }, s.points < t.price);
-      const row = addRow(t.icon, t.name, t.desc, btn);
-      if (t.soon) row.classList.add('soon');
+      addRow(art, t.name, t.desc, btn, !!t.soon);
     }
   } else if (storeCat === 'ship') {
-    for (const [id, item] of Object.entries(ST.SKINS)) cosmeticRow('skin', id, item);
-    for (const [id, item] of Object.entries(ST.TRAILS)) cosmeticRow('trail', id, item);
-    for (const [id, item] of Object.entries(ST.BOOMS)) cosmeticRow('boom', id, item);
+    for (const [id, item] of Object.entries(ST.SKINS)) {
+      cosmeticRow('skin', id, item, icon('i-ship'));
+    }
+    for (const [id, item] of Object.entries(ST.TRAILS)) {
+      const col = item.color === 'rainbow'
+        ? 'linear-gradient(90deg,#f55,#fd5,#5f8,#5df,#a5f)'
+        : item.color ? hex(item.color) : 'var(--acc)';
+      cosmeticRow('trail', id, item, `<span class="trailline" style="background:${col}"></span>`);
+    }
+    for (const [id, item] of Object.entries(ST.BOOMS)) {
+      cosmeticRow('boom', id, item, icon('i-boom'));
+    }
   } else if (storeCat === 'upgrades') {
+    const ICONS = { hyperdur: 'i-ship', hyperregen: 'i-clock', magnet: 'i-magnet' };
     for (const [id, u] of Object.entries(ST.UPGRADES)) {
       const lvl = s.upgrades[id];
       const maxed = lvl >= u.prices.length;
       const pips = `<span class="pips">${u.prices.map((_, i) =>
         `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</span>`;
       const btn = maxed ? mkBtn('MAX', 'owned', null, true)
-        : mkBtn(`✦ ${u.prices[lvl]}`, '', () => {
+        : mkBtn(price(u.prices[lvl]), '', () => {
           if (ST.buyUpgrade(id)) sfx.buy(); else sfx.denied();
           renderStore(); refreshMenu();
         }, s.points < u.prices[lvl]);
-      addRow(u.icon, u.name + pips, u.desc, btn);
+      addRow(icon(ICONS[id]), u.name + pips, u.desc, btn);
     }
   } else {
+    const ICONS = { freeze: 'i-freeze', revive: 'i-revive' };
     for (const item of ST.STORE_EXTRAS) {
-      const count = item.id === 'freeze' ? ` (owned: ${s.streak.freezes})`
-        : item.id === 'revive' ? ` (owned: ${s.revives})` : '';
+      const count = item.id === 'freeze' ? s.streak.freezes : s.revives;
       const capped = item.id === 'revive' && s.revives >= (item.max ?? 99);
-      const btn = mkBtn(capped ? 'FULL' : `✦ ${item.price}`, '', () => {
+      const btn = mkBtn(capped ? 'FULL' : price(item.price), '', () => {
         if (ST.buy(item.id, item.price)) sfx.buy(); else sfx.denied();
         renderStore(); refreshMenu();
       }, capped || s.points < item.price);
-      addRow(item.icon, item.name + count, item.desc, btn);
+      addRow(icon(ICONS[item.id]), `${item.name} · ${count}`, item.desc, btn);
     }
   }
 }
@@ -461,12 +608,16 @@ function renderStore() {
 let boardMode = 'techneck';
 function renderBoard() {
   const list = $('board-list');
-  const rows = boardMode === 'daily' ? (ST.dailyToday().list || []) : ST.state().boards[boardMode];
+  const rows = boardMode === 'daily' ? (ST.dailyToday().list || [])
+    : boardMode === 'weekly' ? ST.weeklyNow().list
+    : ST.state().boards[boardMode];
+  $('btn-play-weekly').classList.toggle('hidden', boardMode !== 'weekly');
   list.innerHTML = '';
   if (!rows.length) {
-    list.innerHTML = `<li class="empty">${boardMode === 'daily'
-      ? 'no daily runs yet — same belt for everyone, once per day'
-      : 'no flights logged yet — go fly'}</li>`;
+    list.innerHTML = `<li class="empty">${{
+      daily: 'same belt for every pilot · resets at midnight',
+      weekly: 'one fixed belt all week · leave your mark',
+    }[boardMode] || 'no flights logged'}</li>`;
     return;
   }
   rows.forEach((r, i) => {
@@ -480,12 +631,22 @@ function renderBoard() {
 // ── trophies ──
 function renderTrophies() {
   const un = ST.state().achievements;
-  $('trophy-count').textContent = `${Object.keys(un).length} / ${ACHIEVEMENTS.length}`;
+  $('trophy-count').textContent = `${Object.keys(un).length} OF ${ACHIEVEMENTS.length}`;
   $('trophy-list').innerHTML = ACHIEVEMENTS.map(a => `
     <div class="trophy ${un[a.id] ? 'unlocked' : ''}">
-      <div class="t-icon">${a.icon}</div>
+      ${icon('i-trophy')}
       <div><div class="t-name">${a.name}</div><div class="t-desc">${a.desc}</div></div>
     </div>`).join('');
+}
+
+// ── codex ──
+function renderLore() {
+  const n = ST.state().lore;
+  $('lore-count').textContent = `${n} OF ${LORE.length} SIGNALS RECOVERED`;
+  $('lore-list').innerHTML = LORE.map((e, i) => i < n
+    ? `<div class="entry"><b>${e.t}</b><p>${e.p}</p></div>`
+    : `<div class="entry locked"><b>SIGNAL ${String(i + 1).padStart(3, '0')} — NOT YET RECOVERED</b></div>`
+  ).join('');
 }
 
 // ── duels (outgoing) ──
@@ -497,14 +658,14 @@ async function sendDuel() {
   if (lastRun.report) {
     await shareCard({ ...lastRun.report, score: lastRun.score }, { duel: true, url, tag });
   } else if (navigator.share) {
-    try { await navigator.share({ text: `⚔️ Beat my ${lastRun.score} in SLOUCH: ${url}` }); } catch { }
+    try { await navigator.share({ text: `Beat my ${lastRun.score} in SLOUCH: ${url}` }); } catch { }
   } else {
     await navigator.clipboard?.writeText(url).catch(() => { });
     hooks.onToast?.('duel link copied');
   }
 }
 
-// ── reminders (best effort on web; real push arrives with the native build) ──
+// ── reminders ──
 let reminderTimer = 0;
 async function toggleReminders(on) {
   ST.state().settings.reminders = on;
@@ -520,10 +681,10 @@ function scheduleReminder() {
   reminderTimer = setTimeout(async () => {
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
-      const opts = { body: 'Your neck has been at phone-angle for a while. Fly a run? 🚀', icon: 'icons/icon-180.png' };
-      if (reg?.showNotification) reg.showNotification('SLOUCH — posture check', opts);
-      else new Notification('SLOUCH — posture check', opts);
-    } catch { /* notification blocked */ }
+      const opts = { body: 'Neck check. Fly a run?', icon: 'icons/icon-180.png' };
+      if (reg?.showNotification) reg.showNotification('SLOUCH', opts);
+      else new Notification('SLOUCH', opts);
+    } catch { }
   }, 4 * 3600 * 1000);
 }
 
@@ -533,10 +694,11 @@ function registerSW() {
   }
 }
 
-// ── event wiring ──
+// ── wiring ──
 $('btn-play-techneck').onclick = () => requestPlay('techneck');
 $('btn-play-casual').onclick = () => requestPlay('casual');
 $('btn-daily').onclick = () => requestPlay('daily', { seed: todaySeed() });
+$('btn-play-weekly').onclick = () => requestPlay('weekly', { seed: hashSeed(ST.isoWeek()) });
 $('btn-duel-accept').onclick = () => {
   const d = duelIncoming;
   duelIncoming = null;
@@ -604,7 +766,7 @@ $('btn-settings').onclick = () => { sfx.ui(); show('screen-settings'); };
 $('btn-settings-back').onclick = () => { sfx.ui(); refreshMenu(); show('screen-menu'); };
 $('btn-history').onclick = () => { sfx.ui(); renderHistory(); show('screen-history'); };
 $('btn-history-back').onclick = () => { sfx.ui(); show('screen-settings'); };
-$('btn-lore').onclick = () => { sfx.ui(); show('screen-lore'); };
+$('btn-lore').onclick = () => { sfx.ui(); renderLore(); show('screen-lore'); };
 $('btn-lore-back').onclick = () => { sfx.ui(); show('screen-settings'); };
 $('btn-recalibrate').onclick = async () => {
   sfx.ui();
@@ -614,7 +776,7 @@ $('btn-recalibrate').onclick = async () => {
 };
 $('btn-reset').onclick = () => {
   if (confirm('Wipe all scores, streaks, purchases and settings?')) {
-    ST.resetAll(); applyVolumes(); applyTheme(); refreshMenu(); sfx.denied();
+    ST.resetAll(); applyVolumes(); applyTheme(); loadHeroShip(); refreshMenu(); sfx.denied();
   }
 };
 

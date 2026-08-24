@@ -7,9 +7,9 @@ const DEFAULTS = {
   points: 0,
   settings: { music: 60, sfx: 80, sensitivity: 100, mirror: true, ghost: true, reminders: false },
   streak: { count: 0, lastDay: null, freezes: 0 },
-  owned: ['theme_space', 'skin_silver', 'trail_theme', 'boom_ember'],
+  owned: ['theme_space', 'skin_talon', 'trail_theme', 'boom_ember'],
   equippedTheme: 'theme_space',
-  equipped: { skin: 'skin_silver', trail: 'trail_theme', boom: 'boom_ember' },
+  equipped: { skin: 'skin_talon', trail: 'trail_theme', boom: 'boom_ember' },
   upgrades: { hyperdur: 0, hyperregen: 0, magnet: 0 },   // levels 0..3
   revives: 0,                                            // consumable stock
   boards: { techneck: [], casual: [] },                  // [{tag, score, date}]
@@ -19,6 +19,10 @@ const DEFAULTS = {
   totals: { runs: 0, smashes: 0, gates: 0, bossKills: 0, duelsWon: 0, hyperSec: 0 },
   achievements: {},                                      // id -> dateStamp
   history: [],                                           // last 30 run reports
+  xp: 0,
+  lore: 0,                                               // unlocked lore shards
+  missions: { day: null, ids: [], done: {} },
+  weekly: { week: null, best: 0, list: [] },
   adaptive: { yawL: 25, yawR: 25, pitchU: 20, pitchD: 20, rollL: 20, rollR: 20 }, // EMA of per-run max ROM (deg)
   ghosts: {},                                            // mode -> {score, dt, path:[x,y,...] }
   calibrated: false,
@@ -29,32 +33,37 @@ export const THEMES = {
   theme_space: {
     name: 'Deep Space', icon: '🚀', price: 0,
     desc: 'The original run. Cyan ion trails through the Cervical Belt.',
+    sky: 'space', planet: 'saturn', ring: true, planetTint: 0xffffff, sun: 0xfff4e0,
     colors: { ship: 0x9fd8ff, engine: 0x4df3ff, accent: 0x4df3ff, fog: 0x05060f,
-      nebula1: 0x2a3fa0, nebula2: 0x7a2fa0, rock: 0x8a8fa0, rockEmissive: 0x1a2040 },
+      rock: 0x9a938c, rockEmissive: 0x1a2040 },
   },
   theme_crimson: {
     name: 'Crimson Nebula', icon: '🩸', price: 2000,
     desc: 'A dying star bleeds across the belt. Rocks glow ember-red.',
+    sky: 'crimson', planet: 'mars', ring: false, planetTint: 0xffc0a0, sun: 0xffc09a,
     colors: { ship: 0xffd0c0, engine: 0xff5a3c, accent: 0xff7a5c, fog: 0x0f0508,
-      nebula1: 0xa02a2f, nebula2: 0xa06a2f, rock: 0x7a5a55, rockEmissive: 0x401a10 },
+      rock: 0x8a6a5c, rockEmissive: 0x401a10 },
   },
   theme_emerald: {
     name: 'Emerald Void', icon: '☄️', price: 2000,
     desc: 'Toxic auroras. Everything alive here wants you dead.',
+    sky: 'emerald', planet: 'jupiter', ring: false, planetTint: 0xa0ffb8, sun: 0xd0ffda,
     colors: { ship: 0xd0ffd8, engine: 0x3cff8a, accent: 0x5cffa0, fog: 0x030f08,
-      nebula1: 0x1a7a4f, nebula2: 0x2a9a2f, rock: 0x5a7a60, rockEmissive: 0x0f3018 },
+      rock: 0x6a8a70, rockEmissive: 0x0f3018 },
   },
   theme_neon: {
     name: 'Neon City', icon: '🌆', price: 3500,
     desc: 'Night courier run over an endless megacity. Hot pink everything.',
+    sky: 'neon', planet: 'moon', ring: false, planetTint: 0xffb0e8, sun: 0xff9ae0,
     colors: { ship: 0xffc0f0, engine: 0xff3cd2, accent: 0xff5ce0, fog: 0x0d0314,
-      nebula1: 0xa02a8f, nebula2: 0x2a4fa0, rock: 0x6a5a80, rockEmissive: 0x38104a },
+      rock: 0x7a6a90, rockEmissive: 0x38104a },
   },
   theme_ocean: {
     name: 'Ocean Dive', icon: '🌊', price: 3500,
     desc: 'The belt drowned. Dodge through bioluminescent deep-sea wreckage.',
+    sky: 'ocean', planet: 'neptune', ring: false, planetTint: 0xc0e8ff, sun: 0xaad4ff,
     colors: { ship: 0xc0f0ff, engine: 0x2ca0ff, accent: 0x40c8ff, fog: 0x02121f,
-      nebula1: 0x0a4f8a, nebula2: 0x0a8a7a, rock: 0x4a6a7a, rockEmissive: 0x0a2a40 },
+      rock: 0x5a7a8a, rockEmissive: 0x0a2a40 },
   },
   theme_jungle: {
     name: 'Jungle Rush 🐇', icon: '🌴', price: 0, soon: true,
@@ -63,11 +72,16 @@ export const THEMES = {
   },
 };
 
+// Real glTF hero ships (Quaternius Ultimate Space Kit, CC0)
 export const SKINS = {
-  skin_silver: { name: 'Silver Fang', icon: '🛸', price: 0, desc: 'Factory hull. Reliable. Unkillable-ish.', color: null },
-  skin_void: { name: 'Void Black', icon: '🖤', price: 1200, desc: 'Stealth composite. The belt barely sees you coming.', color: 0x22242e },
-  skin_gold: { name: 'Gold Rush', icon: '🏆', price: 2500, desc: 'For pilots who want the leaderboard to see them first.', color: 0xffd54d },
-  skin_rose: { name: 'Rose Titanium', icon: '🌹', price: 1800, desc: 'Aerospace-grade. Suspiciously fashionable.', color: 0xffa0b8 },
+  skin_talon: { name: 'Talon', icon: '🛸', price: 0, model: 'talon',
+    desc: 'Swept-wing interceptor. The factory hull of the S.S. Posture.' },
+  skin_striker: { name: 'Striker', icon: '🚀', price: 1500, model: 'striker',
+    desc: 'Slim raked dart. Cuts the belt like a scalpel.' },
+  skin_raider: { name: 'Raider', icon: '🛰', price: 2200, model: 'raider',
+    desc: 'Twin-prong gunship. Ugly, mean, magnificent.' },
+  skin_bumble: { name: 'Bumble', icon: '🐝', price: 2800, model: 'bumble',
+    desc: 'Round little brawler with a glass chin. Fan favorite.' },
 };
 
 export const TRAILS = {
@@ -127,7 +141,7 @@ function load() {
       const s = JSON.parse(raw);
       const d = structuredClone(DEFAULTS);
       const merged = { ...d, ...s };
-      for (const k of ['settings', 'streak', 'best', 'daily', 'goals', 'totals', 'adaptive', 'upgrades', 'equipped']) {
+      for (const k of ['settings', 'streak', 'best', 'daily', 'goals', 'totals', 'adaptive', 'upgrades', 'equipped', 'missions', 'weekly']) {
         merged[k] = { ...d[k], ...(s[k] || {}) };
       }
       merged.boards = { ...structuredClone(d.boards), ...(s.boards || {}) };
@@ -135,6 +149,8 @@ function load() {
       merged.achievements = s.achievements || {};
       merged.history = s.history || [];
       for (const item of d.owned) if (!merged.owned.includes(item)) merged.owned.push(item);
+      // migrate saves from the pre-glTF skin era
+      if (!SKINS[merged.equipped.skin]) merged.equipped.skin = 'skin_talon';
       return merged;
     }
   } catch (e) { /* corrupted save — start fresh */ }
@@ -205,6 +221,26 @@ export function addGoalProgress({ moveSec = 0, tucks = 0, stretches = 0 }) {
   }
   save();
   return justCompleted;
+}
+
+// ── XP ──
+export function addXp(n) { S.xp += Math.round(n); save(); }
+
+// ── weekly tournament (ISO week key) ──
+export function isoWeek(d = new Date()) {
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = x.getUTCDay() || 7;
+  x.setUTCDate(x.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return `${x.getUTCFullYear()}-W${Math.ceil(((x - y0) / 864e5 + 1) / 7)}`;
+}
+export function weeklyNow() {
+  const wk = isoWeek();
+  if (S.weekly.week !== wk) {
+    S.weekly = { week: wk, best: 0, list: [] };
+    save();
+  }
+  return S.weekly;
 }
 
 // ── daily challenge ──
@@ -282,7 +318,7 @@ export function equipCosmetic(slot, id) {
 export function themeColors() { return THEMES[S.equippedTheme]?.colors ?? THEMES.theme_space.colors; }
 export function cosmetics() {
   return {
-    skin: SKINS[S.equipped.skin] ?? SKINS.skin_silver,
+    skin: SKINS[S.equipped.skin] ?? SKINS.skin_talon,
     trail: TRAILS[S.equipped.trail] ?? TRAILS.trail_theme,
     boom: BOOMS[S.equipped.boom] ?? BOOMS.boom_ember,
   };

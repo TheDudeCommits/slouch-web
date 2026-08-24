@@ -1,21 +1,25 @@
 // SLOUCH — core game loop: control mapping, sectors, power-ups, boss fights,
-// flow combo, ghost replay, posture reporting, collisions, scoring.
+// flow/graze trains, slow-mo, boons, mutators, missions, ghost racing.
 
-import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, POWERUP_TYPES } from './world.js';
+import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, POWERUP_TYPES } from './world.js';
 import { head, updateHead } from './head.js';
 import { state, activeEvent } from './state.js';
 import { sfx, setMusicIntensity } from './audio.js';
 import { mulberry32 } from './rng.js';
+import { BOONS, MUTATORS, LORE } from './content.js';
 import { beginReport, reportTick, noteTuck, noteGate, buildReport } from './report.js';
-import { beginGhost, ghostTick, ghostPos, endGhost } from './ghost.js';
+import { beginGhost, ghostTick, ghostPos, ghostPace, endGhost } from './ghost.js';
 
 export const game = {
   running: false, paused: false, over: false,
-  mode: 'techneck',          // techneck | casual | daily | duel
+  mode: 'techneck',          // techneck | casual | daily | duel | weekly
   seed: null, duelTarget: 0,
   score: 0, mult: 1, flow: 0, dist: 0, time: 0,
   speed: 60,
   sector: 'belt',
+  mutator: null,             // active daily mutator object
+  boons: {},                 // id -> true for this run
+  runStats: null,            // mission counters
   hooks: {},
 };
 
@@ -25,22 +29,29 @@ const slouch = { t: 0, active: false };
 const gate = { obj: null, pose: null, dwell: 0, announced: false };
 const boss = { phase: 'idle', t: 0, wallsLeft: 0, wallT: 0, count: 0 };
 const power = { magnet: 0, focus: 0, doubler: 0 };
+const graze = { combo: 0, t: 0 };
+const boon = { offer: null, chooseT: 0, cooldown: 0 };
 let R = Math.random;
 
-let spawnT = 0, enemyT = 0, crystalT = 0, gateT = 0, biasT = 0, powerT = 0, wallT = 0, sectorT = 0;
+let spawnT = 0, enemyT = 0, crystalT = 0, gateT = 0, biasT = 0, powerT = 0, wallT = 0, sectorT = 0, shardT = 0;
 let bias = { x: 0, y: 0 };
 let lastFrame = 0;
 let deathT = -1;
 let invulnT = 0;
+let slowmoT = 0;     // near-miss time dilation
+let hitStop = 0;     // impact freeze
+let burnSmash = 0;   // rocks smashed in current hyper burn
+let freeRevives = 0; // from GUARDIAN boon
 let usedRevive = false;
 let raf = 0;
 
 const SECTORS = ['belt', 'debris', 'lasers', 'wormhole'];
 const SECTOR_NAMES = {
-  belt: null, debris: '⚠ DEBRIS FIELD', lasers: '⚠ LASER FENCE GRID', wormhole: '🌀 WORMHOLE — RIDE IT',
+  belt: null, debris: 'DEBRIS FIELD', lasers: 'LASER FENCE GRID', wormhole: 'WORMHOLE',
 };
 
 function techStyle() { return game.mode !== 'casual'; }
+function vib(p) { if (navigator.vibrate) navigator.vibrate(p); }
 
 export function startGame(mode, hooks, opts = {}) {
   game.mode = mode;
@@ -51,15 +62,22 @@ export function startGame(mode, hooks, opts = {}) {
   game.running = true; game.paused = false; game.over = false;
   game.score = 0; game.mult = 1; game.flow = 0; game.dist = 0; game.time = 0; game.speed = 60;
   game.sector = 'belt';
+  game.boons = {};
+  game.mutator = mode === 'daily' ? MUTATORS[new Date().getDay()] : null;
+  game.runStats = { burnSmash: 0, threads: 0, gates: 0, bestTrain: 0, crystals: 0,
+    tucks: 0, bossKills: 0, score: 0, hyperSec: 0, powerups: 0 };
   ship.x = 0; ship.y = 0; ship.vx = 0; ship.vy = 0;
   shield.active = false; shield.energy = 1; shield.cooldown = 0;
   slouch.t = 0; slouch.active = false;
   gate.obj = null; gate.pose = null; gate.dwell = 0;
   boss.phase = 'idle'; boss.t = 120; boss.count = 0;
   power.magnet = 0; power.focus = 0; power.doubler = 0;
+  graze.combo = 0; graze.t = 0;
+  boon.offer = null; boon.chooseT = 0; boon.cooldown = 0;
   spawnT = 0.5; enemyT = 20; crystalT = 4; gateT = 12; biasT = 0; powerT = 14; wallT = 0;
-  sectorT = 26;
-  deathT = -1; invulnT = 0; usedRevive = false;
+  sectorT = 26; shardT = 40;
+  deathT = -1; invulnT = 0; slowmoT = 0; hitStop = 0; burnSmash = 0;
+  freeRevives = 0; usedRevive = false;
   for (const pool of [world.asteroids, world.enemies, world.gates, world.crystals, world.powerups, world.walls]) {
     for (const o of pool) { o.userData.active = false; o.visible = false; }
   }
@@ -68,6 +86,7 @@ export function startGame(mode, hooks, opts = {}) {
   document.body.classList.remove('focus-active');
   beginReport(mode);
   beginGhost(mode);
+  if (game.mutator) hooks.onToast?.(game.mutator.name);
   lastFrame = performance.now();
   cancelAnimationFrame(raf);
   loop(lastFrame);
@@ -92,12 +111,12 @@ function readControls(dt) {
   if (!head.hasFace) return;
 
   const s = state().settings;
-  const sens = s.sensitivity / 100;
+  let sens = s.sensitivity / 100;
+  if (game.mutator?.id === 'flux') sens *= 1.4;
   const mir = s.mirror ? 1 : -1;
   let tx = 0, ty = 0;
 
-  // Sign convention: rYaw>0 = head turned LEFT, rPitch>0 = head DOWN,
-  // rRoll>0 = head tilted RIGHT. Ship mirrors the player.
+  // Sign convention: rYaw>0 = head LEFT, rPitch>0 = head DOWN, rRoll>0 = tilt RIGHT.
   if (game.mode === 'casual') {
     tx = clampMap(-head.rYaw * mir, 1.2, 13 / sens);
     ty = clampMap(-head.rPitch, 1.2, 11 / sens);
@@ -123,13 +142,34 @@ function clampMap(v, dead, full) {
   return Math.sign(v) * Math.min(1, (a - dead) / (full - dead));
 }
 
-// ── flow / combo: builds on skill events, decays with time ──
+// ── flow / graze trains ──
 function addFlow(n) { game.flow = Math.min(1, game.flow + n); }
+
+function onGraze() {
+  graze.combo++;
+  graze.t = 2;
+  game.runStats.bestTrain = Math.max(game.runStats.bestTrain, graze.combo);
+  addFlow(0.1 + graze.combo * 0.02);
+  slowmoT = Math.max(slowmoT, 0.3);
+  kickCamera(0.18);
+  sfx.nearMiss(graze.combo);
+  vib(10);
+  if (graze.combo >= 2) game.hooks.onToast?.(`GRAZE ×${graze.combo}`);
+}
+
 function updateFlow(dt) {
-  game.flow = Math.max(0, game.flow - dt * 0.035);
+  if (graze.t > 0) {
+    graze.t -= dt;
+    if (graze.t <= 0) {
+      if (graze.combo >= 5) game.hooks.onToast?.('TRAIN LOST');
+      graze.combo = 0;
+    }
+  }
+  const decay = game.boons.flowstate ? 0.017 : 0.035;
+  game.flow = Math.max(0, game.flow - dt * decay);
   game.mult = 1 + game.flow * 5;
   if (slouch.active) game.mult = Math.max(1, game.mult * 0.5);
-  setMusicIntensity(game.flow);
+  setMusicIntensity(bossActive() ? 0.9 : game.flow);
   game.hooks.onFlow?.(game.flow);
 }
 
@@ -138,15 +178,20 @@ function updateHyper(dt) {
   const up = state().upgrades;
   const zBack = -head.rZ;
   const tucking = zBack > 2.8 && Math.abs(head.rPitch) < 14;
-  const drain = 4.5 + up.hyperdur * 1.5;      // seconds of burn
-  const regen = 6 - up.hyperregen * 1.2;      // seconds to refill
+  let drain = 4.5 + up.hyperdur * 1.5;
+  if (game.boons.overdrive) drain *= 1.4;
+  const regen = 6 - up.hyperregen * 1.2;
   if (tucking && shield.cooldown <= 0 && shield.energy > 0.05) {
     if (!shield.active) {
       shield.active = true; sfx.shieldUp(); noteTuck();
-      game.hooks.onToast?.('⚡ HYPERDRIVE ⚡');
+      burnSmash = 0;
+      game.runStats.tucks++;
+      game.hooks.onToast?.('HYPERDRIVE');
+      vib([15, 30, 15]);
     }
     shield.energy = Math.max(0, shield.energy - dt / drain);
     state().totals.hyperSec += dt;
+    game.runStats.hyperSec += dt;
     if (shield.energy <= 0.01) { shield.active = false; shield.cooldown = 4; sfx.shieldDown(); }
   } else if (shield.active) {
     shield.active = false;
@@ -159,7 +204,7 @@ function updateHyper(dt) {
   game.hooks.onShield?.(shield.energy, shield.active);
 }
 
-// ── slouch watchdog (tech-neck-style modes) ──
+// ── slouch watchdog ──
 function updateSlouch(dt) {
   const slouching = head.rZ > 4.2;
   slouch.t = slouching ? slouch.t + dt : Math.max(0, slouch.t - dt * 2);
@@ -169,14 +214,14 @@ function updateSlouch(dt) {
   game.hooks.onSlouch?.(slouch.active);
 }
 
-// ── stretch gates: thresholds adapt to your measured range of motion ──
+// ── stretch gates: thresholds adapt to measured range of motion ──
 function gatePoses() {
   const a = state().adaptive;
   const th = v => clamp(v * 0.7, 12, 28);
   return [
-    { id: 'left', label: 'LOOK LEFT ⟲ & HOLD', test: () => head.rYaw > th(a.yawL) },
-    { id: 'right', label: 'LOOK RIGHT ⟳ & HOLD', test: () => head.rYaw < -th(a.yawR) },
-    { id: 'up', label: 'CHIN UP ↑ & HOLD', test: () => head.rPitch < -th(a.pitchU) },
+    { id: 'left', label: 'LOOK LEFT · HOLD', test: () => head.rYaw > th(a.yawL) },
+    { id: 'right', label: 'LOOK RIGHT · HOLD', test: () => head.rYaw < -th(a.yawR) },
+    { id: 'up', label: 'CHIN UP · HOLD', test: () => head.rPitch < -th(a.pitchU) },
   ];
 }
 
@@ -209,15 +254,18 @@ function updateGate(dt) {
     g.userData.passed = true;
     game.hooks.onGate?.(null);
     if (gate.dwell >= 1.2) {
-      const pts = Math.round(500 * game.mult);
+      const base = game.boons.gatecrash ? 1000 : 500;
+      const pts = Math.round(base * game.mult);
       game.score += pts;
       addFlow(0.22);
       noteGate();
       state().totals.gates++;
+      game.runStats.gates++;
       sfx.gate();
+      vib([20, 40, 20]);
       game.hooks.onToast?.(`STRETCH GATE +${pts}`);
     } else {
-      game.hooks.onToast?.('gate missed…');
+      game.hooks.onToast?.('gate missed');
     }
   }
   if (g.position.z > world.killZ) { g.userData.active = false; g.visible = false; gate.obj = null; }
@@ -225,23 +273,67 @@ function updateGate(dt) {
 
 // ── sectors ──
 function nextSector() {
+  const leaving = game.sector;
   const pool = SECTORS.filter(s => s !== game.sector);
   game.sector = pool[Math.floor(R() * pool.length)];
+  if (game.mutator?.id === 'wall' && game.sector === 'belt') game.sector = 'lasers';
   sectorT = game.sector === 'wormhole' ? 12 : 24 + R() * 10;
   const label = SECTOR_NAMES[game.sector];
   if (label) game.hooks.onToast?.(label);
   if (game.sector === 'lasers') wallT = 2;
+  // wormhole exit gift: offer a boon
+  if (leaving === 'wormhole' && boon.cooldown <= 0) offerBoon();
+}
+
+// ── boons: tilt (or tap) to choose; world runs at 25% while deciding ──
+function offerBoon() {
+  const pool = BOONS.filter(b => !game.boons[b.id]);
+  if (pool.length < 2) return;
+  const a = pool.splice(Math.floor(R() * pool.length), 1)[0];
+  const b = pool.splice(Math.floor(R() * pool.length), 1)[0];
+  boon.offer = [a, b];
+  boon.chooseT = 0;
+  game.hooks.onBoonOffer?.(a, b);
+}
+
+function updateBoon(dt) {
+  boon.cooldown = Math.max(0, boon.cooldown - dt);
+  if (!boon.offer) return;
+  // roll left/right (or touch x in fallback) picks a side
+  const dir = head.usingTouch ? Math.sign(head.touchX || 0) : Math.sign(clampMap(head.rRoll, 8, 20));
+  if (dir !== 0) {
+    boon.chooseT += dt;
+    game.hooks.onBoonLean?.(dir, Math.min(1, boon.chooseT / 0.9));
+    if (boon.chooseT >= 0.9) chooseBoon(dir < 0 ? 0 : 1);
+  } else {
+    boon.chooseT = Math.max(0, boon.chooseT - dt * 2);
+    game.hooks.onBoonLean?.(0, 0);
+  }
+}
+
+export function chooseBoon(index) {
+  if (!boon.offer) return;
+  const chosen = boon.offer[index];
+  game.boons[chosen.id] = true;
+  if (chosen.id === 'guardian') freeRevives++;
+  boon.offer = null;
+  boon.cooldown = 8;
+  sfx.powerup();
+  vib([20, 30, 20]);
+  game.hooks.onBoonOffer?.(null);
+  game.hooks.onToast?.(chosen.name);
 }
 
 // ── boss ──
 function updateBoss(dt) {
   boss.t -= dt;
-  if (boss.phase === 'idle' && boss.t <= 0 && game.sector !== 'wormhole') {
+  if (boss.phase === 'idle' && boss.t <= 0 && game.sector !== 'wormhole' && !boon.offer) {
     boss.phase = 'warn';
     boss.wallsLeft = 4 + Math.min(3, boss.count);
     boss.wallT = 3;
     sfx.bossWarn();
-    game.hooks.onBoss?.('⚠ DREADNOUGHT INBOUND ⚠');
+    vib([80, 60, 80]);
+    game.hooks.onBoss?.('DREADNOUGHT INBOUND');
     world.boss.visible = true;
     world.boss.position.set(0, 2, -190);
     return;
@@ -251,7 +343,7 @@ function updateBoss(dt) {
     if (boss.wallT <= 0) { boss.phase = 'fight'; boss.wallT = 0.5; }
   }
   if (boss.phase === 'fight') {
-    game.hooks.onBoss?.(`DREADNOUGHT — ${boss.wallsLeft} WALLS`);
+    game.hooks.onBoss?.(`DREADNOUGHT · ${boss.wallsLeft}`);
     boss.wallT -= dt;
     if (boss.wallT <= 0 && boss.wallsLeft > 0) {
       spawnWall(true);
@@ -264,6 +356,7 @@ function updateBoss(dt) {
       boss.count++;
       boss.t = 100;
       state().totals.bossKills++;
+      game.runStats.bossKills++;
       const pts = Math.round(2000 * game.mult);
       game.score += pts;
       addFlow(0.5);
@@ -284,6 +377,7 @@ function spawnWall(fromBoss) {
   const gapAxis = R() < 0.55 ? 'x' : 'y';
   const gapCenter = gapAxis === 'x' ? (R() * 2 - 1) * 10 : (R() * 2 - 1) * 5.5;
   armWall(w, gapAxis, gapCenter);
+  if (game.mutator?.id === 'thicket') w.userData.gapHalf = 2.4;
   w.userData.active = true;
   w.userData.fromBoss = !!fromBoss;
   w.position.set(0, 0, fromBoss ? -180 : world.spawnZ);
@@ -304,6 +398,8 @@ function updateWalls(dt) {
           const pts = Math.round(300 * game.mult);
           game.score += pts;
           state().totals.smashes++;
+          hitStop = 0.06;
+          kickCamera(0.4);
           sfx.crash();
           game.hooks.onToast?.(`WALL BREACH +${pts}`);
         } else if (invulnT <= 0) {
@@ -311,10 +407,11 @@ function updateWalls(dt) {
         }
       } else if (!w.userData.scored) {
         w.userData.scored = true;
+        game.runStats.threads++;
         const pts = Math.round(150 * game.mult);
         game.score += pts;
         addFlow(0.15);
-        sfx.nearMiss();
+        onGraze();
         game.hooks.onToast?.(`THREADED +${pts}`);
       }
     }
@@ -322,13 +419,15 @@ function updateWalls(dt) {
   }
 }
 
-// ── power-ups ──
-function spawnPowerup() {
+// ── power-ups & lore shards ──
+function spawnPowerup(forceType) {
   const p = world.powerups.find(o => !o.userData.active);
   if (!p) return;
   const types = Object.keys(POWERUP_TYPES);
-  const type = types[Math.floor(R() * types.length)];
-  const def = POWERUP_TYPES[type];
+  const type = forceType || types[Math.floor(R() * types.length)];
+  const def = type === 'shard'
+    ? { color: 0xffffff }
+    : POWERUP_TYPES[type];
   p.userData.active = true;
   p.userData.type = type;
   p.userData.mat.color.setHex(def.color);
@@ -339,10 +438,25 @@ function spawnPowerup() {
 
 function activatePowerup(type) {
   const up = state().upgrades;
+  if (type === 'shard') {
+    const s = state();
+    if (s.lore < LORE.length) {
+      s.lore++;
+      const entry = LORE[s.lore - 1];
+      game.score += 300;
+      game.hooks.onToast?.(`DATA SHARD · ${entry.t}`);
+    }
+    sfx.gate();
+    vib([30, 50, 30]);
+    game.runStats.powerups++;
+    return;
+  }
   if (type === 'magnet') power.magnet = 8 + up.magnet * 2.5;
   if (type === 'focus') { power.focus = 5; document.body.classList.add('focus-active'); }
   if (type === 'doubler') power.doubler = 10;
+  game.runStats.powerups++;
   sfx.powerup();
+  vib(30);
   game.hooks.onToast?.(POWERUP_TYPES[type].label);
 }
 
@@ -383,7 +497,8 @@ function spawnAsteroid(smallOnly = false) {
     clamp(bx + (R() - 0.5) * 30, -17, 17),
     clamp(by + (R() - 0.5) * 17, -9.5, 9.5),
     world.spawnZ - R() * 60);
-  const driftMul = game.sector === 'debris' ? 2.2 : 1;
+  let driftMul = game.sector === 'debris' ? 2.2 : 1;
+  if (game.boons.greed) driftMul *= 1.15;
   a.userData.vx = (R() - 0.5) * 2.5 * driftMul;
   a.userData.vy = (R() - 0.5) * 1.5 * driftMul;
   a.userData.missed = false;
@@ -403,9 +518,10 @@ function spawnEnemy() {
   e.lookAt(e.position.x + e.userData.vx, e.position.y, e.position.z + game.speed);
 }
 
+// crystal lines spawn near the obstacle bias — greed lives on the dangerous side
 function spawnCrystalLine() {
-  const x = (R() - 0.5) * 20;
-  const y = (R() - 0.5) * 11;
+  const x = clamp(bias.x * 6 + (R() - 0.5) * 14, -10, 10);
+  const y = clamp(bias.y * 3 + (R() - 0.5) * 8, -6, 6);
   let placed = 0;
   for (const c of world.crystals) {
     if (c.userData.active || placed >= 5) continue;
@@ -416,11 +532,25 @@ function spawnCrystalLine() {
   }
 }
 
-// ── collisions & motion of obstacles ──
+// value scales with how dangerous the pickup spot is (nearby active rocks)
+function crystalValue() {
+  let nearby = 0;
+  for (const a of world.asteroids) {
+    if (!a.userData.active) continue;
+    if (a.position.z > -60 &&
+        Math.hypot(a.position.x - ship.x, a.position.y - ship.y) < 10) nearby++;
+  }
+  const danger = 1 + Math.min(4, nearby) * 0.5;
+  const boons = game.boons.greed ? 2 : 1;
+  return Math.round(50 * danger * boons * game.mult * (power.doubler > 0 ? 2 : 1));
+}
+
+// ── collisions ──
 function updateObstacles(dt) {
   const sx = ship.x, sy = ship.y;
   const shipR = 1.1;
-  const magnetR = power.magnet > 0 ? 6 + state().upgrades.magnet * 1.5 : 0;
+  const passiveMagnet = game.boons.magnetize ? 5 : 0;
+  const magnetR = power.magnet > 0 ? 6 + state().upgrades.magnet * 1.5 : passiveMagnet;
 
   for (const a of world.asteroids) {
     if (!a.userData.active) continue;
@@ -454,11 +584,12 @@ function updateObstacles(dt) {
       const d = Math.hypot(c.position.x - sx, c.position.y - sy);
       if (d < c.userData.radius + shipR + 0.6) {
         c.userData.active = false; c.visible = false;
-        const pts = Math.round(50 * game.mult * (power.doubler > 0 ? 2 : 1));
+        const pts = crystalValue();
         game.score += pts;
+        game.runStats.crystals++;
         addFlow(0.05);
-        sfx.nearMiss();
-        game.hooks.onToast?.(`✦ +${pts}`);
+        sfx.nearMiss(Math.min(10, game.runStats.crystals % 11));
+        game.hooks.onToast?.(`+${pts}`);
       }
     }
     if (c.position.z > world.killZ) { c.userData.active = false; c.visible = false; }
@@ -476,9 +607,13 @@ function collideCheck(o, sx, sy, shipR) {
         const pts = Math.round(100 * game.mult);
         game.score += pts;
         state().totals.smashes++;
+        burnSmash++;
+        game.runStats.burnSmash = Math.max(game.runStats.burnSmash, burnSmash);
         addFlow(0.1);
+        hitStop = 0.05;
+        kickCamera(0.3);
         sfx.crash();
-        game.hooks.onToast?.(`HYPER SMASH +${pts}`);
+        game.hooks.onToast?.(`SMASH +${pts}`);
         return;
       }
       if (invulnT > 0) return;
@@ -489,8 +624,7 @@ function collideCheck(o, sx, sy, shipR) {
       o.userData.missed = true;
       const pts = Math.round(25 * game.mult);
       game.score += pts;
-      addFlow(0.12);
-      sfx.nearMiss();
+      onGraze();
     }
   }
   if (o.position.z > world.killZ) { o.userData.active = false; o.visible = false; }
@@ -498,85 +632,102 @@ function collideCheck(o, sx, sy, shipR) {
 
 function die() {
   if (game.over) return;
-  // Emergency Revive: auto-consume once per run
-  if (!usedRevive && state().revives > 0) {
-    usedRevive = true;
-    state().revives--;
+  if ((!usedRevive && state().revives > 0) || freeRevives > 0) {
+    if (freeRevives > 0) freeRevives--;
+    else { usedRevive = true; state().revives--; }
     invulnT = 2.5;
     explodeAt(world.ship.position);
-    // clear the immediate kill zone so the respawn is fair
     for (const pool of [world.asteroids, world.enemies, world.walls]) {
       for (const o of pool) {
         if (o.userData.active && o.position.z > -70) { o.userData.active = false; o.visible = false; }
       }
     }
     sfx.revive();
-    game.hooks.onToast?.('💠 EMERGENCY REVIVE');
-    if (navigator.vibrate) navigator.vibrate(60);
+    game.hooks.onToast?.('REVIVED');
+    vib(60);
     return;
   }
   game.over = true;
   deathT = 0;
+  hitStop = 0.09;
   explodeAt(world.ship.position);
+  kickCamera(0.7);
   world.ship.visible = false;
   world.shipShield.visible = false;
   sfx.crash();
-  if (navigator.vibrate) navigator.vibrate(120);
+  vib(120);
 }
 
 // ── main loop ──
 function loop(t) {
   if (!game.running) return;
   raf = requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (t - lastFrame) / 1000);
+  const rawDt = Math.min(0.05, (t - lastFrame) / 1000);
   lastFrame = t;
   if (game.paused) return;
+
+  // impact hit-stop: the world freezes for a few frames
+  if (hitStop > 0) {
+    hitStop -= rawDt;
+    render();
+    return;
+  }
+
+  // time dilation: near-miss slow-mo, focus, boon-choice, daily mutator
+  slowmoT = Math.max(0, slowmoT - rawDt);
+  let timeScale = 1;
+  if (slowmoT > 0) timeScale = 0.45;
+  if (boon.offer) timeScale = Math.min(timeScale, 0.25);
+  if (game.mutator?.id === 'slowsunday') timeScale *= 0.8;
+  const dt = rawDt * timeScale;
 
   game.time += dt;
 
   if (!game.over) {
-    // difficulty ramp: 60 → 150 over ~3.5 min
     game.speed = 60 + Math.min(90, game.time * 0.45);
     if (game.sector === 'wormhole') game.speed *= 1.3;
-    readControls(dt);
-    updateHyper(dt);
-    if (techStyle()) updateSlouch(dt);
+    if (game.mutator?.id === 'meteor') game.speed *= 1.25;
+    readControls(rawDt);       // controls always run at real time
+    updateHyper(rawDt);
+    if (techStyle()) updateSlouch(rawDt);
     updateFlow(dt);
-    if (power.focus > 0) game.speed *= 0.55;   // FOCUS slow-mo
-    if (shield.active) game.speed *= 1.75;     // HYPERDRIVE
+    updateBoon(rawDt);
+    if (power.focus > 0) game.speed *= 0.55;
+    if (shield.active) game.speed *= 1.75;
     setHyper(shield.active);
     invulnT = Math.max(0, invulnT - dt);
-    world.ship.visible = invulnT <= 0 || Math.floor(t / 90) % 2 === 0; // respawn blink
+    world.ship.visible = invulnT <= 0 || Math.floor(t / 90) % 2 === 0;
 
-    reportTick(dt, shield.active, slouch.active);
+    reportTick(rawDt, shield.active, slouch.active);
     ghostTick(dt, ship.x, ship.y);
 
-    // distance score (doubled in hyperdrive, doubled again by ×2 power-up)
-    const scoreMul = (shield.active ? 2 : 1) * (power.doubler > 0 ? 2 : 1);
+    const hyperScore = shield.active ? (game.mutator?.id === 'tuck' ? 4 : 2) : 1;
+    const scoreMul = hyperScore * (power.doubler > 0 ? 2 : 1);
     game.dist += game.speed * dt;
     game.score += game.speed * dt * 0.18 * game.mult * scoreMul;
+    game.runStats.score = Math.floor(game.score);
     game.hooks.onScore?.(Math.floor(game.score), game.mult);
+    game.hooks.onPace?.(ghostPace(game.time), Math.floor(game.score));
 
-    // sector rotation (suspended while a boss is on screen)
     if (!bossActive()) {
       sectorT -= dt;
       if (sectorT <= 0) nextSector();
     }
     updateBoss(dt);
 
-    // spawn cadence per sector
     const inWormhole = game.sector === 'wormhole';
     const inLasers = game.sector === 'lasers';
     const inDebris = game.sector === 'debris';
     if (!bossActive() && !inWormhole) {
-      spawnT -= dt;
+      // hyperdrive gamble: spawns come 80% faster while burning
+      spawnT -= dt * (shield.active ? 1.8 : 1);
       if (spawnT <= 0) {
         spawnAsteroid(inDebris);
         if ((inDebris || game.time > 45) && R() < 0.45) spawnAsteroid(inDebris);
         const base = inDebris ? 0.5 : inLasers ? 1.6 : 1.1;
         spawnT = Math.max(inDebris ? 0.16 : 0.28, base - game.time * 0.004);
       }
-      enemyT -= dt;
+      enemyT -= dt * (game.mutator?.id === 'swarm' ? 2 : 1);
       if (enemyT <= 0 && game.time > 20) { spawnEnemy(); enemyT = 7 + R() * 6; }
       if (inLasers) {
         wallT -= dt;
@@ -593,6 +744,14 @@ function loop(t) {
     if (!bossActive() && !inWormhole) {
       powerT -= dt;
       if (powerT <= 0) { spawnPowerup(); powerT = 16 + R() * 8; }
+      // lore shards: rare, only while the codex is incomplete
+      if (state().lore < LORE.length) {
+        shardT -= dt;
+        if (shardT <= 0) {
+          if (R() < 0.3) spawnPowerup('shard');
+          shardT = 45;
+        }
+      }
     }
 
     if (techStyle() && !bossActive()) {
@@ -609,7 +768,6 @@ function loop(t) {
     updatePowerups(dt);
     updateWalls(dt);
 
-    // ghost racer
     const gp = ghostPos();
     if (gp) {
       world.ghostShip.visible = true;
@@ -624,9 +782,10 @@ function loop(t) {
     if (deathT > 1.4) {
       stopGame();
       const score = Math.floor(game.score);
+      const pace = ghostPace(game.time);
       endGhost(score);
       const report = buildReport(score);
-      game.hooks.onGameOver?.(score, report);
+      game.hooks.onGameOver?.(score, report, { pace, runStats: game.runStats, boons: Object.keys(game.boons) });
       return;
     }
   }
@@ -645,15 +804,16 @@ function loop(t) {
   render();
 }
 
-// test/debug handle (harmless in production; used by automated smoke tests)
+// test/debug handle
 game._debug = {
-  boss, power, shield, slouch,
+  boss, power, shield, slouch, graze, boon,
   forceBoss() { boss.t = 0.1; },
   forceSector(s) { game.sector = s; sectorT = 99; if (s === 'lasers') wallT = 0.5; },
   forcePowerup(type) { activatePowerup(type); },
+  forceBoon() { offerBoon(); },
 };
 
-// idle menu background: slow drift, no obstacles
+// idle menu background
 let idleRaf = 0;
 export function startIdle() {
   cancelAnimationFrame(idleRaf);

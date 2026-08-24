@@ -76,10 +76,29 @@ unavailable, a touch-control fallback kicks in.
 - Upgrade tree: Hyper Capacity, Hyper Recharge, Magnet Core (3 levels each)
 - Utility: Streak Freezes, Emergency Revives
 
-**Tech**
-- Procedural everything: ship, asteroid belt, enemies, boss, nebulae, explosion
-  FX (Three.js + bloom) and a synthwave soundtrack synthesized live in WebAudio —
-  zero downloaded assets. Installable PWA with offline support.
+**Deep loops**
+- **Wormhole boons** — every wormhole exit offers a choice of two run-long perks;
+  lean your head to pick
+- **Daily mutators** — each weekday warps the daily belt differently (Meteor
+  Monday, Wall Wednesday, …)
+- **Graze trains** — chained near-misses ladder up a pentatonic scale, dilate
+  time, and feed the flow meter
+- **Pilot XP & ranks** — Cadet → Legend, insignia on the menu and share card
+- **Daily missions** — 3 rotating objectives that quietly prescribe your neck's
+  daily movement dose
+- **Weekly tournament belt** — one fixed seed all week, its own board
+- **Lore shards** — rare pickups unlock the 12-signal story of the Atlas Core
+  in the Codex
+
+**Tech & art**
+- Stylized-PBR look: baked [space-3d](https://github.com/wwwtyro/space-3d)
+  nebula skyboxes per theme (also used as environment lighting), giant
+  [Solar System Scope](https://www.solarsystemscope.com/textures/) planets
+  (CC-BY 4.0), [Quaternius](https://quaternius.com) glTF hero ships (CC0),
+  [ambientCG](https://ambientcg.com) PBR rock textures (CC0), lensflare sun,
+  ACES tone mapping, bloom + chromatic aberration + hyperdrive speed-line shader
+- Music & SFX synthesized live in WebAudio; UI set in Zen Dots / Chakra Petch
+- Installable PWA with offline support
 
 ## Tech
 

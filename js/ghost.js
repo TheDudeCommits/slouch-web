@@ -40,6 +40,14 @@ export function ghostPos() {
 
 export function ghostBestScore() { return play?.score ?? null; }
 
+// score the ghost "would have" at elapsed time t (linear proration)
+export function ghostPace(t) {
+  if (!play?.path?.length) return null;
+  const dur = (play.path.length / 2) / HZ;
+  if (dur < 5) return null;
+  return play.score * Math.min(1, t / dur);
+}
+
 export function endGhost(score) {
   if (!rec) return;
   const prev = state().ghosts[rec.mode];

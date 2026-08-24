@@ -102,38 +102,38 @@ export function drawShareCard(report, opts = {}) {
   }
 
   g.textAlign = 'center';
-  g.fillStyle = '#4df3ff';
-  g.font = '900 130px "Avenir Next", system-ui';
-  g.shadowColor = '#4df3ff'; g.shadowBlur = 40;
+  g.fillStyle = '#5ce1ff';
+  g.font = '400 120px "Zen Dots", system-ui';
+  g.shadowColor = '#5ce1ff'; g.shadowBlur = 40;
   g.fillText('SLOUCH', W / 2, 190);
   g.shadowBlur = 0;
-  g.fillStyle = '#7a84ad';
-  g.font = '600 34px "Avenir Next", system-ui';
+  g.fillStyle = '#5c6a8a';
+  g.font = '600 34px "Chakra Petch", system-ui';
   g.fillText(opts.duel ? 'DUEL CHALLENGE' : (report.mode === 'daily' ? 'DAILY CHALLENGE' : 'FLIGHT REPORT'), W / 2, 250);
 
   g.fillStyle = '#ffffff';
-  g.font = '900 170px "Avenir Next", system-ui';
-  g.shadowColor = '#4df3ff'; g.shadowBlur = 26;
+  g.font = '400 150px "Zen Dots", system-ui';
+  g.shadowColor = '#5ce1ff'; g.shadowBlur = 26;
   g.fillText(report.score.toLocaleString(), W / 2, 470);
   g.shadowBlur = 0;
-  g.fillStyle = '#ffd54d';
-  g.font = '800 40px "Avenir Next", system-ui';
-  g.fillText((opts.tag || state().lastTag) + ' · ' + { techneck: 'TECH NECK', casual: 'CASUAL', daily: 'DAILY' }[report.mode], W / 2, 540);
+  g.fillStyle = '#e9f1ff';
+  g.font = '800 40px "Chakra Petch", system-ui';
+  g.fillText((opts.tag || state().lastTag) + ' · ' + ({ techneck: 'TECH NECK', casual: 'CASUAL', daily: 'DAILY', duel: 'DUEL', weekly: 'WEEKLY' }[report.mode] || 'FLIGHT'), W / 2, 540);
 
   // stretch ring
   const cx = W / 2, cy = 800, R = 150;
   g.lineWidth = 26; g.lineCap = 'round';
   g.strokeStyle = 'rgba(122,132,173,0.25)';
   g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
-  g.strokeStyle = '#4df3ff';
+  g.strokeStyle = '#5ce1ff';
   g.beginPath();
   g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + (report.stretchScore / 100) * Math.PI * 2);
   g.stroke();
   g.fillStyle = '#fff';
-  g.font = '900 96px "Avenir Next", system-ui';
+  g.font = '400 84px "Zen Dots", system-ui';
   g.fillText(String(report.stretchScore), cx, cy + 20);
-  g.fillStyle = '#7a84ad';
-  g.font = '700 30px "Avenir Next", system-ui';
+  g.fillStyle = '#5c6a8a';
+  g.font = '700 30px "Chakra Petch", system-ui';
   g.fillText('STRETCH SCORE', cx, cy + 70);
 
   const rows = report.touch
@@ -145,16 +145,16 @@ export function drawShareCard(report, opts = {}) {
       ['CHIN TUCKS', String(report.tucks)],
       ['STRETCH GATES', String(report.gates)],
     ];
-  g.font = '700 34px "Avenir Next", system-ui';
+  g.font = '700 34px "Chakra Petch", system-ui';
   let y = 1030;
   for (const [k, v] of rows) {
-    g.textAlign = 'left'; g.fillStyle = '#7a84ad'; g.fillText(k, 140, y);
+    g.textAlign = 'left'; g.fillStyle = '#5c6a8a'; g.fillText(k, 140, y);
     g.textAlign = 'right'; g.fillStyle = '#e8ecff'; g.fillText(v, W - 140, y);
     y += 56;
   }
   g.textAlign = 'center';
-  g.fillStyle = '#4df3ff';
-  g.font = '700 30px "Avenir Next", system-ui';
+  g.fillStyle = '#5ce1ff';
+  g.font = '700 30px "Chakra Petch", system-ui';
   g.fillText(opts.duel ? 'Beat my score → slouch. fix your neck.' : 'fix your neck · save the galaxy', W / 2, 1300);
   return c;
 }

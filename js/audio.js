@@ -114,7 +114,14 @@ export const sfx = {
   buy() { if (!ctx) return; note(523, now(), 0.1, 'square', 0.15, sfxGain);
     note(784, now() + 0.09, 0.14, 'square', 0.15, sfxGain); },
   denied() { if (!ctx) return; note(180, now(), 0.18, 'square', 0.15, sfxGain, 120); },
-  nearMiss() { if (!ctx) return; note(1200, now(), 0.1, 'sine', 0.2, sfxGain, 1800); },
+  // graze/pickup ladder: each consecutive step climbs a pentatonic scale
+  nearMiss(step = 0) {
+    if (!ctx) return;
+    const scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+    const semi = scale[Math.min(scale.length - 1, step)];
+    const f = 880 * Math.pow(2, semi / 12);
+    note(f, now(), 0.1, 'sine', 0.2, sfxGain, f * 1.5);
+  },
   gate() { if (!ctx) return; [523, 659, 784, 1047].forEach((f, i) =>
     note(f, now() + i * 0.07, 0.16, 'triangle', 0.2, sfxGain)); },
   shieldUp() { if (!ctx) return; note(300, now(), 0.3, 'sawtooth', 0.14, sfxGain, 900); },

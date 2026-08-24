@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#05060f">
-<title>SLOUCH — neck-controlled space dodger</title>
+<meta name="theme-color" content="#05070e">
+<title>SLOUCH</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Dots&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 {
@@ -21,263 +24,270 @@
 </script>
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3-3 5-3 9a5 5 0 0 0 10 0c0-2-1-3.5-2-5-.3 1.4-1 2-2 2.5C15.5 7 14 4.5 12 3z"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8z"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4M12 14v3m-4 4h8m-6.5-4h5l.5 4h-6z"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4l4 4M5 13v6h14v-6"/></symbol>
+<symbol id="i-swords" viewBox="0 0 24 24"><path d="M4 4l9 9m0 0l2 2m-2-2l3-3m-9 9l-2-2m0 0L4 20m1-3l2 2M20 4l-9 9m4 4l2 2m-1-3l-2 2"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M4 10h16M8 4v4m8-4v4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zm0 0v16M8 7h7"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4m0 16h16M8 16v-5m4 5V8m4 8v-3"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="M16 11l5-3v9l-5-3"/></symbol>
+<symbol id="i-ship" viewBox="0 0 24 24"><path d="M12 3l3 8 5 4-4 1-1 5-3-3-3 3-1-5-4-1 5-4z"/></symbol>
+<symbol id="i-freeze" viewBox="0 0 24 24"><path d="M12 2v20M4 6l16 12M20 6L4 18M12 6l2-2m-2 2L10 4m2 14l2 2m-2-2l-2 2"/></symbol>
+<symbol id="i-revive" viewBox="0 0 24 24"><path d="M12 4l6 4v8l-6 4-6-4V8zm0 4v8m-4-4h8"/></symbol>
+<symbol id="i-magnet" viewBox="0 0 24 24"><path d="M6 4v8a6 6 0 0 0 12 0V4m-4 0v8a2 2 0 0 1-4 0V4M6 4h4m4 0h4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 3"/></symbol>
+<symbol id="i-double" viewBox="0 0 24 24"><path d="M5 16V8l4 8V8m4 8l6-8m-6 0l6 8"/></symbol>
+<symbol id="i-boom" viewBox="0 0 24 24"><path d="M12 3v4m6.4-1.4l-2.8 2.8M21 12h-4m1.4 6.4l-2.8-2.8M12 21v-4m-6.4 1.4l2.8-2.8M3 12h4M5.6 5.6l2.8 2.8"/></symbol>
+<symbol id="i-trail" viewBox="0 0 24 24"><path d="M3 12h4m3 0h4m3 0h4" stroke-dasharray="0"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-8 8c0 3 2 5 4 6v4h8v-4c2-1 4-3 4-6a8 8 0 0 0-8-8z"/><circle cx="9" cy="11" r="1.4"/><circle cx="15" cy="11" r="1.4"/></symbol>
+</defs>
+</svg>
+
 <canvas id="gl"></canvas>
 <video id="cam" playsinline muted autoplay></video>
 <div id="focus-tint"></div>
 
-<!-- ══════════ LOADING ══════════ -->
+<!-- LOADING -->
 <div id="screen-loading" class="screen active">
-  <div class="loading-wrap">
-    <h1 class="logo glitch">SLOUCH</h1>
-    <p class="tagline">fix your neck. save the galaxy.</p>
-    <div class="loader-bar"><div id="loader-fill"></div></div>
-    <p id="loader-msg" class="dim">warming up engines…</p>
-  </div>
+  <h1 class="logo">SLOUCH</h1>
+  <div class="loader-bar"><div id="loader-fill"></div></div>
+  <p id="loader-msg" class="mut small"></p>
 </div>
 
-<!-- ══════════ MENU ══════════ -->
+<!-- MENU -->
 <div id="screen-menu" class="screen">
-  <div class="menu-top">
-    <div class="chip" id="chip-streak" title="Daily streak">🔥 <span id="streak-count">0</span></div>
-    <div class="chip chip-rings" id="chip-goals" title="Daily goals">
-      <svg viewBox="0 0 40 40" width="26" height="26">
-        <circle class="ring-bg" cx="20" cy="20" r="17"/>
-        <circle class="ring-bg" cx="20" cy="20" r="12"/>
-        <circle class="ring-bg" cx="20" cy="20" r="7"/>
-        <circle id="ring-move" class="ring ring1" cx="20" cy="20" r="17"/>
-        <circle id="ring-tuck" class="ring ring2" cx="20" cy="20" r="12"/>
-        <circle id="ring-stretch" class="ring ring3" cx="20" cy="20" r="7"/>
-      </svg>
-    </div>
-    <div class="chip" id="chip-points">✦ <span id="points-count">0</span></div>
-  </div>
-  <div class="menu-center">
+  <header class="top">
+    <span class="stat"><svg class="ic hot"><use href="#i-flame"/></svg><b id="streak-count">0</b></span>
+    <svg id="chip-goals" viewBox="0 0 40 40" width="30" height="30">
+      <circle class="ring-bg" cx="20" cy="20" r="17"/>
+      <circle class="ring-bg" cx="20" cy="20" r="12"/>
+      <circle class="ring-bg" cx="20" cy="20" r="7"/>
+      <circle id="ring-move" class="ring" cx="20" cy="20" r="17"/>
+      <circle id="ring-tuck" class="ring r2" cx="20" cy="20" r="12"/>
+      <circle id="ring-stretch" class="ring r3" cx="20" cy="20" r="7"/>
+    </svg>
+    <span class="stat"><svg class="ic acc"><use href="#i-star"/></svg><b id="points-count">0</b></span>
+  </header>
+
+  <div class="menu-hero">
     <h1 class="logo">SLOUCH</h1>
-    <p class="tagline">fix your neck. save the galaxy.</p>
-    <div id="event-banner" class="event-banner hidden"></div>
-    <div class="best-line dim">BEST <span id="menu-best">0</span></div>
-    <button class="btn btn-primary" id="btn-play-techneck">▶ TECH NECK MODE</button>
-    <button class="btn" id="btn-play-casual">▶ CASUAL MODE</button>
-    <button class="btn btn-gold" id="btn-daily">🗓 DAILY CHALLENGE <span id="daily-status"></span></button>
-    <div class="menu-row">
-      <button class="btn btn-small" id="btn-store">STORE</button>
-      <button class="btn btn-small" id="btn-leaderboard">RANKS</button>
-      <button class="btn btn-small" id="btn-trophies">🏆</button>
-      <button class="btn btn-small" id="btn-settings">⚙︎</button>
+    <div class="rank-line">
+      <span id="rank-chevrons"></span>
+      <span id="rank-name" class="mut small"></span>
     </div>
+    <div class="best-num" id="menu-best">0</div>
+    <div id="event-banner" class="event hidden"></div>
   </div>
-  <p class="menu-foot dim">head-tracked · camera never leaves your phone</p>
+
+  <nav class="menu-actions">
+    <button class="cta" id="btn-play-techneck"><svg class="ic"><use href="#i-play"/></svg>TECH NECK</button>
+    <button class="ghost-btn" id="btn-play-casual">CASUAL</button>
+    <button class="ghost-btn" id="btn-daily"><span id="daily-label">DAILY BELT</span><span id="daily-status" class="mut small"></span></button>
+  </nav>
+
+  <div id="menu-missions" class="missions"></div>
+
+  <footer class="iconrow">
+    <button class="iconbtn" id="btn-store" aria-label="Store"><svg class="ic"><use href="#i-star"/></svg><span>STORE</span></button>
+    <button class="iconbtn" id="btn-leaderboard" aria-label="Ranks"><svg class="ic"><use href="#i-chart"/></svg><span>RANKS</span></button>
+    <button class="iconbtn" id="btn-trophies" aria-label="Trophies"><svg class="ic"><use href="#i-trophy"/></svg><span>HONORS</span></button>
+    <button class="iconbtn" id="btn-settings" aria-label="Settings"><svg class="ic"><use href="#i-gear"/></svg><span>SYSTEM</span></button>
+  </footer>
 </div>
 
-<!-- ══════════ DUEL BANNER ══════════ -->
+<!-- DUEL INCOMING -->
 <div id="screen-duel" class="screen overlay">
-  <div class="panel">
-    <h2>⚔️ DUEL</h2>
-    <p><b id="duel-tag">???</b> challenges you!</p>
-    <div class="go-score" id="duel-score">0</div>
-    <p class="dim">Beat that score on the same asteroid belt.</p>
-    <button class="btn btn-primary" id="btn-duel-accept">ACCEPT DUEL</button>
-    <button class="btn" id="btn-duel-decline">LATER</button>
-  </div>
+  <svg class="ic big acc"><use href="#i-swords"/></svg>
+  <p class="label">CHALLENGE FROM <b id="duel-tag"></b></p>
+  <div class="big-num" id="duel-score">0</div>
+  <button class="cta" id="btn-duel-accept">ACCEPT</button>
+  <button class="ghost-btn" id="btn-duel-decline">LATER</button>
 </div>
 
-<!-- ══════════ CALIBRATION ══════════ -->
+<!-- CALIBRATION -->
 <div id="screen-calibrate" class="screen">
-  <div class="cal-wrap">
-    <h2>CALIBRATE</h2>
-    <div class="cal-cam-frame">
-      <canvas id="cal-preview"></canvas>
-      <div class="cal-reticle"></div>
-    </div>
-    <p id="cal-msg">Sit tall. Stack your head over your shoulders.<br>Look straight at the screen.</p>
-    <div class="cal-count" id="cal-count"></div>
-    <button class="btn btn-primary" id="btn-cal-start">HOLD STILL & CALIBRATE</button>
-    <button class="btn btn-small" id="btn-cal-back">BACK</button>
+  <p class="label">CALIBRATE</p>
+  <div class="cal-frame">
+    <canvas id="cal-preview"></canvas>
+    <svg class="cal-guide" viewBox="0 0 100 130"><ellipse cx="50" cy="60" rx="32" ry="42"/><path d="M30 105 q20 14 40 0"/></svg>
   </div>
+  <p id="cal-msg" class="mut">sit tall · look straight ahead</p>
+  <div class="cal-count" id="cal-count"></div>
+  <button class="cta" id="btn-cal-start">CALIBRATE</button>
+  <button class="ghost-btn" id="btn-cal-back">BACK</button>
 </div>
 
-<!-- ══════════ GAME HUD ══════════ -->
+<!-- HUD -->
 <div id="hud" class="screen">
   <div class="hud-top">
-    <div class="hud-score"><span id="hud-score">0</span></div>
-    <div class="hud-mult" id="hud-mult">×1</div>
-    <button id="btn-pause" aria-label="Pause">Ⅱ</button>
+    <div class="hud-score" id="hud-score">0</div>
+    <div class="hud-right">
+      <div class="hud-mult" id="hud-mult">×1</div>
+      <button id="btn-pause" aria-label="Pause"><svg class="ic"><use href="#i-pause"/></svg></button>
+    </div>
   </div>
   <div class="hud-bars">
-    <div id="hud-shield" class="hud-shield"><div id="hud-shield-fill"></div></div>
-    <div id="hud-flow" class="hud-flow"><div id="hud-flow-fill"></div></div>
+    <div id="hud-shield" class="bar"><div id="hud-shield-fill"></div></div>
+    <div id="hud-flow" class="bar thin"><div id="hud-flow-fill"></div></div>
   </div>
   <div id="hud-powerups" class="hud-powerups"></div>
+  <div id="hud-duel-target" class="hud-duel hidden"></div>
+  <div id="hud-pace" class="hud-pace hidden"></div>
   <div id="hud-boss" class="hud-boss hidden"></div>
   <div id="hud-gate" class="hud-gate hidden"></div>
-  <div id="hud-slouch" class="hud-slouch hidden">⚠ SLOUCH DETECTED — sit tall!</div>
   <div id="hud-toast" class="hud-toast hidden"></div>
-  <div id="hud-face-lost" class="hud-face-lost hidden">😶 face lost — center yourself</div>
-  <div id="hud-duel-target" class="hud-duel hidden"></div>
+  <div id="hud-slouch" class="hud-slouch hidden">SLOUCH DETECTED — SIT TALL</div>
+  <div id="hud-face-lost" class="hud-face-lost hidden">face lost — center yourself</div>
+  <div id="boon-offer" class="boon hidden">
+    <p class="label">WORMHOLE GIFT — LEAN TO CHOOSE</p>
+    <div class="boon-row">
+      <div class="boon-card" id="boon-left"><b></b><span></span><i></i></div>
+      <div class="boon-card" id="boon-right"><b></b><span></span><i></i></div>
+    </div>
+  </div>
 </div>
 
-<!-- ══════════ PAUSE ══════════ -->
+<!-- PAUSE -->
 <div id="screen-pause" class="screen overlay">
-  <div class="panel">
-    <h2>PAUSED</h2>
-    <button class="btn btn-primary" id="btn-resume">RESUME</button>
-    <button class="btn" id="btn-recal-pause">RECALIBRATE</button>
-    <button class="btn" id="btn-quit">QUIT TO MENU</button>
+  <p class="label">PAUSED</p>
+  <button class="cta" id="btn-resume">RESUME</button>
+  <button class="ghost-btn" id="btn-recal-pause">RECALIBRATE</button>
+  <button class="ghost-btn" id="btn-quit">ABANDON RUN</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="screen-gameover" class="screen overlay scrollable">
+  <p class="label" id="go-title">SHIP DOWN</p>
+  <div class="big-num" id="go-score">0</div>
+  <div id="go-best" class="go-best hidden">NEW BEST</div>
+  <div id="go-close" class="go-close hidden">
+    <div class="go-close-bar"><div id="go-close-fill"></div></div>
+    <span id="go-close-text" class="mut small"></span>
+  </div>
+  <p id="go-pace" class="small hidden"></p>
+  <div id="go-duel-result" class="hidden"></div>
+  <p class="mut small"><svg class="ic tiny acc"><use href="#i-star"/></svg><span id="go-points">0</span> <span id="go-event-bonus"></span> · <span id="go-xp">0</span> XP</p>
+  <div id="go-rankup" class="go-rankup hidden"></div>
+  <div id="go-missions" class="go-missions"></div>
+  <div id="go-unlocks"></div>
+  <div id="go-name-entry" class="hidden">
+    <p class="mut small">TOP 10 — YOUR TAG</p>
+    <input id="go-name" maxlength="8" autocomplete="off">
+  </div>
+  <button class="cta" id="btn-retry">FLY AGAIN</button>
+  <button class="ghost-btn" id="btn-report">POSTURE REPORT</button>
+  <div class="iconrow">
+    <button class="iconbtn" id="btn-share"><svg class="ic"><use href="#i-share"/></svg></button>
+    <button class="iconbtn" id="btn-duel-send"><svg class="ic"><use href="#i-swords"/></svg></button>
+    <button class="iconbtn" id="btn-go-menu"><svg class="ic"><use href="#i-back"/></svg></button>
   </div>
 </div>
 
-<!-- ══════════ GAME OVER ══════════ -->
-<div id="screen-gameover" class="screen overlay">
-  <div class="panel scroll">
-    <h2 id="go-title">SHIP DOWN</h2>
-    <div class="go-score" id="go-score">0</div>
-    <div id="go-best" class="go-best hidden">★ NEW BEST ★</div>
-    <div id="go-duel-result" class="hidden"></div>
-    <p class="dim">✦ <span id="go-points">0</span> stardust earned <span id="go-event-bonus"></span></p>
-    <div id="go-unlocks"></div>
-    <div id="go-name-entry" class="hidden">
-      <p>Top 10! Enter your tag:</p>
-      <input id="go-name" maxlength="8" placeholder="ACE" autocomplete="off">
-    </div>
-    <button class="btn btn-primary" id="btn-retry">FLY AGAIN</button>
-    <button class="btn" id="btn-report">🧘 POSTURE REPORT</button>
-    <div class="menu-row">
-      <button class="btn btn-small" id="btn-share">📤 SHARE</button>
-      <button class="btn btn-small" id="btn-duel-send">⚔️ DUEL A FRIEND</button>
-      <button class="btn btn-small" id="btn-go-menu">MENU</button>
-    </div>
+<!-- POSTURE REPORT -->
+<div id="screen-report" class="screen scrollable">
+  <p class="label">POSTURE REPORT</p>
+  <div class="report-ring-wrap">
+    <svg viewBox="0 0 120 120" width="130" height="130">
+      <circle class="ring-bg w" cx="60" cy="60" r="52"/>
+      <circle id="report-ring" class="ring w" cx="60" cy="60" r="52"/>
+    </svg>
+    <div class="report-ring-num"><span id="report-stretch">0</span><small>STRETCH</small></div>
   </div>
+  <p id="report-trend" class="mut small"></p>
+  <div id="report-rows" class="rows"></div>
+  <div id="report-goals" class="report-goals"></div>
+  <button class="ghost-btn" id="btn-report-share"><svg class="ic tiny"><use href="#i-share"/></svg> SHARE CARD</button>
+  <button class="cta" id="btn-report-back">BACK</button>
 </div>
 
-<!-- ══════════ POSTURE REPORT ══════════ -->
-<div id="screen-report" class="screen">
-  <div class="panel scroll">
-    <h2>POSTURE REPORT</h2>
-    <div class="report-ring-wrap">
-      <svg viewBox="0 0 120 120" width="130" height="130">
-        <circle class="ring-bg big" cx="60" cy="60" r="52"/>
-        <circle id="report-ring" class="ring ring1 big" cx="60" cy="60" r="52"/>
-      </svg>
-      <div class="report-ring-num"><span id="report-stretch">0</span><small>STRETCH<br>SCORE</small></div>
-    </div>
-    <p id="report-trend" class="dim"></p>
-    <div id="report-rows"></div>
-    <div id="report-goals" class="report-goals"></div>
-    <button class="btn btn-small" id="btn-report-share">📤 SHARE CARD</button>
-    <button class="btn btn-primary" id="btn-report-back">BACK</button>
-  </div>
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen scrollable">
+  <p class="label">SYSTEM</p>
+  <label class="setting"><span>MUSIC</span><input type="range" id="set-music" min="0" max="100" value="60"></label>
+  <label class="setting"><span>SOUND</span><input type="range" id="set-sfx" min="0" max="100" value="80"></label>
+  <label class="setting"><span>SENSITIVITY</span><input type="range" id="set-sens" min="30" max="200" value="100"></label>
+  <label class="setting"><span>MIRROR</span><input type="checkbox" id="set-mirror" checked></label>
+  <label class="setting"><span>GHOST RACER</span><input type="checkbox" id="set-ghost" checked></label>
+  <label class="setting"><span>REMINDERS</span><input type="checkbox" id="set-reminders"></label>
+  <button class="ghost-btn" id="btn-recalibrate"><svg class="ic tiny"><use href="#i-cam"/></svg> RECALIBRATE</button>
+  <button class="ghost-btn" id="btn-history"><svg class="ic tiny"><use href="#i-chart"/></svg> FLIGHT LOG</button>
+  <button class="ghost-btn" id="btn-lore"><svg class="ic tiny"><use href="#i-book"/></svg> CODEX</button>
+  <button class="ghost-btn danger" id="btn-reset">WIPE ALL DATA</button>
+  <button class="cta" id="btn-settings-back">BACK</button>
 </div>
 
-<!-- ══════════ SETTINGS ══════════ -->
-<div id="screen-settings" class="screen">
-  <div class="panel scroll">
-    <h2>SETTINGS</h2>
-    <label class="setting"><span>Music</span>
-      <input type="range" id="set-music" min="0" max="100" value="60"></label>
-    <label class="setting"><span>Sound FX</span>
-      <input type="range" id="set-sfx" min="0" max="100" value="80"></label>
-    <label class="setting"><span>Sensitivity</span>
-      <input type="range" id="set-sens" min="30" max="200" value="100"></label>
-    <label class="setting"><span>Mirror controls</span>
-      <input type="checkbox" id="set-mirror" checked></label>
-    <label class="setting"><span>Race your ghost</span>
-      <input type="checkbox" id="set-ghost" checked></label>
-    <label class="setting"><span>Posture reminders</span>
-      <input type="checkbox" id="set-reminders"></label>
-    <button class="btn" id="btn-recalibrate">📷 RECALIBRATE CAMERA</button>
-    <button class="btn" id="btn-history">📈 RUN HISTORY</button>
-    <button class="btn" id="btn-lore">📖 LORE / ABOUT</button>
-    <button class="btn btn-danger" id="btn-reset">RESET ALL DATA</button>
-    <button class="btn btn-primary" id="btn-settings-back">BACK</button>
-  </div>
+<!-- FLIGHT LOG -->
+<div id="screen-history" class="screen scrollable">
+  <p class="label">FLIGHT LOG</p>
+  <div id="rom-progress" class="rows"></div>
+  <div id="history-list" class="rows"></div>
+  <button class="cta" id="btn-history-back">BACK</button>
 </div>
 
-<!-- ══════════ RUN HISTORY ══════════ -->
-<div id="screen-history" class="screen">
-  <div class="panel scroll">
-    <h2>RUN HISTORY</h2>
-    <div id="history-list"></div>
-    <button class="btn btn-primary" id="btn-history-back">BACK</button>
+<!-- STORE -->
+<div id="screen-store" class="screen scrollable">
+  <p class="label">STORE</p>
+  <p class="stat center"><svg class="ic tiny acc"><use href="#i-star"/></svg><b id="store-points">0</b></p>
+  <div class="tabs" id="store-tabs">
+    <button class="tab active" data-cat="themes">WORLDS</button>
+    <button class="tab" data-cat="ship">SHIP</button>
+    <button class="tab" data-cat="upgrades">UPGRADES</button>
+    <button class="tab" data-cat="utility">SUPPLY</button>
   </div>
+  <div id="store-items" class="rows"></div>
+  <button class="cta" id="btn-store-back">BACK</button>
 </div>
 
-<!-- ══════════ STORE ══════════ -->
-<div id="screen-store" class="screen">
-  <div class="panel scroll">
-    <h2>STORE</h2>
-    <p class="dim">balance ✦ <span id="store-points">0</span></p>
-    <div class="tabs" id="store-tabs">
-      <button class="tab active" data-cat="themes">THEMES</button>
-      <button class="tab" data-cat="ship">SHIP</button>
-      <button class="tab" data-cat="upgrades">UPGRADES</button>
-      <button class="tab" data-cat="utility">UTILITY</button>
-    </div>
-    <div id="store-items"></div>
-    <button class="btn btn-primary" id="btn-store-back">BACK</button>
+<!-- RANKS -->
+<div id="screen-leaderboard" class="screen scrollable">
+  <p class="label">RANKS</p>
+  <div class="tabs">
+    <button class="tab active" data-board="techneck">NECK</button>
+    <button class="tab" data-board="casual">CASUAL</button>
+    <button class="tab" data-board="daily">TODAY</button>
+    <button class="tab" data-board="weekly">WEEK</button>
   </div>
+  <ol id="board-list"></ol>
+  <button class="cta hidden" id="btn-play-weekly">FLY THE WEEKLY BELT</button>
+  <button class="cta" id="btn-board-back">BACK</button>
 </div>
 
-<!-- ══════════ LEADERBOARD ══════════ -->
-<div id="screen-leaderboard" class="screen">
-  <div class="panel scroll">
-    <h2>RANKS</h2>
-    <div class="tabs">
-      <button class="tab active" data-board="techneck">TECH NECK</button>
-      <button class="tab" data-board="casual">CASUAL</button>
-      <button class="tab" data-board="daily">TODAY</button>
-    </div>
-    <ol id="board-list"></ol>
-    <button class="btn btn-primary" id="btn-board-back">BACK</button>
-  </div>
+<!-- HONORS -->
+<div id="screen-trophies" class="screen scrollable">
+  <p class="label">HONORS</p>
+  <p class="mut small center" id="trophy-count"></p>
+  <div id="trophy-list" class="rows"></div>
+  <button class="cta" id="btn-trophies-back">BACK</button>
 </div>
 
-<!-- ══════════ TROPHIES ══════════ -->
-<div id="screen-trophies" class="screen">
-  <div class="panel scroll">
-    <h2>TROPHIES</h2>
-    <p class="dim"><span id="trophy-count">0</span> unlocked</p>
-    <div id="trophy-list"></div>
-    <button class="btn btn-primary" id="btn-trophies-back">BACK</button>
-  </div>
+<!-- CODEX -->
+<div id="screen-lore" class="screen scrollable">
+  <p class="label">CODEX</p>
+  <p class="mut small center" id="lore-count"></p>
+  <div id="lore-list" class="lore"></div>
+  <p class="mut small lore-about">Slouch turns tech-neck physiotherapy into flight controls.
+  Face tracking runs entirely on this device. Not medical advice — stop if anything hurts.</p>
+  <button class="cta" id="btn-lore-back">BACK</button>
 </div>
 
-<!-- ══════════ LORE ══════════ -->
-<div id="screen-lore" class="screen">
-  <div class="panel scroll">
-    <h2>THE LORE</h2>
-    <div class="lore-text">
-      <p>Year 2184. Humanity finally left its screens — because the screens left first.</p>
-      <p>The <b>Cervical Belt</b>: a drifting graveyard of dead satellites, doom-scrolled
-      servers and fossilized office chairs, orbiting a collapsed data-star. Somewhere
-      inside it lies the <b>Atlas Core</b>, the last machine that remembers how humans
-      stood upright.</p>
-      <p>You fly the <b>S.S. Posture</b>, the only ship steered not by stick or thruster —
-      but by the pilot's own spine. The straighter you sit, the truer she flies.
-      Slouch, and she sputters.</p>
-      <p>Every tilt of your head banks her wings. Every chin tuck slams her into
-      hyperdrive. Every look over your shoulder opens a Stretch Gate. And somewhere
-      out there, the <b>Dreadnought</b> is mining the belt — its laser fences don't
-      care about your posture. Thread them anyway.</p>
-      <p><b>Fly far. Sit tall. The galaxy is watching your posture.</b></p>
-      <hr>
-      <p class="dim">Slouch turns evidence-based tech-neck exercises into flight controls.
-      All face tracking runs on-device — no video ever leaves your phone.
-      Not medical advice; stop if anything hurts. See TECHNECK.md in the repo for
-      the movement science.</p>
-    </div>
-    <button class="btn btn-primary" id="btn-lore-back">BACK</button>
-  </div>
-</div>
-
-<!-- ══════════ CAMERA PERMISSION / ERROR ══════════ -->
+<!-- CAMERA ERROR -->
 <div id="screen-camerr" class="screen overlay">
-  <div class="panel">
-    <h2>CAMERA NEEDED</h2>
-    <p id="camerr-msg" class="dim">Slouch steers with your head. Allow camera access —
-    all tracking runs on-device, nothing is uploaded.</p>
-    <button class="btn btn-primary" id="btn-cam-retry">TRY AGAIN</button>
-    <button class="btn" id="btn-cam-touch">PLAY WITH TOUCH INSTEAD</button>
-  </div>
+  <svg class="ic big"><use href="#i-cam"/></svg>
+  <p class="label">CAMERA NEEDED</p>
+  <p id="camerr-msg" class="mut small center"></p>
+  <button class="cta" id="btn-cam-retry">TRY AGAIN</button>
+  <button class="ghost-btn" id="btn-cam-touch">USE TOUCH</button>
 </div>
 
 <script type="module" src="js/main.js"></script>
