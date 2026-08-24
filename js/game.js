@@ -421,7 +421,7 @@ function updateWalls(dt) {
           state().totals.smashes++;
           hitStop = 0.06;
           kickCamera(0.4);
-          sfx.crash();
+          sfx.smash();
           game.hooks.onToast?.(`WALL BREACH +${pts}`);
         } else if (invulnT <= 0) {
           die();
@@ -707,7 +707,7 @@ function collideCheck(o, sx, sy, shipR) {
         addFlow(0.1);
         hitStop = 0.05;
         kickCamera(0.3);
-        sfx.crash();
+        sfx.smash();
         game.hooks.onToast?.(`SMASH +${pts}`);
         return;
       }

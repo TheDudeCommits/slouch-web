@@ -1,6 +1,5 @@
-// SLOUCH — audio: real synthwave soundtrack (see assets/ATTRIBUTION.txt),
-// streamed lazily per track through a flow-driven low-pass filter, plus
-// procedurally synthesized arcade SFX.
+// SLOUCH — audio: real synthwave soundtrack streamed through a flow-driven
+// low-pass filter, plus sampled 8-bit / interface SFX (see assets/ATTRIBUTION.txt).
 
 import { state } from './state.js';
 
@@ -121,6 +120,7 @@ export function initAudio() {
   musicGain.connect(master);
   sfxGain.connect(master);
   applyVolumes();
+  loadSfx();
 }
 
 export function applyVolumes() {
@@ -132,70 +132,54 @@ export function applyVolumes() {
 
 export function resumeAudio() { if (ctx?.state === 'suspended') ctx.resume(); }
 
-function note(freq, t, dur, type, gain, dest, glideTo) {
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type = type;
-  o.frequency.setValueAtTime(freq, t);
-  if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(gain, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(dest);
-  o.start(t); o.stop(t + dur + 0.05);
+// ── SFX: sampled sounds — Juhani Junkala's 8-bit collection (CC0) for game
+// moments, Kenney Interface Sounds (CC0) for UI. Loaded once, ~180KB total.
+const SFX_FILES = ['ui', 'buy', 'denied', 'near', 'gate', 'shieldup', 'shielddown',
+  'warn', 'crash', 'smash', 'powerup', 'bosswarn', 'bossdown', 'laser', 'revive', 'levelup'];
+const sfxBufs = {};
+
+async function loadSfx() {
+  await Promise.all(SFX_FILES.map(async (name) => {
+    try {
+      const res = await fetch(`assets/sfx/${name}.m4a`);
+      sfxBufs[name] = await ctx.decodeAudioData(await res.arrayBuffer());
+    } catch (e) { /* sound stays silent if it fails to load */ }
+  }));
 }
 
-// ── SFX ──
-function now() { return ctx?.currentTime ?? 0; }
+function play(name, { rate = 1, gain = 1 } = {}) {
+  const buf = sfxBufs[name];
+  if (!ctx || !buf) return;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  src.connect(g);
+  g.connect(sfxGain);
+  src.start();
+}
 
 export const sfx = {
-  ui() { if (!ctx) return; note(660, now(), 0.08, 'square', 0.12, sfxGain, 880); },
-  buy() { if (!ctx) return; note(523, now(), 0.1, 'square', 0.15, sfxGain);
-    note(784, now() + 0.09, 0.14, 'square', 0.15, sfxGain); },
-  denied() { if (!ctx) return; note(180, now(), 0.18, 'square', 0.15, sfxGain, 120); },
-  // graze/pickup ladder: each consecutive step climbs a pentatonic scale
+  ui() { play('ui', { gain: 0.7 }); },
+  buy() { play('buy', { gain: 0.8 }); },
+  denied() { play('denied', { gain: 0.7 }); },
+  // graze/pickup ladder: the same coin blip climbing a pentatonic scale
   nearMiss(step = 0) {
-    if (!ctx) return;
     const scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
     const semi = scale[Math.min(scale.length - 1, step)];
-    const f = 880 * Math.pow(2, semi / 12);
-    note(f, now(), 0.1, 'sine', 0.2, sfxGain, f * 1.5);
+    play('near', { rate: Math.pow(2, semi / 12), gain: 0.65 });
   },
-  gate() { if (!ctx) return; [523, 659, 784, 1047].forEach((f, i) =>
-    note(f, now() + i * 0.07, 0.16, 'triangle', 0.2, sfxGain)); },
-  shieldUp() { if (!ctx) return; note(300, now(), 0.3, 'sawtooth', 0.14, sfxGain, 900); },
-  shieldDown() { if (!ctx) return; note(900, now(), 0.25, 'sawtooth', 0.12, sfxGain, 300); },
-  warn() { if (!ctx) return; note(220, now(), 0.12, 'square', 0.14, sfxGain);
-    note(220, now() + 0.16, 0.12, 'square', 0.14, sfxGain); },
-  powerup() { if (!ctx) return; [440, 660, 880, 1320].forEach((f, i) =>
-    note(f, now() + i * 0.05, 0.12, 'sine', 0.18, sfxGain)); },
-  bossWarn() { if (!ctx) return; [0, 0.3, 0.6].forEach(o => {
-    note(160, now() + o, 0.22, 'sawtooth', 0.2, sfxGain);
-    note(164, now() + o, 0.22, 'sawtooth', 0.2, sfxGain); }); },
-  bossDown() { if (!ctx) return; [392, 523, 659, 784, 1047, 1319].forEach((f, i) =>
-    note(f, now() + i * 0.09, 0.22, 'triangle', 0.2, sfxGain)); },
-  laser() { if (!ctx) return; note(2200, now(), 0.18, 'sawtooth', 0.08, sfxGain, 300); },
-  revive() { if (!ctx) return; [220, 330, 440, 660, 880].forEach((f, i) =>
-    note(f, now() + i * 0.06, 0.3, 'triangle', 0.16, sfxGain)); },
-  levelup() { if (!ctx) return; [523, 784].forEach((f, i) =>
-    note(f, now() + i * 0.08, 0.2, 'square', 0.12, sfxGain)); },
-  crash() {
-    if (!ctx) return;
-    // filtered noise burst
-    const dur = 0.7;
-    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 1.6;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const f = ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.setValueAtTime(3000, now());
-    f.frequency.exponentialRampToValueAtTime(120, now() + dur);
-    const g = ctx.createGain();
-    g.gain.value = 0.8;
-    src.connect(f); f.connect(g); g.connect(sfxGain);
-    src.start();
-    note(80, now(), 0.6, 'sine', 0.6, sfxGain, 30);
-  },
+  gate() { play('gate', { gain: 0.85 }); },
+  shieldUp() { play('shieldup', { gain: 0.8 }); },
+  shieldDown() { play('shielddown', { gain: 0.6 }); },
+  warn() { play('warn', { gain: 0.7 }); },
+  crash() { play('crash', { gain: 0.9 }); },
+  smash() { play('smash', { rate: 0.9 + Math.random() * 0.25, gain: 0.75 }); },
+  powerup() { play('powerup', { gain: 0.8 }); },
+  bossWarn() { play('bosswarn', { rate: 0.85, gain: 0.85 }); },
+  bossDown() { play('bossdown', { gain: 0.9 }); },
+  laser() { play('laser', { gain: 0.55 }); },
+  revive() { play('revive', { gain: 0.9 }); },
+  levelup() { play('levelup', { gain: 0.85 }); },
 };

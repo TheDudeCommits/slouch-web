@@ -18,3 +18,7 @@ Music:
 - "Retro Synthwave Loops" x5 by Tomasz Kucza / Magnesus — OpenGameArt (CC-BY 4.0)
 - "Space Ranger" seamless loop — OpenGameArt (CC0)
 - "Calm Ambient 2 (Synthwave)" by The Cynic Project — OpenGameArt (CC0)
+Sound effects:
+- "The Essential Retro Video Game Sound Effects Collection" by Juhani Junkala
+  / SubspaceAudio — OpenGameArt (CC0)
+- Kenney Interface Sounds — kenney.nl (CC0)
