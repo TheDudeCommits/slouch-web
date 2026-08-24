@@ -252,7 +252,9 @@ function updateGate(dt) {
   const g = gate.obj;
   if (!g || !g.userData.active) return;
   g.position.z += game.speed * dt;
-  g.rotation.z += dt * 0.4;
+  // chevrons pulse toward the player instead of spinning
+  const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.07;
+  g.userData.holder?.scale.setScalar(pulse);
   if (g.position.z > -260 && !gate.announced) {
     gate.announced = true;
     game.hooks.onGate?.(gate.pose.label);
@@ -499,7 +501,7 @@ function updatePowerups(dt) {
     if (!p.userData.active) continue;
     p.position.z += game.speed * dt;
     p.rotation.y += dt * 2.5;
-    p.rotation.x += dt * 1.2;
+    p.scale.setScalar(1 + Math.sin(performance.now() * 0.008) * 0.12);
     if (Math.abs(p.position.z) < 2.5) {
       const d = Math.hypot(p.position.x - ship.x, p.position.y - ship.y);
       if (d < p.userData.radius + 1.3) {
@@ -840,6 +842,7 @@ game._debug = {
   forceSector(s) { game.sector = s; sectorT = 99; if (s === 'lasers') wallT = 0.5; },
   forcePowerup(type) { activatePowerup(type); },
   forceBoon() { offerBoon(); },
+  god() { invulnT = 1e9; },
 };
 
 // idle menu background

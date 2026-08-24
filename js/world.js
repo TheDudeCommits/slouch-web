@@ -102,7 +102,7 @@ export function initWorld() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
   renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.15;
   world.renderer = renderer;
 
   const scene = new THREE.Scene();
@@ -143,6 +143,7 @@ export function initWorld() {
   applyTheme();
   loadRockGeometries();
   loadPickupModels();
+  loadGateModel();
   loadHeroShip();
 
   addEventListener('resize', () => {
@@ -374,9 +375,9 @@ function buildAsteroids() {
     map: texLoader.load('assets/rock/color.jpg'),
     normalMap: texLoader.load('assets/rock/normal.jpg'),
     normalScale: new THREE.Vector2(1.1, 1.1),
-    emissive: 0x2a3050, emissiveIntensity: 0.45 });
+    emissive: 0x2a3050, emissiveIntensity: 0.6 });
   themedMats.rock = mat;
-  const sizes = [1, 1.8, 3, 4.6];
+  const sizes = [1.5, 2.4, 3.6, 5.2];
   for (let i = 0; i < 42; i++) {
     const size = sizes[Math.floor(Math.random() * sizes.length)];
     const m = new THREE.Mesh(makeFallbackRockGeo(1), mat);
@@ -415,52 +416,62 @@ function buildEnemies() {
   }
 }
 
-// ── stretch gates: gold ring + a big arrow showing which way to move ──
-function arrowTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d');
-  g.strokeStyle = 'rgba(255,235,180,0.95)';
-  g.lineWidth = 14;
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  // chevron arrow pointing RIGHT
-  g.beginPath();
-  g.moveTo(30, 64); g.lineTo(92, 64);
-  g.moveTo(66, 34); g.lineTo(98, 64); g.lineTo(66, 94);
-  g.stroke();
-  return new THREE.CanvasTexture(c);
+// ── stretch gates: giant sourced chevron marker pointing the pose direction ──
+let gateProto = null;
+
+async function loadGateModel() {
+  try {
+    const model = (await gltfLoader.loadAsync('assets/pickups/gate.glb')).scene;
+    normalizeProto(model, 7.5);
+    // solid glowing gold chevrons with a hot outline — readable at any distance
+    model.traverse(o => {
+      if (o.isMesh) {
+        const bright = (o.material.color?.r ?? 0) + (o.material.color?.g ?? 0) + (o.material.color?.b ?? 0) > 2.2;
+        o.material = new THREE.MeshStandardMaterial({
+          color: bright ? 0xfff2cc : 0xffb02c,
+          emissive: bright ? 0xffe0a0 : 0xcc7a00,
+          emissiveIntensity: bright ? 0.9 : 0.8,
+          metalness: 0.3, roughness: 0.4,
+        });
+      }
+    });
+    // the source arrow lies flat on the ground — stand it up to face the pilot
+    const proto = new THREE.Group();
+    model.rotation.x = Math.PI / 2;
+    proto.add(model);
+    gateProto = proto;
+    for (const g of world.gates) {
+      g.userData.holder.clear();
+      g.userData.holder.add(proto.clone(true));
+    }
+  } catch (e) { console.warn('gate model load failed', e); }
 }
 
 function buildGates() {
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffd54d });
-  const arrowTex = arrowTexture();
   for (let i = 0; i < 3; i++) {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.35, 10, 40), mat));
-    const inner = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.1, 8, 40),
-      new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.5 }));
-    g.add(inner);
+    const holder = new THREE.Group();
+    // placeholder ring until the chevron model lands
+    holder.add(new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.35, 10, 40),
+      new THREE.MeshBasicMaterial({ color: 0xffb02c })));
+    g.add(holder);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTexture('rgba(255,220,120,0.9)'), color: 0xffd54d,
-      transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(16, 16, 1);
+      map: glowTexture('rgba(255,205,110,0.9)'), color: 0xffb02c,
+      transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(14, 14, 1);
     g.add(glow);
-    const arrow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: arrowTex, transparent: true, opacity: 0.9, depthWrite: false }));
-    arrow.scale.set(4.2, 4.2, 1);
-    g.add(arrow);
     g.visible = false;
-    g.userData = { active: false, radius: 5.2, pose: null, passed: false, vz: 0, arrow };
+    g.userData = { active: false, radius: 5.2, pose: null, passed: false, vz: 0, holder };
     world.scene.add(g);
     world.gates.push(g);
   }
 }
 
-// point a gate's arrow: 'left' | 'right' | 'up'
+// orient the chevron: 'left' | 'right' | 'up' (source model points LEFT natively)
 export function setGateArrow(g, dir) {
-  const rot = { right: 0, left: Math.PI, up: Math.PI / 2 }[dir] ?? 0;
-  g.userData.arrow.material.rotation = rot;
+  const h = g.userData.holder;
+  h.rotation.set(0, 0, { left: 0, right: Math.PI, up: -Math.PI / 2 }[dir] ?? 0);
+  h.scale.setScalar(1);
 }
 
 // ── stardust: gold coins (placeholder octahedron until the glb lands) ──
@@ -472,11 +483,11 @@ function buildCrystals() {
     g.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.55), mat));
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture('rgba(255,220,120,0.9)'), color: 0xffd75c, transparent: true,
-      opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(2.4, 2.4, 1);
+      opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(3.6, 3.6, 1);
     g.add(glow);
     g.visible = false;
-    g.userData = { active: false, radius: 1.4, vz: 0, spin: 2 + Math.random() * 3 };
+    g.userData = { active: false, radius: 1.8, vz: 0, spin: 2 + Math.random() * 3 };
     world.scene.add(g);
     world.crystals.push(g);
   }
@@ -490,7 +501,8 @@ async function loadPickupModels() {
   // coin replaces the stardust placeholder
   try {
     const coin = (await gltfLoader.loadAsync('assets/pickups/coin.glb')).scene;
-    normalizeProto(coin, 1.15);
+    normalizeProto(coin, 1.7);
+    selfIlluminate(coin, 0.65);
     for (const c of world.crystals) {
       c.remove(c.children[0]);
       const m = coin.clone(true);
@@ -500,7 +512,8 @@ async function loadPickupModels() {
   for (const [type, file] of Object.entries(PICKUP_MODEL)) {
     try {
       const proto = (await gltfLoader.loadAsync(`assets/pickups/${file}.glb`)).scene;
-      normalizeProto(proto, type === 'shard' ? 1.0 : 1.3);
+      normalizeProto(proto, type === 'shard' ? 1.5 : 2.1);
+      selfIlluminate(proto, 0.6);
       pickupProtos[type] = proto;
     } catch (e) { console.warn(file, 'load failed', e); }
   }
@@ -516,6 +529,19 @@ function normalizeProto(obj, radius) {
   obj.position.sub(center);
 }
 
+// pickups must read at 100+ units/s: make every material glow its own color
+function selfIlluminate(obj, intensity = 0.55) {
+  obj.traverse(o => {
+    if (o.isMesh && o.material) {
+      o.material = o.material.clone();
+      if (o.material.emissive) {
+        o.material.emissive.copy(o.material.color);
+        o.material.emissiveIntensity = intensity;
+      }
+    }
+  });
+}
+
 function buildPowerups() {
   for (let i = 0; i < 6; i++) {
     const g = new THREE.Group();
@@ -524,13 +550,13 @@ function buildPowerups() {
     holder.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.7), mat)); // placeholder
     g.add(holder);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTexture('rgba(255,255,255,0.9)'), transparent: true, opacity: 0.5,
+      map: glowTexture('rgba(255,255,255,0.9)'), transparent: true, opacity: 0.55,
       blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(4.5, 4.5, 1);
+    glow.scale.set(6.5, 6.5, 1);
     g.add(glow);
     g.visible = false;
     g.userData = {
-      active: false, radius: 1.8, type: null, mat, glowMat: glow.material,
+      active: false, radius: 2.3, type: null, mat, glowMat: glow.material,
       setType(type) {
         holder.clear();
         const proto = pickupProtos[type];
