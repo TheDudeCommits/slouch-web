@@ -46,6 +46,28 @@ let rockGeos = null;        // loaded from glb, fallback = displaced icosahedra
 let currentSky = null;
 let postPass = null;
 
+// soft caustic web pattern for the seafloor light
+function causticTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.filter = 'blur(3px)';
+  g.strokeStyle = 'rgba(255,255,255,0.65)';
+  g.lineWidth = 2.2;
+  for (let i = 0; i < 26; i++) {
+    g.beginPath();
+    const cx = Math.random() * 256, cy = Math.random() * 256, r = 18 + Math.random() * 34;
+    for (let a = 0; a <= Math.PI * 2 + 0.3; a += 0.5) {
+      const rr = r * (0.75 + Math.random() * 0.5);
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      a === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  return tex;
+}
+
 function glowTexture(inner = 'rgba(255,255,255,1)', outer = 'rgba(255,255,255,0)') {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
@@ -802,6 +824,14 @@ export function updateWorld(dt, speed, shipVel) {
       if (a.userData.active && a.userData.bobFloat) {
         a.userData.holder.position.y = Math.sin(now * 0.003 + a.id) * 0.5;
       }
+      if (a.userData.active && a.userData.marker) {
+        a.userData.marker.material.opacity = 0.22 + Math.abs(Math.sin(now * 0.004 + a.id)) * 0.22;
+      }
+    }
+    if (packEnv.caustics) {
+      const m = packEnv.caustics.material.map;
+      m.offset.x = Math.sin(now * 0.00012) * 0.3;
+      m.offset.y -= speed * dt * 0.02;
     }
   }
 
@@ -935,6 +965,7 @@ export async function applyWorldPack(onProgress) {
     for (const a of world.asteroids) {
       a.userData.holder.clear();
       a.userData.holder.add(a.userData.rockMesh);
+      if (a.userData.marker) { a.remove(a.userData.marker); a.userData.marker = null; }
     }
     for (const e of world.enemies) {
       e.userData.holder.clear();
@@ -974,13 +1005,53 @@ export async function applyWorldPack(onProgress) {
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
   floorTex.repeat.set(10, 120);
   floorTex.colorSpace = THREE.SRGBColorSpace;
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 1200),
+  // the seabed rolls in soft dunes; jungle ground stays flat for the path
+  const floorGeo = new THREE.PlaneGeometry(140, 1200, 28, 140);
+  if (env.dunes) {
+    const p = floorGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), yy = p.getY(i);
+      p.setZ(i, Math.sin(x * 0.09) * Math.sin(yy * 0.045 + x * 0.02) * 1.5 +
+        Math.sin(x * 0.23 + yy * 0.11) * 0.45);
+    }
+    floorGeo.computeVertexNormals();
+  }
+  const floor = new THREE.Mesh(floorGeo,
     new THREE.MeshStandardMaterial({ map: floorTex, color: env.floorTint, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, env.floorY, -400);
   world.scene.add(floor);
   packEnv.floor = floor;
   packEnv.scrollTexs = [floorTex];
+
+  // animated caustic light dancing on the sand
+  if (env.dunes) {
+    const caus = new THREE.Mesh(new THREE.PlaneGeometry(140, 1200),
+      new THREE.MeshBasicMaterial({ map: causticTexture(), color: 0xbfefff, transparent: true,
+        opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }));
+    caus.material.map.wrapS = caus.material.map.wrapT = THREE.RepeatWrapping;
+    caus.material.map.repeat.set(9, 80);
+    caus.rotation.x = -Math.PI / 2;
+    caus.position.set(0, env.floorY + 2.1, -400);
+    world.scene.add(caus);
+    packEnv.decor.push(caus);
+    caus.userData.isPath = true;
+    packEnv.caustics = caus;
+
+    // scattered sand-worn stones break up the plain
+    if (rockGeos) {
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0xd8c49c, roughness: 1 });
+      for (let i = 0; i < 16; i++) {
+        const stone = new THREE.Mesh(rockGeos[i % rockGeos.length], stoneMat);
+        const s = 0.5 + Math.random() * 1.6;
+        stone.scale.setScalar(s);
+        stone.position.set((Math.random() - 0.5) * 60, env.floorY + s * 0.45, -20 - i * 27);
+        stone.rotation.y = Math.random() * Math.PI * 2;
+        world.scene.add(stone);
+        packEnv.decor.push(stone);
+      }
+    }
+  }
 
   const rays = buildRays(env.ray);
   rays.userData.baseOpacity = env.rayOpacity ?? 0.14;
@@ -1012,8 +1083,9 @@ export async function applyWorldPack(onProgress) {
     c.obj.traverse(o => {
       if (o.isMesh && o.material?.color) {
         o.material = o.material.clone();
-        o.material.color.offsetHSL((Math.random() - 0.5) * hueSpread, 0.05, (Math.random() - 0.5) * 0.12);
-        o.material.emissive?.copy(o.material.color).multiplyScalar(0.22);
+        o.material.color.offsetHSL((Math.random() - 0.5) * hueSpread, 0.03, -0.04 + (Math.random() - 0.5) * 0.1);
+        // scenery stays soft so glowing OBSTACLES are the loud things
+        o.material.emissive?.copy(o.material.color).multiplyScalar(0.1);
       }
     });
     const side = i % 2 === 0 ? -1 : 1;
@@ -1083,6 +1155,15 @@ export async function applyWorldPack(onProgress) {
     a.userData.anchor = def.anchor || (pack.grounded ? 'floor' : 'free');
     a.userData.halfH = c ? c.dims.y / 2 : a.userData.radius;
     a.userData.bobFloat = !!def.bob;
+    // danger marker: a pulsing warm halo — the universal "this one hurts" cue
+    if (a.userData.marker) { a.remove(a.userData.marker); a.userData.marker = null; }
+    const mk = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture('rgba(255,120,110,0.85)'), color: env.danger ?? 0xff5470,
+      transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
+    mk.scale.setScalar(Math.max(3.4, a.userData.radius * 2.6));
+    mk.position.y = a.userData.anchor === 'free' ? 0 : -a.userData.halfH * 0.35;
+    a.add(mk);
+    a.userData.marker = mk;
   }
 
   for (const e of world.enemies) {

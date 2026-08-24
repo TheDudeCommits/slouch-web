@@ -132,10 +132,47 @@ export function applyVolumes() {
 
 export function resumeAudio() { if (ctx?.state === 'suspended') ctx.resume(); }
 
+// ── world ambience: a soft looping bed under the music (birdsong, bubbles) ──
+let ambEl = null, ambGain = null, ambName = null;
+
+export function setAmbience(worldId) {
+  if (!ctx) return;
+  const file = { ocean: 'amb_ocean', jungle: 'amb_jungle' }[worldId] || null;
+  if (ambName === file) return;
+  ambName = file;
+  if (ambGain) ambGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
+  if (!file) { setTimeout(() => ambEl?.pause(), 900); return; }
+  const el = new Audio(`assets/sfx/${file}.m4a`);
+  el.loop = true;
+  el.style.display = 'none';
+  document.body.appendChild(el);
+  const src = ctx.createMediaElementSource(el);
+  const g = ctx.createGain();
+  g.gain.value = 0;
+  src.connect(g);
+  g.connect(master);
+  const old = ambEl;
+  setTimeout(() => old?.pause(), 900);
+  ambEl = el; ambGain = g;
+  el.play().catch(() => { });
+  g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 1.5);
+}
+
 // ── SFX: sampled sounds — Juhani Junkala's 8-bit collection (CC0) for game
-// moments, Kenney Interface Sounds (CC0) for UI. Loaded once, ~180KB total.
+// moments, Kenney Interface Sounds (CC0) for UI, plus organic per-world
+// overrides (Pixabay): bubble pops and splashes underwater, soft thumps in
+// the jungle. Loaded once, lightweight.
 const SFX_FILES = ['ui', 'buy', 'denied', 'near', 'gate', 'shieldup', 'shielddown',
-  'warn', 'crash', 'smash', 'powerup', 'bosswarn', 'bossdown', 'laser', 'revive', 'levelup'];
+  'warn', 'crash', 'smash', 'powerup', 'bosswarn', 'bossdown', 'laser', 'revive', 'levelup',
+  'o_splash', 'o_pop', 'j_thump'];
+// which sample actually plays per world for a given slot
+const SFX_WORLD = {
+  ocean: { near: 'o_pop', smash: 'o_splash', crash: 'o_splash', laser: 'o_pop' },
+  jungle: { smash: 'j_thump', crash: 'j_thump' },
+};
+let sfxWorld = 'space';
+export function setSfxWorld(w) { sfxWorld = w; }
+function resolve(name) { return SFX_WORLD[sfxWorld]?.[name] || name; }
 const sfxBufs = {};
 
 async function loadSfx() {
@@ -148,7 +185,7 @@ async function loadSfx() {
 }
 
 function play(name, { rate = 1, gain = 1 } = {}) {
-  const buf = sfxBufs[name];
+  const buf = sfxBufs[resolve(name)];
   if (!ctx || !buf) return;
   const src = ctx.createBufferSource();
   src.buffer = buf;

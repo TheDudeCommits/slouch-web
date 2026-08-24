@@ -3,7 +3,7 @@
 import { initWorld, applyTheme, loadHeroShip, applyWorldPack } from './world.js';
 import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head, updateHead } from './head.js';
 import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon } from './game.js';
-import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx } from './audio.js';
+import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx, setAmbience, setSfxWorld } from './audio.js';
 import { todaySeed, hashSeed, mulberry32 } from './rng.js';
 import { shareCard, weeklyTrend } from './report.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
@@ -17,6 +17,8 @@ function applyWorldSkin() {
   document.body.classList.toggle('world-ocean', w === 'ocean');
   document.body.classList.toggle('world-jungle', w === 'jungle');
   $('btn-retry').textContent = (WORLD_TEXT[w] || WORLD_TEXT.space).retry;
+  setSfxWorld(w);
+  setAmbience(w);
 }
 
 const $ = (id) => document.getElementById(id);
@@ -317,6 +319,8 @@ addEventListener('pointerdown', function firstTap() {
   removeEventListener('pointerdown', firstTap);
   initAudio(); resumeAudio(); applyVolumes();
   if (!game.running) startMusic('menu');
+  setSfxWorld(ST.currentWorld());
+  setAmbience(ST.currentWorld());
 }, { once: true });
 
 // touch fallback for boon choice

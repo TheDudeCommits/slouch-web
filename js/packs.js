@@ -58,7 +58,7 @@ export const PACKS = {
       ray: 0xffffff, rayOpacity: 0.14, particle: 0xe8fbff, accent: 0x3fd4ff,
       hemi: [0xf0ffff, 0x3a7a90, 1.5],
       exposure: 1.24,
-      decorCount: 36, sway: true, surface: true, swimmerCount: 13,
+      decorCount: 36, sway: true, surface: true, swimmerCount: 13, dunes: true, danger: 0xff5470,
       swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
     },
     heroes: {
@@ -72,10 +72,10 @@ export const PACKS = {
       { file: 'coral2.glb', anchor: 'floor', tall: true },
       { file: 'coral3.glb', anchor: 'floor', tall: true },
       { file: 'urchin.glb', anchor: 'floor', low: true },
-      { file: 'puffer.glb', anchor: 'free', bob: true },   // floaters guard the upper water
+      { file: 'puffer.glb', anchor: 'free', bob: true },   // pufferfish guard the upper water
       { file: 'puffer.glb', anchor: 'free', bob: true },
-      { file: 'octo1.glb', anchor: 'free', bob: true },
-      { file: 'octo2.glb', anchor: 'free', bob: true },
+      { file: 'octo1.glb', anchor: 'floor', low: true },   // octopuses lurk on the seabed
+      { file: 'octo2.glb', anchor: 'floor', low: true },
       { file: 'kelp.glb', anchor: 'floor', tall: true },
     ],
     enemies: [
@@ -103,7 +103,7 @@ export const PACKS = {
       ray: 0xfff6d0, rayOpacity: 0.07, particle: 0xffe9a0, accent: 0x7ddf4a,
       hemi: [0xfff4d0, 0x5a8a3a, 1.4],
       exposure: 1.18,
-      decorCount: 30, path: true,
+      decorCount: 30, path: true, danger: 0xff8a3c,
     },
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
