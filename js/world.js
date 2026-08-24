@@ -6,14 +6,21 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { themeColors } from './state.js';
+import { themeColors, cosmetics } from './state.js';
 
 export const world = {
   scene: null, camera: null, renderer: null, composer: null,
-  ship: null, shipShield: null,
-  asteroids: [], enemies: [], gates: [], crystals: [],
+  ship: null, shipShield: null, ghostShip: null,
+  asteroids: [], enemies: [], gates: [], crystals: [], powerups: [], walls: [],
+  boss: null,
   bounds: { x: 13, y: 7.5 },
   spawnZ: -420, killZ: 14,
+};
+
+export const POWERUP_TYPES = {
+  magnet: { color: 0xffd54d, label: '🧲 MAGNET' },
+  focus: { color: 0x8ab8ff, label: '🕰 FOCUS' },
+  doubler: { color: 0xff5ce0, label: '×2 SCORE' },
 };
 
 let engineMat, trailPts, trailGeo, shieldMat, warpStars;
@@ -57,12 +64,16 @@ export function initWorld() {
   scene.add(key);
 
   buildShip();
+  buildGhostShip();
   buildStars();
   buildNebula();
   buildAsteroids();
   buildEnemies();
   buildGates();
   buildCrystals();
+  buildPowerups();
+  buildWalls();
+  buildBoss();
   buildExplosion();
 
   const composer = new EffectComposer(renderer);
@@ -154,6 +165,122 @@ function buildShip() {
 
   world.scene.add(ship);
   world.ship = ship;
+}
+
+// ── ghost ship: translucent replay of your best run ──
+function buildGhostShip() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color: 0x4df3ff, transparent: true, opacity: 0.22,
+    blending: THREE.AdditiveBlending, depthWrite: false });
+  themedMats.ghost = mat;
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.42, 2.4, 6), mat);
+  nose.rotation.x = -Math.PI / 2;
+  nose.position.z = -1.1;
+  g.add(nose);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.6, 1.8, 6), mat);
+  body.rotation.x = -Math.PI / 2;
+  body.position.z = 0.9;
+  g.add(body);
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 1.1), mat);
+    wing.position.set(side * 1.15, -0.08, 0.9);
+    wing.rotation.z = side * 0.28;
+    g.add(wing);
+  }
+  g.visible = false;
+  world.scene.add(g);
+  world.ghostShip = g;
+}
+
+// ── power-ups: spinning torus-knot pickups with a glow halo ──
+function buildPowerups() {
+  for (let i = 0; i < 6; i++) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.55, 0.18, 48, 8), mat);
+    g.add(knot);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture('rgba(255,255,255,0.9)'), transparent: true, opacity: 0.5,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(4, 4, 1);
+    g.add(glow);
+    g.visible = false;
+    g.userData = { active: false, radius: 1.8, type: null, mat, glowMat: glow.material };
+    world.scene.add(g);
+    world.powerups.push(g);
+  }
+}
+
+// ── laser walls: fences of beams with one gap, spawned by sectors & the boss ──
+function buildWalls() {
+  for (let i = 0; i < 5; i++) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: 0xff3c5a, transparent: true, opacity: 0.85 });
+    // 10 beams; unused ones are hidden per-spawn depending on gap position
+    for (let b = 0; b < 10; b++) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), mat);
+      g.add(beam);
+    }
+    g.visible = false;
+    g.userData = { active: false, mat, gapAxis: 'x', gapCenter: 0, gapHalf: 3.4 };
+    world.scene.add(g);
+    world.walls.push(g);
+  }
+}
+
+// Arrange a wall's beams as a fence perpendicular to `axis` with a gap at gapCenter.
+export function armWall(g, gapAxis, gapCenter) {
+  const beams = g.children;
+  const positions = [];
+  const span = gapAxis === 'x' ? 17 : 10; // fence extent along the gap axis
+  for (let p = -span; p <= span; p += span / 4.6) positions.push(p);
+  let bi = 0;
+  for (const p of positions) {
+    if (bi >= beams.length) break;
+    if (Math.abs(p - gapCenter) < 3.6) continue; // the gap
+    const beam = beams[bi++];
+    beam.visible = true;
+    if (gapAxis === 'x') { // vertical beams, dodge along x
+      beam.position.set(p, 0, 0);
+      beam.scale.set(1, 80, 1);
+    } else {               // horizontal beams, dodge along y
+      beam.position.set(0, p, 0);
+      beam.scale.set(130, 1, 1);
+    }
+  }
+  for (; bi < beams.length; bi++) beams[bi].visible = false;
+  // hidden beams left as-is; only re-armed ones show
+  g.userData.gapAxis = gapAxis;
+  g.userData.gapCenter = gapCenter;
+  g.userData.gapHalf = 3.2;
+}
+
+// ── boss: the mining dreadnought ──
+function buildBoss() {
+  const g = new THREE.Group();
+  const hull = new THREE.MeshStandardMaterial({ color: 0x3a2a3a, metalness: 0.85, roughness: 0.4, flatShading: true });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 6, 26, 8), hull);
+  body.rotation.z = Math.PI / 2;
+  g.add(body);
+  for (const s of [-1, 1]) {
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(3, 7, 3), hull);
+    tower.position.set(s * 8, 5, 0);
+    g.add(tower);
+    const engine = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture('rgba(255,90,90,1)'), color: 0xff3c5a,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+    engine.scale.set(5, 5, 1);
+    engine.position.set(s * 11, -1, 3);
+    g.add(engine);
+  }
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff3c5a }));
+  eye.position.set(0, 0, 6);
+  g.add(eye);
+  g.userData = { eye };
+  g.visible = false;
+  world.scene.add(g);
+  world.boss = g;
 }
 
 // ── starfield tube that wraps around the flight path ──
@@ -293,6 +420,10 @@ function buildExplosion() {
 }
 
 export function explodeAt(p) {
+  const boom = cosmetics().boom;
+  const col = boom.color === 'accent' ? themeColors().accent : boom.color;
+  explosion.pts.material.color.setHex(col);
+  explosion.pts.material.size = 0.85 * boom.size;
   const pos = explosion.pts.geometry.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     pos.setXYZ(i, p.x, p.y, p.z);
@@ -337,6 +468,22 @@ export function updateWorld(dt, speed, shipVel) {
   ship.userData.glow.scale.set(1.6 * flicker, 1.6 * flicker, 1);
   ship.userData.engineLight.intensity = 2 * flicker + speed * 0.008;
 
+  // prism trail cycles the full spectrum
+  if (rainbowTrail) {
+    const hue = (performance.now() * 0.00012) % 1;
+    const col = new THREE.Color().setHSL(hue, 1, 0.6);
+    trailPts.material.color.copy(col);
+    ship.userData.glow.material.color.copy(col);
+    ship.userData.engineLight.color.copy(col);
+  }
+
+  // boss idle motion
+  if (world.boss.visible) {
+    world.boss.position.x = Math.sin(performance.now() * 0.0004) * 6;
+    world.boss.position.y = Math.cos(performance.now() * 0.0005) * 3 + 2;
+    world.boss.userData.eye.scale.setScalar(1 + Math.sin(performance.now() * 0.006) * 0.25);
+  }
+
   // hyperdrive: FOV punch + subtle shake
   hyperLevel += (hyperTarget - hyperLevel) * Math.min(1, dt * 5);
   const fov = 72 + hyperLevel * 16;
@@ -380,19 +527,25 @@ export function setShieldVisual(strength) {
   world.shipShield.scale.setScalar(1 + Math.sin(performance.now() * 0.01) * 0.03);
 }
 
+let rainbowTrail = false;
+
 export function applyTheme() {
   const c = themeColors();
+  const cos = cosmetics();
   world.scene.fog = new THREE.FogExp2(c.fog, 0.0052);
   world.renderer.setClearColor(c.fog);
-  themedMats.hull.color.setHex(c.ship);
+  themedMats.hull.color.setHex(cos.skin.color ?? c.ship);
   themedMats.rock.color.setHex(c.rock);
   themedMats.rock.emissive.setHex(c.rockEmissive);
   themedMats.crystal.color.setHex(c.accent);
-  engineMat.color.setHex(c.engine);
-  shieldMat.color.setHex(c.engine);
-  world.ship.userData.glow.material.color.setHex(c.engine);
-  world.ship.userData.engineLight.color.setHex(c.engine);
-  trailPts.material.color.setHex(c.engine);
+  themedMats.ghost?.color.setHex(c.accent);
+  rainbowTrail = cos.trail.color === 'rainbow';
+  const engineCol = rainbowTrail ? c.engine : (cos.trail.color ?? c.engine);
+  engineMat.color.setHex(engineCol);
+  shieldMat.color.setHex(engineCol);
+  world.ship.userData.glow.material.color.setHex(engineCol);
+  world.ship.userData.engineLight.color.setHex(engineCol);
+  trailPts.material.color.setHex(engineCol);
   nebulaSprites.forEach((s, i) => s.material.color.setHex(i % 2 ? c.nebula1 : c.nebula2));
 }
 

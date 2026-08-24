@@ -177,3 +177,94 @@ h2 { letter-spacing: 0.18em; font-weight: 800; color: var(--accent); margin-bott
 .lore-text b { color: var(--accent); }
 
 .hidden { display: none !important; }
+
+/* ── focus slow-mo tint ── */
+#focus-tint { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(60, 120, 255, 0.28) 100%);
+  transition: opacity 0.4s; }
+body.focus-active #focus-tint { opacity: 1; }
+
+/* ── goal rings ── */
+.chip-rings { padding: 5px 10px; display: flex; align-items: center; }
+.ring-bg { fill: none; stroke: rgba(122,132,173,0.25); stroke-width: 3.4; }
+.ring { fill: none; stroke-width: 3.4; stroke-linecap: round; transform: rotate(-90deg);
+  transform-origin: center; transition: stroke-dashoffset 0.6s; }
+.ring1 { stroke: #4df3ff; }
+.ring2 { stroke: #ffd54d; }
+.ring3 { stroke: #ff5ce0; }
+.ring-bg.big, .ring.big { stroke-width: 7; }
+
+/* ── event banner / gold button ── */
+.event-banner { margin: 0 0 10px; padding: 9px 16px; border-radius: 999px; font-size: 12px;
+  font-weight: 800; letter-spacing: 0.06em; color: var(--gold);
+  border: 1px solid rgba(255,213,77,0.45); background: rgba(255,213,77,0.08);
+  box-shadow: 0 0 18px rgba(255,213,77,0.15); display: inline-block; }
+.btn-gold { border-color: rgba(255,213,77,0.55); color: var(--gold);
+  background: rgba(255,213,77,0.07); }
+#daily-status { font-size: 11px; opacity: 0.8; }
+
+/* ── HUD additions ── */
+.hud-bars { align-self: flex-start; margin-top: 8px; }
+.hud-flow { width: min(200px, 50vw); height: 5px; margin-top: 5px; border-radius: 3px;
+  background: rgba(122,132,173,0.25); overflow: hidden; }
+#hud-flow-fill { height: 100%; width: 0%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold), #ff5ce0);
+  box-shadow: 0 0 8px rgba(255,213,77,0.7); transition: width 0.15s linear; }
+.hud-powerups { align-self: flex-start; display: flex; gap: 6px; margin-top: 8px; }
+.hud-powerups .pu { background: var(--panel); border: 1px solid rgba(122,132,173,0.35);
+  border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; }
+.hud-boss { margin-top: 6vh; font-size: 19px; font-weight: 900; letter-spacing: 0.12em;
+  color: var(--danger); text-shadow: 0 0 18px rgba(255,77,109,0.8); text-align: center;
+  animation: pulse 0.7s infinite; }
+.hud-duel { position: absolute; top: calc(70px + var(--sat)); right: 16px;
+  font-size: 13px; font-weight: 800; color: var(--gold); }
+
+/* ── posture report ── */
+.report-ring-wrap { position: relative; width: 130px; height: 130px; margin: 4px auto 8px; }
+.report-ring-num { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 40px; font-weight: 900; }
+.report-ring-num small { font-size: 9px; letter-spacing: 0.15em; color: var(--dim); line-height: 1.3; }
+#report-rows { text-align: left; margin: 10px 0; }
+.report-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px;
+  border-bottom: 1px solid rgba(122,132,173,0.12); font-size: 13px; font-weight: 700; }
+.report-row .k { color: var(--dim); flex: 1; }
+.report-row .bar { flex: 2; height: 6px; border-radius: 3px; background: rgba(122,132,173,0.2);
+  overflow: hidden; }
+.report-row .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.report-row .v { min-width: 74px; text-align: right; color: var(--text); }
+.report-goals { display: flex; justify-content: space-around; margin: 12px 0; }
+.report-goals .g { text-align: center; font-size: 11px; font-weight: 800; color: var(--dim); }
+.report-goals .g b { display: block; font-size: 17px; color: var(--text); }
+.report-goals .g.done b { color: var(--gold); }
+
+/* ── game over extras ── */
+#go-unlocks { margin: 6px 0; }
+#go-unlocks .unlock { color: var(--gold); font-weight: 800; font-size: 13px; margin: 3px 0;
+  letter-spacing: 0.04em; }
+#go-duel-result { font-weight: 900; font-size: 19px; letter-spacing: 0.1em; margin: 4px 0; }
+#go-duel-result.win { color: var(--gold); }
+#go-duel-result.lose { color: var(--danger); }
+
+/* ── store upgrades pips ── */
+.pips { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.pips i { width: 8px; height: 8px; border-radius: 50%; background: rgba(122,132,173,0.3); }
+.pips i.on { background: var(--gold); box-shadow: 0 0 6px rgba(255,213,77,0.8); }
+
+/* ── trophies ── */
+#trophy-list { text-align: left; }
+.trophy { display: flex; gap: 12px; align-items: center; padding: 10px 6px;
+  border-bottom: 1px solid rgba(122,132,173,0.12); }
+.trophy .t-icon { font-size: 26px; width: 38px; text-align: center; filter: grayscale(1) opacity(0.4); }
+.trophy.unlocked .t-icon { filter: none; }
+.trophy .t-name { font-weight: 800; font-size: 13.5px; }
+.trophy.unlocked .t-name { color: var(--gold); }
+.trophy .t-desc { color: var(--dim); font-size: 11.5px; }
+
+/* ── history ── */
+#history-list { text-align: left; }
+.hist-row { display: flex; gap: 10px; padding: 9px 4px; font-size: 13px; font-weight: 700;
+  border-bottom: 1px solid rgba(122,132,173,0.12); align-items: center; }
+.hist-row .h-date { color: var(--dim); width: 74px; font-size: 11px; }
+.hist-row .h-mode { width: 30px; }
+.hist-row .h-score { flex: 1; text-align: right; color: var(--accent); }
+.hist-row .h-stretch { width: 56px; text-align: right; color: var(--gold); }

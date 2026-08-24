@@ -7,6 +7,9 @@ let ctx = null;
 let musicGain, sfxGain, master;
 let musicTimer = null;
 let step = 0;
+let intensity = 0; // 0..1, driven by the in-game flow meter
+
+export function setMusicIntensity(v) { intensity = Math.max(0, Math.min(1, v)); }
 
 export function initAudio() {
   if (ctx) return;
@@ -60,7 +63,29 @@ function scheduleMusicStep(t) {
   if (step % 4 === 0) {                                      // soft kick
     note(120, t, 0.16, 'sine', 0.5, musicGain, 40);
   }
+  // flow layers: hats come in at medium intensity, octave arp + extra kicks at high
+  if (intensity > 0.35 && step % 2 === 1) {
+    hat(t, 0.05 + intensity * 0.06);
+  }
+  if (intensity > 0.7) {
+    note(freq * 2, t + 0.02, 0.14, 'square', 0.06, musicGain);
+    if (step % 4 === 2) note(120, t, 0.12, 'sine', 0.3, musicGain, 45);
+  }
   step++;
+}
+
+function hat(t, gain) {
+  const dur = 0.05;
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const f = ctx.createBiquadFilter();
+  f.type = 'highpass'; f.frequency.value = 7000;
+  const g = ctx.createGain(); g.gain.value = gain;
+  src.connect(f); f.connect(g); g.connect(musicGain);
+  src.start(t);
 }
 
 export function startMusic() {
@@ -96,6 +121,18 @@ export const sfx = {
   shieldDown() { if (!ctx) return; note(900, now(), 0.25, 'sawtooth', 0.12, sfxGain, 300); },
   warn() { if (!ctx) return; note(220, now(), 0.12, 'square', 0.14, sfxGain);
     note(220, now() + 0.16, 0.12, 'square', 0.14, sfxGain); },
+  powerup() { if (!ctx) return; [440, 660, 880, 1320].forEach((f, i) =>
+    note(f, now() + i * 0.05, 0.12, 'sine', 0.18, sfxGain)); },
+  bossWarn() { if (!ctx) return; [0, 0.3, 0.6].forEach(o => {
+    note(160, now() + o, 0.22, 'sawtooth', 0.2, sfxGain);
+    note(164, now() + o, 0.22, 'sawtooth', 0.2, sfxGain); }); },
+  bossDown() { if (!ctx) return; [392, 523, 659, 784, 1047, 1319].forEach((f, i) =>
+    note(f, now() + i * 0.09, 0.22, 'triangle', 0.2, sfxGain)); },
+  laser() { if (!ctx) return; note(2200, now(), 0.18, 'sawtooth', 0.08, sfxGain, 300); },
+  revive() { if (!ctx) return; [220, 330, 440, 660, 880].forEach((f, i) =>
+    note(f, now() + i * 0.06, 0.3, 'triangle', 0.16, sfxGain)); },
+  levelup() { if (!ctx) return; [523, 784].forEach((f, i) =>
+    note(f, now() + i * 0.08, 0.2, 'square', 0.12, sfxGain)); },
   crash() {
     if (!ctx) return;
     // filtered noise burst

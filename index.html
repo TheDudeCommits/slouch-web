@@ -23,6 +23,7 @@
 <body>
 <canvas id="gl"></canvas>
 <video id="cam" playsinline muted autoplay></video>
+<div id="focus-tint"></div>
 
 <!-- ══════════ LOADING ══════════ -->
 <div id="screen-loading" class="screen active">
@@ -38,21 +39,46 @@
 <div id="screen-menu" class="screen">
   <div class="menu-top">
     <div class="chip" id="chip-streak" title="Daily streak">🔥 <span id="streak-count">0</span></div>
+    <div class="chip chip-rings" id="chip-goals" title="Daily goals">
+      <svg viewBox="0 0 40 40" width="26" height="26">
+        <circle class="ring-bg" cx="20" cy="20" r="17"/>
+        <circle class="ring-bg" cx="20" cy="20" r="12"/>
+        <circle class="ring-bg" cx="20" cy="20" r="7"/>
+        <circle id="ring-move" class="ring ring1" cx="20" cy="20" r="17"/>
+        <circle id="ring-tuck" class="ring ring2" cx="20" cy="20" r="12"/>
+        <circle id="ring-stretch" class="ring ring3" cx="20" cy="20" r="7"/>
+      </svg>
+    </div>
     <div class="chip" id="chip-points">✦ <span id="points-count">0</span></div>
   </div>
   <div class="menu-center">
     <h1 class="logo">SLOUCH</h1>
     <p class="tagline">fix your neck. save the galaxy.</p>
+    <div id="event-banner" class="event-banner hidden"></div>
     <div class="best-line dim">BEST <span id="menu-best">0</span></div>
     <button class="btn btn-primary" id="btn-play-techneck">▶ TECH NECK MODE</button>
     <button class="btn" id="btn-play-casual">▶ CASUAL MODE</button>
+    <button class="btn btn-gold" id="btn-daily">🗓 DAILY CHALLENGE <span id="daily-status"></span></button>
     <div class="menu-row">
       <button class="btn btn-small" id="btn-store">STORE</button>
       <button class="btn btn-small" id="btn-leaderboard">RANKS</button>
-      <button class="btn btn-small" id="btn-settings">SETTINGS</button>
+      <button class="btn btn-small" id="btn-trophies">🏆</button>
+      <button class="btn btn-small" id="btn-settings">⚙︎</button>
     </div>
   </div>
   <p class="menu-foot dim">head-tracked · camera never leaves your phone</p>
+</div>
+
+<!-- ══════════ DUEL BANNER ══════════ -->
+<div id="screen-duel" class="screen overlay">
+  <div class="panel">
+    <h2>⚔️ DUEL</h2>
+    <p><b id="duel-tag">???</b> challenges you!</p>
+    <div class="go-score" id="duel-score">0</div>
+    <p class="dim">Beat that score on the same asteroid belt.</p>
+    <button class="btn btn-primary" id="btn-duel-accept">ACCEPT DUEL</button>
+    <button class="btn" id="btn-duel-decline">LATER</button>
+  </div>
 </div>
 
 <!-- ══════════ CALIBRATION ══════════ -->
@@ -77,11 +103,17 @@
     <div class="hud-mult" id="hud-mult">×1</div>
     <button id="btn-pause" aria-label="Pause">Ⅱ</button>
   </div>
-  <div id="hud-shield" class="hud-shield"><div id="hud-shield-fill"></div></div>
+  <div class="hud-bars">
+    <div id="hud-shield" class="hud-shield"><div id="hud-shield-fill"></div></div>
+    <div id="hud-flow" class="hud-flow"><div id="hud-flow-fill"></div></div>
+  </div>
+  <div id="hud-powerups" class="hud-powerups"></div>
+  <div id="hud-boss" class="hud-boss hidden"></div>
   <div id="hud-gate" class="hud-gate hidden"></div>
   <div id="hud-slouch" class="hud-slouch hidden">⚠ SLOUCH DETECTED — sit tall!</div>
   <div id="hud-toast" class="hud-toast hidden"></div>
   <div id="hud-face-lost" class="hud-face-lost hidden">😶 face lost — center yourself</div>
+  <div id="hud-duel-target" class="hud-duel hidden"></div>
 </div>
 
 <!-- ══════════ PAUSE ══════════ -->
@@ -96,17 +128,43 @@
 
 <!-- ══════════ GAME OVER ══════════ -->
 <div id="screen-gameover" class="screen overlay">
-  <div class="panel">
+  <div class="panel scroll">
     <h2 id="go-title">SHIP DOWN</h2>
     <div class="go-score" id="go-score">0</div>
     <div id="go-best" class="go-best hidden">★ NEW BEST ★</div>
-    <p class="dim">✦ <span id="go-points">0</span> stardust earned</p>
+    <div id="go-duel-result" class="hidden"></div>
+    <p class="dim">✦ <span id="go-points">0</span> stardust earned <span id="go-event-bonus"></span></p>
+    <div id="go-unlocks"></div>
     <div id="go-name-entry" class="hidden">
       <p>Top 10! Enter your tag:</p>
       <input id="go-name" maxlength="8" placeholder="ACE" autocomplete="off">
     </div>
     <button class="btn btn-primary" id="btn-retry">FLY AGAIN</button>
-    <button class="btn" id="btn-go-menu">MENU</button>
+    <button class="btn" id="btn-report">🧘 POSTURE REPORT</button>
+    <div class="menu-row">
+      <button class="btn btn-small" id="btn-share">📤 SHARE</button>
+      <button class="btn btn-small" id="btn-duel-send">⚔️ DUEL A FRIEND</button>
+      <button class="btn btn-small" id="btn-go-menu">MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ POSTURE REPORT ══════════ -->
+<div id="screen-report" class="screen">
+  <div class="panel scroll">
+    <h2>POSTURE REPORT</h2>
+    <div class="report-ring-wrap">
+      <svg viewBox="0 0 120 120" width="130" height="130">
+        <circle class="ring-bg big" cx="60" cy="60" r="52"/>
+        <circle id="report-ring" class="ring ring1 big" cx="60" cy="60" r="52"/>
+      </svg>
+      <div class="report-ring-num"><span id="report-stretch">0</span><small>STRETCH<br>SCORE</small></div>
+    </div>
+    <p id="report-trend" class="dim"></p>
+    <div id="report-rows"></div>
+    <div id="report-goals" class="report-goals"></div>
+    <button class="btn btn-small" id="btn-report-share">📤 SHARE CARD</button>
+    <button class="btn btn-primary" id="btn-report-back">BACK</button>
   </div>
 </div>
 
@@ -122,10 +180,24 @@
       <input type="range" id="set-sens" min="30" max="200" value="100"></label>
     <label class="setting"><span>Mirror controls</span>
       <input type="checkbox" id="set-mirror" checked></label>
+    <label class="setting"><span>Race your ghost</span>
+      <input type="checkbox" id="set-ghost" checked></label>
+    <label class="setting"><span>Posture reminders</span>
+      <input type="checkbox" id="set-reminders"></label>
     <button class="btn" id="btn-recalibrate">📷 RECALIBRATE CAMERA</button>
+    <button class="btn" id="btn-history">📈 RUN HISTORY</button>
     <button class="btn" id="btn-lore">📖 LORE / ABOUT</button>
     <button class="btn btn-danger" id="btn-reset">RESET ALL DATA</button>
     <button class="btn btn-primary" id="btn-settings-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ RUN HISTORY ══════════ -->
+<div id="screen-history" class="screen">
+  <div class="panel scroll">
+    <h2>RUN HISTORY</h2>
+    <div id="history-list"></div>
+    <button class="btn btn-primary" id="btn-history-back">BACK</button>
   </div>
 </div>
 
@@ -134,6 +206,12 @@
   <div class="panel scroll">
     <h2>STORE</h2>
     <p class="dim">balance ✦ <span id="store-points">0</span></p>
+    <div class="tabs" id="store-tabs">
+      <button class="tab active" data-cat="themes">THEMES</button>
+      <button class="tab" data-cat="ship">SHIP</button>
+      <button class="tab" data-cat="upgrades">UPGRADES</button>
+      <button class="tab" data-cat="utility">UTILITY</button>
+    </div>
     <div id="store-items"></div>
     <button class="btn btn-primary" id="btn-store-back">BACK</button>
   </div>
@@ -146,9 +224,20 @@
     <div class="tabs">
       <button class="tab active" data-board="techneck">TECH NECK</button>
       <button class="tab" data-board="casual">CASUAL</button>
+      <button class="tab" data-board="daily">TODAY</button>
     </div>
     <ol id="board-list"></ol>
     <button class="btn btn-primary" id="btn-board-back">BACK</button>
+  </div>
+</div>
+
+<!-- ══════════ TROPHIES ══════════ -->
+<div id="screen-trophies" class="screen">
+  <div class="panel scroll">
+    <h2>TROPHIES</h2>
+    <p class="dim"><span id="trophy-count">0</span> unlocked</p>
+    <div id="trophy-list"></div>
+    <button class="btn btn-primary" id="btn-trophies-back">BACK</button>
   </div>
 </div>
 
@@ -166,7 +255,9 @@
       but by the pilot's own spine. The straighter you sit, the truer she flies.
       Slouch, and she sputters.</p>
       <p>Every tilt of your head banks her wings. Every chin tuck slams her into
-      hyperdrive. Every look over your shoulder opens a Stretch Gate.</p>
+      hyperdrive. Every look over your shoulder opens a Stretch Gate. And somewhere
+      out there, the <b>Dreadnought</b> is mining the belt — its laser fences don't
+      care about your posture. Thread them anyway.</p>
       <p><b>Fly far. Sit tall. The galaxy is watching your posture.</b></p>
       <hr>
       <p class="dim">Slouch turns evidence-based tech-neck exercises into flight controls.
