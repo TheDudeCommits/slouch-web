@@ -65,6 +65,7 @@ const PostShader = {
     time: { value: 0 },
     hyper: { value: 0 },
     aspect: { value: 1 },
+    tint: { value: new THREE.Vector3(0.55, 0.85, 1.0) },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -72,6 +73,7 @@ const PostShader = {
   fragmentShader: /* glsl */`
     uniform sampler2D tDiffuse;
     uniform float time, hyper, aspect;
+    uniform vec3 tint;
     varying vec2 vUv;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     void main() {
@@ -85,13 +87,13 @@ const PostShader = {
       col.r = texture2D(tDiffuse, uv + off).r;
       col.g = texture2D(tDiffuse, uv).g;
       col.b = texture2D(tDiffuse, uv - off).b;
-      // hyper speed lines: radial streaks flickering outward
+      // hyper speed lines: radial streaks flickering outward (world-tinted)
       if (hyper > 0.01) {
         vec2 d = vec2(c.x * aspect, c.y);
         float ang = atan(d.y, d.x);
         float streak = hash(vec2(floor(ang * 60.0), floor(time * 24.0)));
         float mask = smoothstep(0.06, 0.42, r2) * step(0.82, streak) * hyper;
-        col += vec3(0.55, 0.85, 1.0) * mask * 0.5;
+        col += tint * mask * 0.5;
       }
       // vignette
       col *= 1.0 - r2 * (0.55 - hyper * 0.15);
@@ -755,7 +757,7 @@ export function updateWorld(dt, speed, shipVel) {
   }
   if (packEnv.rays) {
     for (const r of packEnv.rays.children) {
-      r.material.opacity = 0.1 + Math.abs(Math.sin(now * 0.0003 + r.userData.phase)) * 0.12;
+      r.material.opacity = 0.16 + Math.abs(Math.sin(now * 0.0003 + r.userData.phase)) * 0.18;
     }
   }
   for (const d of packEnv.decor) {
@@ -872,7 +874,7 @@ const packMixers = [];
 const packEnv = { floor: null, rays: null, decor: [] };
 
 function clearPackEnv() {
-  for (const key of ['floor', 'rays']) {
+  for (const key of ['floor', 'rays', 'hemi']) {
     if (packEnv[key]) { world.scene.remove(packEnv[key]); packEnv[key] = null; }
   }
   for (const d of packEnv.decor) world.scene.remove(d);
@@ -899,6 +901,8 @@ export async function applyWorldPack(onProgress) {
     sunLight.visible = true;
     warpStars.visible = true;
     trailPts.visible = true;
+    world.renderer.toneMappingExposure = 1.15;
+    postPass.uniforms.tint.value.set(0.55, 0.85, 1.0);
     for (const a of world.asteroids) {
       a.userData.holder.clear();
       a.userData.holder.add(a.userData.rockMesh);
@@ -924,6 +928,12 @@ export async function applyWorldPack(onProgress) {
   if (target === 'ocean') trailPts.material.color.setHex(0xcfeaff);
 
   const env = pack.env;
+  world.renderer.toneMappingExposure = env.exposure ?? 1.25;
+  const ac = new THREE.Color(env.accent);
+  postPass.uniforms.tint.value.set(ac.r, ac.g, ac.b);
+  shieldMat.color.setHex(env.accent);
+  world.ship.userData.glow.material.color.setHex(env.accent);
+  world.ship.userData.engineLight.color.setHex(env.accent);
   world.scene.background = env.treeline ? treelineTexture(env.bg) : gradientTexture(env.bg);
   world.scene.environment = null;
   world.scene.fog = new THREE.FogExp2(env.fogColor, env.fogDensity);
@@ -946,10 +956,10 @@ export async function applyWorldPack(onProgress) {
   world.scene.add(rays);
   packEnv.rays = rays;
 
-  // pack lighting: bright hemisphere so creatures and floor read clearly
+  // pack lighting: bright hemisphere + warm sun so nothing reads gloomy
   const hemi = new THREE.HemisphereLight(env.hemi[0], env.hemi[1], env.hemi[2]);
   world.scene.add(hemi);
-  packEnv.decor.push(hemi); // cleaned up with decor
+  packEnv.hemi = hemi;
 
   for (let i = 0; i < 12; i++) {
     const file = pack.decor[i % pack.decor.length];
@@ -967,9 +977,8 @@ export async function applyWorldPack(onProgress) {
     const size = a.userData.size;
     const c = spawnCreature(target, def.file, def.tall
       ? { len: size * 3.2 } : { r: def.low ? size * 0.8 : size });
-    if (!c) continue;
     a.userData.holder.clear();
-    a.userData.holder.add(c.obj);
+    a.userData.holder.add(c ? c.obj : a.userData.rockMesh); // never an invisible collider
     a.userData.tall = !!def.tall;
     a.userData.low = !!def.low;
   }
@@ -977,11 +986,15 @@ export async function applyWorldPack(onProgress) {
   for (const e of world.enemies) {
     const def = pack.enemies[Math.floor(Math.random() * pack.enemies.length)];
     const c = spawnCreature(target, def.file, { clip: def.clip, len: def.len, yaw: def.yaw });
-    if (!c) continue;
     e.userData.holder.clear();
-    e.userData.holder.add(c.obj);
-    e.userData.bob = !!def.bob;
-    if (c.mixer) packMixers.push(c.mixer);
+    if (c) {
+      e.userData.holder.add(c.obj);
+      if (c.mixer) packMixers.push(c.mixer);
+    } else {
+      const dart = makeDart();
+      for (const ch of [...dart.children]) e.userData.holder.add(ch);
+    }
+    e.userData.bob = !!(c && def.bob);
   }
 
   const b = spawnCreature(target, pack.boss.file, { len: pack.boss.len, yaw: pack.boss.yaw });

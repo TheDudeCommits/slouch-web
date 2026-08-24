@@ -308,3 +308,23 @@ footer.iconrow { position: absolute; bottom: calc(16px + var(--sab)); }
 .setting input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--acc); }
 
 .hidden { display: none !important; }
+
+/* ── world skins: the whole UI changes voice with the equipped world ── */
+body.world-ocean {
+  --acc: #3fd4ff;
+  --bg: #04222e;
+  --mut: #6b93a8;
+  --display: "Fredoka", sans-serif;
+}
+body.world-ocean .logo { text-shadow: 0 0 34px rgba(63, 212, 255, 0.55); }
+body.world-ocean .cta { box-shadow: 0 0 30px rgba(63, 212, 255, 0.4); }
+body.world-jungle {
+  --acc: #7ddf4a;
+  --bg: #10240c;
+  --mut: #7fa06b;
+  --hot: #ff8a3c;
+  --display: "Baloo 2", sans-serif;
+}
+body.world-jungle .logo { text-shadow: 0 0 34px rgba(125, 223, 74, 0.55); }
+body.world-jungle .cta { box-shadow: 0 0 30px rgba(125, 223, 74, 0.4); }
+body.world-jungle .label, body.world-ocean .label { letter-spacing: 0.3em; }

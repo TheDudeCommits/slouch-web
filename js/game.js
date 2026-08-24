@@ -7,6 +7,9 @@ import { state, activeEvent } from './state.js';
 import { sfx, setMusicIntensity, musicEvent } from './audio.js';
 import { mulberry32 } from './rng.js';
 import { BOONS, MUTATORS, LORE } from './content.js';
+import { WORLD_TEXT } from './packs.js';
+
+function TXT() { return WORLD_TEXT[world.packMode] || WORLD_TEXT.space; }
 import { beginReport, reportTick, noteTuck, noteGate, buildReport } from './report.js';
 import { beginGhost, ghostTick, ghostPace, endGhost } from './ghost.js';
 
@@ -92,8 +95,8 @@ export function startGame(mode, hooks, opts = {}) {
   seenHint = {};
   hintQueue = state().totals.runs === 0 ? [
     [2, mode === 'casual' ? 'MOVE YOUR HEAD — THE SHIP FOLLOWS' : 'TILT YOUR HEAD TO STEER'],
-    [6, 'CHIN UP / DOWN TO CLIMB AND DIVE'],
-    [11, 'GLIDE YOUR CHIN STRAIGHT BACK = HYPERDRIVE'],
+    [6, world.grounded ? (TXT().jumpHint || 'CHIN UP = JUMP') : 'CHIN UP / DOWN TO CLIMB AND DIVE'],
+    [11, TXT().hyperHint],
     [17, 'SHAVE PAST ROCKS FOR GRAZE COMBOS'],
   ] : [];
   if (game.mutator) hooks.onToast?.(game.mutator.name);
@@ -141,13 +144,21 @@ function readControls(dt) {
 
   let ny;
   if (world.grounded) {
-    // runner physics: chin up = jump height, gravity pulls back to the ground
+    // real runner physics: a jump is ballistic — chin up launches, gravity
+    // ALWAYS brings you back down. No hovering, no flying.
     const ground = world.groundY + 1.1;
-    const jump = Math.max(0, ty);
-    const targY = ground + jump * 10.5;
-    const yRate = Math.min(1, (targY > ship.y ? 13 : 6.5) * dt); // spring up, fall slower
-    ny = clamp(ship.y + (targY - ship.y) * yRate, ground, ground + 11);
-    heroState.ducking = ty < -0.35 && ship.y < ground + 0.5;
+    const onGround = ship.y <= ground + 0.05;
+    if (onGround && heroState.jumpArmed && ty > 0.15) {
+      heroState.jumpVel = 15 + Math.min(1, ty) * 11;   // bigger chin lift = bigger hop
+      heroState.jumpArmed = false;
+      vib(12);
+    }
+    if (ty < 0.1) heroState.jumpArmed = true;          // must reset the chin to hop again
+    heroState.jumpVel -= 52 * dt;                       // gravity
+    let yNext = ship.y + heroState.jumpVel * dt;
+    if (yNext <= ground) { yNext = ground; heroState.jumpVel = 0; }
+    ny = Math.min(yNext, ground + 12);
+    heroState.ducking = ty < -0.35 && onGround;
   } else {
     const targY = ty * world.bounds.y;
     ny = clamp(ship.y + (targY - ship.y) * rate, -world.bounds.y, world.bounds.y);
@@ -158,7 +169,7 @@ function readControls(dt) {
 }
 
 // hero animation state machine (pack worlds)
-const heroState = { airborne: false, ducking: false };
+const heroState = { airborne: false, ducking: false, jumpVel: 0, jumpArmed: true };
 function updateHeroAnim() {
   if (world.packMode === 'space') return;
   if (world.grounded) {
@@ -227,7 +238,7 @@ function updateHyper(dt) {
       shield.active = true; sfx.shieldUp(); noteTuck();
       burnSmash = 0;
       game.runStats.tucks++;
-      game.hooks.onToast?.('HYPERDRIVE');
+      game.hooks.onToast?.(TXT().hyper);
       vib([15, 30, 15]);
     }
     shield.energy = Math.max(0, shield.energy - dt / drain);
@@ -291,7 +302,7 @@ function updateGate(dt) {
     game.hooks.onGate?.(gate.pose.label);
     if (!seenHint.gate) {
       seenHint.gate = true;
-      game.hooks.onToast?.('GOLD RING — HOLD THE POSE TO OPEN IT');
+      game.hooks.onToast?.(TXT().gateHint);
     }
   }
   if (gate.announced && !g.userData.passed) {
@@ -311,7 +322,7 @@ function updateGate(dt) {
       game.runStats.gates++;
       sfx.gate();
       vib([20, 40, 20]);
-      game.hooks.onToast?.(`STRETCH GATE +${pts}`);
+      game.hooks.onToast?.(`${TXT().gate} +${pts}`);
     } else {
       game.hooks.onToast?.('gate missed');
     }
@@ -384,7 +395,7 @@ function updateBoss(dt) {
     sfx.bossWarn();
     musicEvent('boss');
     vib([80, 60, 80]);
-    game.hooks.onBoss?.('DREADNOUGHT INBOUND');
+    game.hooks.onBoss?.(TXT().bossIn);
     world.boss.visible = true;
     world.boss.position.set(0, 2, -190);
     return;
@@ -394,7 +405,7 @@ function updateBoss(dt) {
     if (boss.wallT <= 0) { boss.phase = 'fight'; boss.wallT = 0.5; }
   }
   if (boss.phase === 'fight') {
-    game.hooks.onBoss?.(`DREADNOUGHT · ${boss.wallsLeft}`);
+    game.hooks.onBoss?.(`${TXT().bossTag} · ${boss.wallsLeft}`);
     boss.wallT -= dt;
     if (boss.wallT <= 0 && boss.wallsLeft > 0) {
       spawnWall(true);
@@ -414,7 +425,7 @@ function updateBoss(dt) {
       sfx.bossDown();
       musicEvent('restore');
       game.hooks.onBoss?.(null);
-      game.hooks.onToast?.(`DREADNOUGHT CLEARED +${pts}`);
+      game.hooks.onToast?.(`${TXT().bossClear} +${pts}`);
       world.boss.visible = false;
     }
   }
@@ -453,7 +464,7 @@ function updateWalls(dt) {
           hitStop = 0.06;
           kickCamera(0.4);
           sfx.smash();
-          game.hooks.onToast?.(`WALL BREACH +${pts}`);
+          game.hooks.onToast?.(`${TXT().breach} +${pts}`);
         } else if (invulnT <= 0) {
           die();
         }
@@ -464,7 +475,7 @@ function updateWalls(dt) {
         game.score += pts;
         addFlow(0.15);
         onGraze();
-        game.hooks.onToast?.(`THREADED +${pts}`);
+        game.hooks.onToast?.(`${TXT().thread} +${pts}`);
       }
     }
     if (w.position.z > world.killZ) { w.userData.active = false; w.userData.scored = false; w.visible = false; }
@@ -722,7 +733,7 @@ function updateObstacles(dt) {
         sfx.nearMiss(Math.min(10, game.runStats.crystals % 11));
         if (!seenHint.coin) {
           seenHint.coin = true;
-          game.hooks.onToast?.(`+${pts} STARDUST — buy upgrades in the store`);
+          game.hooks.onToast?.(`+${pts} ${TXT().coinHint}`);
         } else {
           game.hooks.onToast?.(`+${pts}`);
         }
@@ -749,7 +760,7 @@ function collideCheck(o, sx, sy, shipR) {
         hitStop = 0.05;
         kickCamera(0.3);
         sfx.smash();
-        game.hooks.onToast?.(`SMASH +${pts}`);
+        game.hooks.onToast?.(`${TXT().smash} +${pts}`);
         return;
       }
       if (invulnT > 0) return;

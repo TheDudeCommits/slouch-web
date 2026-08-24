@@ -9,16 +9,43 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const gltfLoader = new GLTFLoader();
 
+// Per-world voice: every string the player sees adapts to the world.
+export const WORLD_TEXT = {
+  space: {
+    hyper: 'HYPERDRIVE', retry: 'FLY AGAIN', death: 'SHIP DOWN',
+    bossIn: 'DREADNOUGHT INBOUND', bossTag: 'DREADNOUGHT', bossClear: 'DREADNOUGHT CLEARED',
+    smash: 'SMASH', breach: 'WALL BREACH', thread: 'THREADED', gate: 'STRETCH GATE',
+    coinHint: 'STARDUST — buy upgrades in the store', gateHint: 'GOLD RING — HOLD THE POSE TO OPEN IT',
+    hyperHint: 'GLIDE YOUR CHIN STRAIGHT BACK = HYPERDRIVE',
+  },
+  ocean: {
+    hyper: 'RIPTIDE', retry: 'SWIM AGAIN', death: 'WASHED OUT',
+    bossIn: 'THE GREAT WHALE APPROACHES', bossTag: 'GREAT WHALE', bossClear: 'WHALE OUTSWUM',
+    smash: 'SPLASH', breach: 'KELP BREAK', thread: 'THREADED', gate: 'STRETCH RING',
+    coinHint: 'COINS — buy upgrades in the store', gateHint: 'GOLD RING — HOLD THE POSE TO OPEN IT',
+    hyperHint: 'CHIN BACK = RIPTIDE BOOST',
+  },
+  jungle: {
+    hyper: 'SUPERHOP', retry: 'HOP AGAIN', death: 'BUNNY DOWN',
+    bossIn: 'BEAR CHARGE INCOMING', bossTag: 'THE BEAR', bossClear: 'BEAR OUTRUN',
+    smash: 'THUMP', breach: 'VINE BREAK', thread: 'THREADED', gate: 'STRETCH ARCH',
+    coinHint: 'CARROTS — buy upgrades in the store', gateHint: 'GOLD ARCH — HOLD THE POSE TO OPEN IT',
+    hyperHint: 'CHIN BACK = SUPERHOP', jumpHint: 'CHIN UP = JUMP',
+  },
+};
+
 export const PACKS = {
   ocean: {
     base: 'assets/packs/ocean/',
     grounded: false,
     env: {
-      bg: ['#2a7d9c', '#0a4a66', '#031b2e', '#010a14'],   // surface → abyss
-      fogColor: 0x0a3d55, fogDensity: 0.0058,
-      floor: 'floor.jpg', floorTint: 0xd8c8a0, floorY: -12,
-      ray: 0xbfeaff, particle: 0xaee8ff, accent: 0x40c8ff,
-      hemi: [0x9fd4e8, 0x1a3040, 1.1],
+      // bright tropical reef, not the abyss
+      bg: ['#b8f0fa', '#5fd0ea', '#1e9ac4', '#0a6a92'],
+      fogColor: 0x3fb0d4, fogDensity: 0.0038,
+      floor: 'floor.jpg', floorTint: 0xffedc0, floorY: -12,
+      ray: 0xffffff, particle: 0xe8fbff, accent: 0x3fd4ff,
+      hemi: [0xf0ffff, 0x3a7a90, 1.5],
+      exposure: 1.3,
     },
     heroes: {
       hero_clown: { file: 'hero_clown.glb', len: 3.6, yaw: Math.PI },
@@ -42,7 +69,7 @@ export const PACKS = {
       { file: 'octo2.glb', len: 4.5, yaw: 0, clip: null, bob: true },
     ],
     boss: { file: 'whale.glb', len: 30, yaw: 0 },
-    decor: ['coral1.glb', 'coral2.glb', 'coral3.glb', 'kelp.glb'],
+    decor: ['coral1.glb', 'coral2.glb', 'coral3.glb'],   // coral only on the seabed
     coin: null,   // keeps the gold coin
     wallColor: 0x2fae72,   // kelp-green energy fences
   },
@@ -51,12 +78,14 @@ export const PACKS = {
     grounded: true,
     groundY: -6.5,
     env: {
-      bg: ['#cfe8c0', '#8fc47e', '#3f7a46', '#16301c'],   // hazy light → undergrowth
+      // sunny storybook jungle: blue sky, golden light, lush green
+      bg: ['#aee6ff', '#eaf7c8', '#a8dd7a', '#5fae54'],
       treeline: true,
-      fogColor: 0x4a7a50, fogDensity: 0.0042,
-      floor: 'floor.jpg', floorTint: 0x86b060, floorY: -7.2,
-      ray: 0xfff2c0, particle: 0xffe9a0, accent: 0x9dff3c,
-      hemi: [0xd8f0c0, 0x2a4020, 1.15],
+      fogColor: 0xbfe49a, fogDensity: 0.0024,
+      floor: 'floor.jpg', floorTint: 0xb8e878, floorY: -7.2,
+      ray: 0xfff6d0, particle: 0xffe9a0, accent: 0x7ddf4a,
+      hemi: [0xfff8dc, 0x5a8a3a, 1.6],
+      exposure: 1.32,
     },
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
@@ -147,7 +176,7 @@ export function spawnCreature(packId, file, { clip = null, len = null, r = null,
       const m = o.material;
       if (m?.emissive && !m.userData._lit) {
         m.userData._lit = true;
-        m.emissive.copy(m.color).multiplyScalar(0.22);
+        m.emissive.copy(m.color).multiplyScalar(0.35);
       }
     }
   });
@@ -200,11 +229,11 @@ export function treelineTexture(stops) {
   stops.forEach((col, i) => grad.addColorStop(i / (stops.length - 1), col));
   g.fillStyle = grad;
   g.fillRect(0, 0, W, H);
-  // three silhouette layers, darker as they near
+  // three leafy layers — sunlit greens, not gloomy silhouettes
   const layers = [
-    { y: H * 0.52, amp: 26, col: 'rgba(47,90,52,0.55)' },
-    { y: H * 0.60, amp: 34, col: 'rgba(30,62,36,0.75)' },
-    { y: H * 0.68, amp: 44, col: 'rgba(16,38,22,0.95)' },
+    { y: H * 0.52, amp: 26, col: 'rgba(148,205,110,0.6)' },
+    { y: H * 0.60, amp: 34, col: 'rgba(108,178,84,0.8)' },
+    { y: H * 0.68, amp: 44, col: 'rgba(74,148,66,0.95)' },
   ];
   for (const L of layers) {
     g.fillStyle = L.col;

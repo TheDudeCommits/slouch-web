@@ -8,7 +8,16 @@ import { todaySeed, hashSeed, mulberry32 } from './rng.js';
 import { shareCard, weeklyTrend } from './report.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { MISSION_POOL, MUTATORS, LORE, levelFromXp } from './content.js';
+import { WORLD_TEXT } from './packs.js';
 import * as ST from './state.js';
+
+// restyle the whole UI to match the equipped world: colors, font, labels
+function applyWorldSkin() {
+  const w = ST.currentWorld();
+  document.body.classList.toggle('world-ocean', w === 'ocean');
+  document.body.classList.toggle('world-jungle', w === 'jungle');
+  $('btn-retry').textContent = (WORLD_TEXT[w] || WORLD_TEXT.space).retry;
+}
 
 const $ = (id) => document.getElementById(id);
 const screens = [...document.querySelectorAll('.screen')];
@@ -31,6 +40,7 @@ let duelIncoming = null;
 async function boot() {
   initWorld();
   if (ST.currentWorld() !== 'space') applyWorldPack();
+  applyWorldSkin();
   startIdle();
   ST.tickStreak(false);
   refreshMenu();
@@ -432,7 +442,8 @@ function finishRun(score, report, extra) {
   $('go-score').textContent = score.toLocaleString();
   $('go-points').textContent = earned;
   $('go-best').classList.toggle('hidden', !isBest);
-  $('go-title').textContent = { daily: 'DAILY RUN COMPLETE', duel: 'DUEL OVER', weekly: 'WEEKLY RUN LOGGED' }[mode] || 'SHIP DOWN';
+  $('go-title').textContent = { daily: 'DAILY RUN COMPLETE', duel: 'DUEL OVER', weekly: 'WEEKLY RUN LOGGED' }[mode]
+    || (WORLD_TEXT[ST.currentWorld()] || WORLD_TEXT.space).death;
 
   const qualifies = boardMode && ST.qualifiesForBoard(boardMode, score);
   $('go-name-entry').classList.toggle('hidden', !qualifies);
@@ -571,6 +582,7 @@ function renderStore() {
       renderStore();
       hooks.onToast?.('loading world…');
       await applyWorldPack();
+      applyWorldSkin();
       renderStore();
     };
     const spaceOn = ST.currentWorld() === 'space';
