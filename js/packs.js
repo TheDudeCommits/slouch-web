@@ -2,6 +2,18 @@
 // pack is owned and equipped: the base game ships Space only. Each manifest
 // lists lazy-fetched glbs (poly.pizza community models, credits in
 // assets/ATTRIBUTION.txt) plus environment parameters.
+//
+// ── PLACEMENT PHYSICS — every world obeys its own rules ─────────────────────
+// SPACE  zero gravity: everything free-floats and tumbles anywhere in the
+//        corridor. The only world where obstacles may spin on all axes.
+// JUNGLE ground world: EVERY object stands vertical with its base exactly on
+//        the grass (trees, logs, stumps, snakes, predators, boss). Nothing
+//        floats, nothing tilts. Vertical play = ballistic jumps only.
+// OCEAN  seabed world: corals, kelp and urchins grow straight up from the
+//        sand (anchor:'floor'); only things that can swim float mid-water
+//        (pufferfish, predators, background fish, the whale). No tilt.
+// Placement uses each spawned model's REAL measured height (halfH) so bases
+// sit exactly on the surface — never radius approximations.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -42,11 +54,12 @@ export const PACKS = {
       // bright tropical reef, not the abyss
       bg: ['#b8f0fa', '#5fd0ea', '#1e9ac4', '#0a6a92'],
       fogColor: 0x3fb0d4, fogDensity: 0.0038,
-      floor: 'floor.jpg', floorTint: 0xffedc0, floorY: -12,
-      ray: 0xffffff, rayOpacity: 0.16, particle: 0xe8fbff, accent: 0x3fd4ff,
+      floor: 'floor.jpg', floorTint: 0xffF8e0, floorY: -9.5,
+      ray: 0xffffff, rayOpacity: 0.14, particle: 0xe8fbff, accent: 0x3fd4ff,
       hemi: [0xf0ffff, 0x3a7a90, 1.5],
       exposure: 1.24,
-      decorCount: 24, sway: true, swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
+      decorCount: 30, sway: true, surface: true,
+      swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
     },
     heroes: {
       hero_clown: { file: 'hero_clown.glb', len: 3.6, yaw: Math.PI },
@@ -55,12 +68,12 @@ export const PACKS = {
     },
     heroClips: { base: 'Swimming_Normal', fast: 'Swimming_Fast' },
     obstacles: [
-      { file: 'coral1.glb', spin: false, ground: false },
-      { file: 'coral2.glb', spin: false, ground: false },
-      { file: 'coral3.glb', spin: false, ground: false },
-      { file: 'urchin.glb', spin: true, ground: false },
-      { file: 'puffer.glb', spin: false, ground: false, bob: true },
-      { file: 'kelp.glb', spin: false, ground: false },
+      { file: 'coral1.glb', anchor: 'floor', tall: true },
+      { file: 'coral2.glb', anchor: 'floor', tall: true },
+      { file: 'coral3.glb', anchor: 'floor', tall: true },
+      { file: 'urchin.glb', anchor: 'floor', low: true },
+      { file: 'puffer.glb', anchor: 'free', bob: true },   // a fish — the only floater
+      { file: 'kelp.glb', anchor: 'floor', tall: true },
     ],
     enemies: [
       { file: 'shark.glb', len: 6.5, yaw: 0, clip: null },
@@ -80,14 +93,14 @@ export const PACKS = {
     groundY: -6.5,
     env: {
       // pleasant storybook daylight: readable, lush, never blinding
-      bg: ['#9fd8f2', '#cfeab8', '#96cf70', '#5fae54'],
+      bg: ['#9fd8f2', '#cfeab8', '#9cd478', '#6fbc60'],
       treeline: true,
       fogColor: 0x9fcc80, fogDensity: 0.0026,
-      floor: 'floor.jpg', floorTint: 0x9ed468, floorY: -7.2,
-      ray: 0xfff6d0, rayOpacity: 0.09, particle: 0xffe9a0, accent: 0x7ddf4a,
-      hemi: [0xfff4d0, 0x5a8a3a, 1.35],
+      floor: 'floor.jpg', floorTint: 0xf0ffb8, floorY: -7.2,
+      ray: 0xfff6d0, rayOpacity: 0.07, particle: 0xffe9a0, accent: 0x7ddf4a,
+      hemi: [0xfff4d0, 0x5a8a3a, 1.4],
       exposure: 1.18,
-      decorCount: 24, canopy: true, path: true,
+      decorCount: 30, path: true,
     },
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
@@ -207,7 +220,10 @@ export function spawnCreature(packId, file, { clip = null, len = null, r = null,
     const want = clip && (actions[clip] || actions[Object.keys(actions).find(k => k.includes(clip))]);
     (want || Object.values(actions)[0])?.play();
   }
-  return { obj: wrap, mixer, actions };
+  return {
+    obj: wrap, mixer, actions,
+    dims: { x: proto.size.x * s, y: proto.size.y * s, z: proto.size.z * s },
+  };
 }
 
 // ── environment texture builders ──
@@ -266,7 +282,7 @@ export function buildRays(color, count = 6) {
   c.width = 64; c.height = 256;
   const g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(0, 'rgba(255,255,255,0.32)');
   grad.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = grad;
   g.beginPath();

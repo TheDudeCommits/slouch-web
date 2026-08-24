@@ -22,6 +22,7 @@ export const world = {
   packMode: 'space',      // space | ocean | jungle
   grounded: false,
   groundY: -6.5,
+  floorY: -9.5,           // scenery surface in pack worlds
   spinObstacles: true,
 };
 
@@ -95,8 +96,8 @@ const PostShader = {
         float mask = smoothstep(0.06, 0.42, r2) * step(0.82, streak) * hyper;
         col += tint * mask * 0.5;
       }
-      // vignette
-      col *= 1.0 - r2 * (0.55 - hyper * 0.15);
+      // vignette — gentle; heavy corners read as gloom on bright worlds
+      col *= 1.0 - r2 * (0.28 - hyper * 0.1);
       // grain
       col += (hash(uv * vec2(1917.0, 1033.0) + fract(time)) - 0.5) * 0.035;
       gl_FragColor = vec4(col, 1.0);
@@ -786,8 +787,7 @@ export function updateWorld(dt, speed, shipVel) {
     d.position.z += speed * dt;
     if (d.position.z > 20) {
       d.position.z -= 460;
-      const high = d.position.y > world.groundY + 5;
-      d.position.x = (d.position.x < 0 ? -1 : 1) * (high ? 13 + Math.random() * 4 : 16 + Math.random() * 14);
+      d.position.x = (d.position.x < 0 ? -1 : 1) * (15 + Math.random() * 14);
     }
   }
   // gentle bob for static pack creatures (keeps them feeling alive)
@@ -796,6 +796,11 @@ export function updateWorld(dt, speed, shipVel) {
       if (e.userData.active && e.userData.bob) {
         e.userData.holder.position.y = Math.sin(now * 0.004 + e.id) * 0.35;
         e.userData.holder.rotation.z = Math.sin(now * 0.003 + e.id) * 0.08;
+      }
+    }
+    for (const a of world.asteroids) {
+      if (a.userData.active && a.userData.bobFloat) {
+        a.userData.holder.position.y = Math.sin(now * 0.003 + a.id) * 0.5;
       }
     }
   }
@@ -897,6 +902,7 @@ const packMixers = [];
 const packEnv = { floor: null, rays: null, decor: [] };
 
 function clearPackEnv() {
+  if (packEnv.lamp) { world.ship.remove(packEnv.lamp); packEnv.lamp = null; }
   for (const key of ['floor', 'rays', 'hemi']) {
     if (packEnv[key]) { world.scene.remove(packEnv[key]); packEnv[key] = null; }
   }
@@ -985,35 +991,38 @@ export async function applyWorldPack(onProgress) {
   world.scene.add(hemi);
   packEnv.hemi = hemi;
 
-  // dense roadside scenery in two depth rows — the corridor should feel ALIVE
+  // soft lamp travelling with the hero — keeps the near ground lively
+  const lamp = new THREE.PointLight(env.hemi[0], 1.6, 46, 1.6);
+  lamp.position.set(0, 7, -6);
+  world.ship.add(lamp);
+  packEnv.lamp = lamp;
+
+  // dense roadside scenery in depth rows, every base EXACTLY on the surface,
+  // stood perfectly vertical, with gentle per-prop color variation for lushness
   const decorCount = env.decorCount ?? 12;
   for (let i = 0; i < decorCount; i++) {
     const file = pack.decor[i % pack.decor.length];
-    const c = spawnCreature(target, file, { len: 4.5 + Math.random() * 7 });
+    const big = i % 5 === 0;
+    const c = spawnCreature(target, file, { len: big ? 12 + Math.random() * 5 : 4.5 + Math.random() * 6 });
     if (!c) continue;
+    // hue/lightness jitter so a forest never looks copy-pasted
+    c.obj.traverse(o => {
+      if (o.isMesh && o.material?.color) {
+        o.material = o.material.clone();
+        o.material.color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.12);
+        o.material.emissive?.copy(o.material.color).multiplyScalar(0.18);
+      }
+    });
     const side = i % 2 === 0 ? -1 : 1;
     const nearRow = i % 4 < 2;
     c.obj.position.set(
-      side * (nearRow ? 16 + Math.random() * 5 : 26 + Math.random() * 12),
-      env.floorY + 2.6, -20 - i * (440 / decorCount));
+      side * (nearRow ? 15 + Math.random() * 6 : 25 + Math.random() * 13),
+      env.floorY + c.dims.y / 2,             // base on the surface — never floats
+      -20 - i * (440 / decorCount));
     c.obj.rotation.y = Math.random() * Math.PI * 2;
     c.obj.userData.sway = env.sway ? Math.random() * Math.PI * 2 : null;
     world.scene.add(c.obj);
     packEnv.decor.push(c.obj);
-  }
-
-  // jungle canopy: huge crowns leaning over the track form a leafy tunnel
-  if (env.canopy) {
-    for (let i = 0; i < 8; i++) {
-      const c = spawnCreature(target, pack.decor[i % 4], { len: 16 + Math.random() * 6 });
-      if (!c) continue;
-      const side = i % 2 === 0 ? -1 : 1;
-      c.obj.position.set(side * (13 + Math.random() * 4), env.floorY + 9 + Math.random() * 4, -30 - i * 58);
-      c.obj.rotation.z = -side * (0.5 + Math.random() * 0.25);
-      c.obj.rotation.y = Math.random() * Math.PI * 2;
-      world.scene.add(c.obj);
-      packEnv.decor.push(c.obj);
-    }
   }
 
   // worn dirt path under the runner
@@ -1023,12 +1032,24 @@ export async function applyWorldPack(onProgress) {
     pathTex.repeat.set(1.4, 120);
     pathTex.colorSpace = THREE.SRGBColorSpace;
     const path = new THREE.Mesh(new THREE.PlaneGeometry(9, 1200),
-      new THREE.MeshStandardMaterial({ map: pathTex, color: 0xb08a52, roughness: 1 }));
+      new THREE.MeshStandardMaterial({ map: pathTex, color: 0xffe8b0, roughness: 1 }));
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, env.floorY + 0.05, -400);
     world.scene.add(path);
     packEnv.decor.push(path);
     path.userData.isPath = true;
+  }
+
+  // ocean surface: a glowing sheet of light overhead, seen from below
+  if (env.surface) {
+    const surf = new THREE.Mesh(new THREE.PlaneGeometry(400, 1200),
+      new THREE.MeshBasicMaterial({ color: 0xeaffff, transparent: true, opacity: 0.16,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    surf.rotation.x = Math.PI / 2;
+    surf.position.set(0, 16, -400);
+    world.scene.add(surf);
+    packEnv.decor.push(surf);
+    surf.userData.isPath = true; // static — excluded from the scroll loop
   }
 
   // ocean ambience: schools of small fish cruising the background
@@ -1045,15 +1066,19 @@ export async function applyWorldPack(onProgress) {
     }
   }
 
+  world.floorY = env.floorY;
   for (const a of world.asteroids) {
     const def = pack.obstacles[Math.floor(Math.random() * pack.obstacles.length)];
     const size = a.userData.size;
     const c = spawnCreature(target, def.file, def.tall
-      ? { len: size * 3.2 } : { r: def.low ? size * 0.8 : size });
+      ? { len: size * 2.6 } : { r: def.low ? size * 0.8 : size });
     a.userData.holder.clear();
     a.userData.holder.add(c ? c.obj : a.userData.rockMesh); // never an invisible collider
     a.userData.tall = !!def.tall;
     a.userData.low = !!def.low;
+    a.userData.anchor = def.anchor || (pack.grounded ? 'floor' : 'free');
+    a.userData.halfH = c ? c.dims.y / 2 : a.userData.radius;
+    a.userData.bobFloat = !!def.bob;
   }
 
   for (const e of world.enemies) {
@@ -1063,9 +1088,11 @@ export async function applyWorldPack(onProgress) {
     if (c) {
       e.userData.holder.add(c.obj);
       if (c.mixer) packMixers.push(c.mixer);
+      e.userData.halfH = c.dims.y / 2;
     } else {
       const dart = makeDart();
       for (const ch of [...dart.children]) e.userData.holder.add(ch);
+      e.userData.halfH = 1.2;
     }
     e.userData.bob = !!(c && def.bob);
   }

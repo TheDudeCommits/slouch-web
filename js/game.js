@@ -576,15 +576,20 @@ function placeRock(x, y, dz, opts = {}) {
   if (!a) return;
   a.userData.active = true;
   a.visible = true;
-  if (world.grounded) {
-    // everything grows from the jungle floor: trees block tall, logs block low
-    y = world.groundY + (a.userData.tall ? a.userData.radius * 1.6 : a.userData.radius * 0.75);
+  // world placement rules (see packs.js header): grounded worlds root everything
+  // on the surface; ocean floor-anchored props grow from the sand; only true
+  // floaters keep their free y.
+  const anchored = world.grounded ||
+    (world.packMode === 'ocean' && a.userData.anchor === 'floor');
+  if (anchored) {
+    const base = world.grounded ? world.groundY : world.floorY;
+    y = base + (a.userData.halfH ?? a.userData.radius);
   }
   a.position.set(x, y, world.spawnZ - dz);
-  let driftMul = (opts.drift && !world.grounded) ? (game.sector === 'debris' ? 2.2 : 1) : 0.12;
+  let driftMul = (opts.drift && world.packMode === 'space') ? (game.sector === 'debris' ? 2.2 : 1) : 0.12;
   if (game.boons.greed) driftMul *= 1.15;
-  a.userData.vx = (R() - 0.5) * 2.5 * driftMul;
-  a.userData.vy = world.grounded ? 0 : (R() - 0.5) * 1.5 * driftMul;
+  a.userData.vx = anchored ? 0 : (R() - 0.5) * 2.5 * driftMul;
+  a.userData.vy = anchored ? 0 : world.packMode === 'space' ? (R() - 0.5) * 1.5 * driftMul : 0;
   a.userData.missed = false;
   if (world.spinObstacles) a.rotation.set(R() * 3, R() * 3, 0);
   else a.rotation.set(0, R() * Math.PI * 2, 0);
@@ -649,7 +654,9 @@ function spawnEnemy() {
   e.userData.active = true;
   e.visible = true;
   const side = R() < 0.5 ? -1 : 1;
-  const y = world.grounded ? world.groundY + 1.2 : (R() - 0.5) * 12;
+  const y = world.grounded
+    ? world.groundY + (e.userData.halfH ?? 1.2)   // predators run ON the ground
+    : (R() - 0.5) * 12;
   e.position.set(side * 20, y, world.spawnZ * 0.7);
   e.userData.vx = -side * (6 + R() * 5);
   e.userData.vy = world.grounded ? 0 : (R() - 0.5) * 2;
