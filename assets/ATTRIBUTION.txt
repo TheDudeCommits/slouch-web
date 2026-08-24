@@ -1,1 +1,12 @@
-Quaternius Ultimate Space Kit (CC0) via poly.pizza; ambientCG Rock030 (CC0); Solar System Scope textures (CC-BY 4.0); skyboxes generated with wwwtyro/space-3d (Unlicense)
+Ships (via poly.pizza):
+- crosswing.glb "X-WING" by Eric Finn Oltmanns (CC-BY)
+- viper.glb, lance.glb, quadra.glb "Spaceship" by Liz Reddington (CC-BY)
+- shadow.glb "spaceship" by dook (CC-BY)
+Pickups (via poly.pizza):
+- coin.glb "Coin" (Google Poly, CC-BY), magnet.glb "Magnet" (CC-BY),
+  hourglass.glb "Hourglass" (Google Poly, CC-BY), crown.glb "Crown" (Google Poly, CC-BY),
+  star.glb "Star" (CC-BY)
+Rocks: ambientCG Rock030 (CC0) + poly.pizza rock scans (CC0)
+Planets: Solar System Scope textures (CC-BY 4.0)
+Skyboxes: generated with wwwtyro/space-3d (Unlicense)
+Lensflare textures: three.js examples (MIT)

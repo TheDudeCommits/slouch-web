@@ -7,9 +7,9 @@ const DEFAULTS = {
   points: 0,
   settings: { music: 60, sfx: 80, sensitivity: 100, mirror: true, ghost: true, reminders: false },
   streak: { count: 0, lastDay: null, freezes: 0 },
-  owned: ['theme_space', 'skin_talon', 'trail_theme', 'boom_ember'],
+  owned: ['theme_space', 'skin_crosswing', 'trail_theme', 'boom_ember'],
   equippedTheme: 'theme_space',
-  equipped: { skin: 'skin_talon', trail: 'trail_theme', boom: 'boom_ember' },
+  equipped: { skin: 'skin_crosswing', trail: 'trail_theme', boom: 'boom_ember' },
   upgrades: { hyperdur: 0, hyperregen: 0, magnet: 0 },   // levels 0..3
   revives: 0,                                            // consumable stock
   boards: { techneck: [], casual: [] },                  // [{tag, score, date}]
@@ -33,37 +33,38 @@ export const THEMES = {
   theme_space: {
     name: 'Deep Space', icon: '🚀', price: 0,
     desc: 'The original run. Cyan ion trails through the Cervical Belt.',
-    sky: 'space', planet: 'saturn', ring: true, planetTint: 0xffffff, sun: 0xfff4e0,
+    sky: ['space', 'space2', 'space3'],
+    planets: ['saturn', 'jupiter', 'moon', null], sun: 0xfff4e0,
     colors: { ship: 0x9fd8ff, engine: 0x4df3ff, accent: 0x4df3ff, fog: 0x05060f,
-      rock: 0x9a938c, rockEmissive: 0x1a2040 },
+      rock: 0xcfc4b4, rockEmissive: 0x2a3050 },
   },
   theme_crimson: {
     name: 'Crimson Nebula', icon: '🩸', price: 2000,
     desc: 'A dying star bleeds across the belt. Rocks glow ember-red.',
-    sky: 'crimson', planet: 'mars', ring: false, planetTint: 0xffc0a0, sun: 0xffc09a,
+    sky: ['crimson'], planets: ['mars', 'jupiter', null], sun: 0xffc09a,
     colors: { ship: 0xffd0c0, engine: 0xff5a3c, accent: 0xff7a5c, fog: 0x0f0508,
-      rock: 0x8a6a5c, rockEmissive: 0x401a10 },
+      rock: 0xd0a890, rockEmissive: 0x502a1a },
   },
   theme_emerald: {
     name: 'Emerald Void', icon: '☄️', price: 2000,
     desc: 'Toxic auroras. Everything alive here wants you dead.',
-    sky: 'emerald', planet: 'jupiter', ring: false, planetTint: 0xa0ffb8, sun: 0xd0ffda,
+    sky: ['emerald'], planets: ['jupiter', 'moon', null], sun: 0xd0ffda,
     colors: { ship: 0xd0ffd8, engine: 0x3cff8a, accent: 0x5cffa0, fog: 0x030f08,
-      rock: 0x6a8a70, rockEmissive: 0x0f3018 },
+      rock: 0xaacbaa, rockEmissive: 0x1a4a28 },
   },
   theme_neon: {
     name: 'Neon City', icon: '🌆', price: 3500,
     desc: 'Night courier run over an endless megacity. Hot pink everything.',
-    sky: 'neon', planet: 'moon', ring: false, planetTint: 0xffb0e8, sun: 0xff9ae0,
+    sky: ['neon'], planets: ['moon', 'neptune', null], sun: 0xff9ae0,
     colors: { ship: 0xffc0f0, engine: 0xff3cd2, accent: 0xff5ce0, fog: 0x0d0314,
-      rock: 0x7a6a90, rockEmissive: 0x38104a },
+      rock: 0xbfa8d5, rockEmissive: 0x4a1a60 },
   },
   theme_ocean: {
     name: 'Ocean Dive', icon: '🌊', price: 3500,
     desc: 'The belt drowned. Dodge through bioluminescent deep-sea wreckage.',
-    sky: 'ocean', planet: 'neptune', ring: false, planetTint: 0xc0e8ff, sun: 0xaad4ff,
+    sky: ['ocean'], planets: ['neptune', 'moon', null], sun: 0xaad4ff,
     colors: { ship: 0xc0f0ff, engine: 0x2ca0ff, accent: 0x40c8ff, fog: 0x02121f,
-      rock: 0x5a7a8a, rockEmissive: 0x0a2a40 },
+      rock: 0x9ec0d5, rockEmissive: 0x104a70 },
   },
   theme_jungle: {
     name: 'Jungle Rush 🐇', icon: '🌴', price: 0, soon: true,
@@ -72,16 +73,18 @@ export const THEMES = {
   },
 };
 
-// Real glTF hero ships (Quaternius Ultimate Space Kit, CC0)
+// glTF hero starfighters (poly.pizza community models, CC-BY — see assets/ATTRIBUTION.txt)
 export const SKINS = {
-  skin_talon: { name: 'Talon', icon: '🛸', price: 0, model: 'talon',
-    desc: 'Swept-wing interceptor. The factory hull of the S.S. Posture.' },
-  skin_striker: { name: 'Striker', icon: '🚀', price: 1500, model: 'striker',
-    desc: 'Slim raked dart. Cuts the belt like a scalpel.' },
-  skin_raider: { name: 'Raider', icon: '🛰', price: 2200, model: 'raider',
-    desc: 'Twin-prong gunship. Ugly, mean, magnificent.' },
-  skin_bumble: { name: 'Bumble', icon: '🐝', price: 2800, model: 'bumble',
-    desc: 'Round little brawler with a glass chin. Fan favorite.' },
+  skin_crosswing: { name: 'Crosswing', price: 0, model: 'crosswing',
+    desc: 'Four S-foils, locked in attack position. The factory hull.' },
+  skin_viper: { name: 'Viper', price: 1500, model: 'viper',
+    desc: 'Twin-cannon patrol fighter in rebel white-and-red.' },
+  skin_lance: { name: 'Lance', price: 2200, model: 'lance',
+    desc: 'A thrown spear with an engine. Nothing turns tighter.' },
+  skin_quadra: { name: 'Quadra', price: 2800, model: 'quadra',
+    desc: 'Quad-wing interceptor. Reads as trouble from every angle.' },
+  skin_shadow: { name: 'Vanguard', price: 3500, model: 'shadow',
+    desc: 'Heavy assault frame. Twin cannon housings, zero apologies.' },
 };
 
 export const TRAILS = {
@@ -149,8 +152,9 @@ function load() {
       merged.achievements = s.achievements || {};
       merged.history = s.history || [];
       for (const item of d.owned) if (!merged.owned.includes(item)) merged.owned.push(item);
-      // migrate saves from the pre-glTF skin era
-      if (!SKINS[merged.equipped.skin]) merged.equipped.skin = 'skin_talon';
+      // migrate saves from older skin generations
+      if (!SKINS[merged.equipped.skin]) merged.equipped.skin = 'skin_crosswing';
+      if (!merged.owned.includes('skin_crosswing')) merged.owned.push('skin_crosswing');
       return merged;
     }
   } catch (e) { /* corrupted save — start fresh */ }
@@ -318,7 +322,7 @@ export function equipCosmetic(slot, id) {
 export function themeColors() { return THEMES[S.equippedTheme]?.colors ?? THEMES.theme_space.colors; }
 export function cosmetics() {
   return {
-    skin: SKINS[S.equipped.skin] ?? SKINS.skin_talon,
+    skin: SKINS[S.equipped.skin] ?? SKINS.skin_crosswing,
     trail: TRAILS[S.equipped.trail] ?? TRAILS.trail_theme,
     boom: BOOMS[S.equipped.boom] ?? BOOMS.boom_ember,
   };

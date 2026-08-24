@@ -9,10 +9,11 @@ const MAX_SAMPLES = 2400; // 4 minutes
 let rec = null;
 let play = null;
 
+// The ghost is invisible — it only powers the pace comparison ("+400 vs best").
 export function beginGhost(mode) {
   rec = { mode, t: 0, next: 0, path: [] };
   const g = state().ghosts[mode];
-  play = (state().settings.ghost && g?.path?.length) ? { ...g, t: 0 } : null;
+  play = g?.path?.length ? { ...g, t: 0 } : null;
 }
 
 export function ghostTick(dt, x, y) {

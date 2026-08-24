@@ -1,7 +1,7 @@
 // SLOUCH — app shell: screens, HUD wiring, store, ranks, missions, codex.
 
 import { initWorld, applyTheme, loadHeroShip } from './world.js';
-import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head } from './head.js';
+import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head, updateHead } from './head.js';
 import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon } from './game.js';
 import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx } from './audio.js';
 import { todaySeed, hashSeed, mulberry32 } from './rng.js';
@@ -91,7 +91,6 @@ function refreshMenu() {
   $('set-sfx').value = s.settings.sfx;
   $('set-sens').value = s.settings.sensitivity;
   $('set-mirror').checked = s.settings.mirror;
-  $('set-ghost').checked = s.settings.ghost;
   $('set-reminders').checked = s.settings.reminders;
 
   const lv = levelFromXp(s.xp);
@@ -163,40 +162,52 @@ async function requestPlay(mode, opts = {}) {
   else openCalibration();
 }
 
+// Hands-free calibration: as soon as a face is stable in frame it captures
+// the neutral pose and launches. No button.
+let calState = 'idle';
 function openCalibration() {
   show('screen-calibrate');
   $('cal-count').textContent = '';
-  $('cal-msg').textContent = 'sit tall · look straight ahead';
+  $('cal-msg').textContent = 'get your face in the frame';
   const canvas = $('cal-preview');
   cancelAnimationFrame(camPreviewRaf);
-  (function draw() {
+  calState = 'watching';
+  let stable = 0;
+  let last = performance.now();
+  (async function draw() {
+    if (calState === 'done') return;
     camPreviewRaf = requestAnimationFrame(draw);
     drawPreview(canvas);
+    updateHead();
+    const now = performance.now();
+    const dt = (now - last) / 1000;
+    last = now;
+    if (calState !== 'watching') return;
+    if (head.hasFace) {
+      stable += dt;
+      $('cal-msg').textContent = 'sit tall · hold still';
+      $('cal-count').textContent = '·'.repeat(1 + Math.min(2, Math.floor(stable * 4)));
+      if (stable >= 0.7) {
+        calState = 'capturing';
+        const ok = await calibrate(1100);
+        if (ok) {
+          calState = 'done';
+          calibratedThisSession = true;
+          $('cal-count').textContent = '✓';
+          sfx.gate();
+          setTimeout(() => { cancelAnimationFrame(camPreviewRaf); launch(); }, 350);
+        } else {
+          calState = 'watching';
+          stable = 0;
+          $('cal-msg').textContent = 'lost you — center yourself, add light';
+        }
+      }
+    } else {
+      stable = 0;
+      $('cal-count').textContent = '';
+      $('cal-msg').textContent = 'get your face in the frame';
+    }
   })();
-}
-
-async function runCalibration() {
-  sfx.ui();
-  const count = $('cal-count');
-  for (const n of ['3', '2', '1']) {
-    count.textContent = n;
-    await new Promise(r => setTimeout(r, 650));
-  }
-  count.textContent = '·';
-  $('cal-msg').textContent = 'hold still';
-  const ok = await calibrate(1500);
-  if (!ok) {
-    count.textContent = '';
-    $('cal-msg').textContent = 'no face found — center yourself, add light';
-    sfx.denied();
-    return;
-  }
-  calibratedThisSession = true;
-  count.textContent = '✓';
-  sfx.gate();
-  await new Promise(r => setTimeout(r, 400));
-  cancelAnimationFrame(camPreviewRaf);
-  launch();
 }
 
 function launch() {
@@ -706,8 +717,11 @@ $('btn-duel-accept').onclick = () => {
 };
 $('btn-duel-decline').onclick = () => { duelIncoming = null; sfx.ui(); show('screen-menu'); };
 
-$('btn-cal-start').onclick = runCalibration;
-$('btn-cal-back').onclick = () => { cancelAnimationFrame(camPreviewRaf); sfx.ui(); show('screen-menu'); };
+$('btn-cal-back').onclick = () => {
+  calState = 'done';
+  cancelAnimationFrame(camPreviewRaf);
+  sfx.ui(); show('screen-menu');
+};
 
 $('btn-pause').onclick = () => { pauseGame(true); sfx.ui(); show('hud', 'screen-pause'); };
 $('btn-resume').onclick = () => { sfx.ui(); show('hud'); pauseGame(false); };
@@ -787,7 +801,6 @@ for (const [id, key] of [['set-music', 'music'], ['set-sfx', 'sfx'], ['set-sens'
   };
 }
 $('set-mirror').onchange = () => { ST.state().settings.mirror = $('set-mirror').checked; ST.save(); };
-$('set-ghost').onchange = () => { ST.state().settings.ghost = $('set-ghost').checked; ST.save(); };
 $('set-reminders').onchange = () => toggleReminders($('set-reminders').checked);
 
 $('btn-cam-retry').onclick = () => { sfx.ui(); requestPlay(pendingMode, pendingOpts); };

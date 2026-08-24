@@ -1,14 +1,14 @@
 // SLOUCH — core game loop: control mapping, sectors, power-ups, boss fights,
 // flow/graze trains, slow-mo, boons, mutators, missions, ghost racing.
 
-import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, POWERUP_TYPES } from './world.js';
+import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, setGateArrow, randomizeBackdrop, POWERUP_TYPES } from './world.js';
 import { head, updateHead } from './head.js';
 import { state, activeEvent } from './state.js';
 import { sfx, setMusicIntensity } from './audio.js';
 import { mulberry32 } from './rng.js';
 import { BOONS, MUTATORS, LORE } from './content.js';
 import { beginReport, reportTick, noteTuck, noteGate, buildReport } from './report.js';
-import { beginGhost, ghostTick, ghostPos, ghostPace, endGhost } from './ghost.js';
+import { beginGhost, ghostTick, ghostPace, endGhost } from './ghost.js';
 
 export const game = {
   running: false, paused: false, over: false,
@@ -34,6 +34,8 @@ const boon = { offer: null, chooseT: 0, cooldown: 0 };
 let R = Math.random;
 
 let spawnT = 0, enemyT = 0, crystalT = 0, gateT = 0, biasT = 0, powerT = 0, wallT = 0, sectorT = 0, shardT = 0;
+let seenHint = {};   // one-time explanations per run session
+let hintQueue = [];  // [t, text] first-run tutorial toasts
 let bias = { x: 0, y: 0 };
 let lastFrame = 0;
 let deathT = -1;
@@ -84,8 +86,16 @@ export function startGame(mode, hooks, opts = {}) {
   world.boss.visible = false;
   world.ship.visible = true;
   document.body.classList.remove('focus-active');
+  randomizeBackdrop();
   beginReport(mode);
   beginGhost(mode);
+  seenHint = {};
+  hintQueue = state().totals.runs === 0 ? [
+    [2, mode === 'casual' ? 'MOVE YOUR HEAD — THE SHIP FOLLOWS' : 'TILT YOUR HEAD TO STEER'],
+    [6, 'CHIN UP / DOWN TO CLIMB AND DIVE'],
+    [11, 'GLIDE YOUR CHIN STRAIGHT BACK = HYPERDRIVE'],
+    [17, 'SHAVE PAST ROCKS FOR GRAZE COMBOS'],
+  ] : [];
   if (game.mutator) hooks.onToast?.(game.mutator.name);
   lastFrame = performance.now();
   cancelAnimationFrame(raf);
@@ -234,6 +244,7 @@ function spawnGate() {
   g.userData.passed = false;
   g.position.set(0, 0, world.spawnZ);
   g.visible = true;
+  setGateArrow(g, pose.id);
   gate.obj = g; gate.pose = pose; gate.dwell = 0; gate.announced = false;
 }
 
@@ -245,6 +256,10 @@ function updateGate(dt) {
   if (g.position.z > -260 && !gate.announced) {
     gate.announced = true;
     game.hooks.onGate?.(gate.pose.label);
+    if (!seenHint.gate) {
+      seenHint.gate = true;
+      game.hooks.onToast?.('GOLD RING — HOLD THE POSE TO OPEN IT');
+    }
   }
   if (gate.announced && !g.userData.passed) {
     if (gate.pose.test()) gate.dwell += dt;
@@ -430,6 +445,7 @@ function spawnPowerup(forceType) {
     : POWERUP_TYPES[type];
   p.userData.active = true;
   p.userData.type = type;
+  p.userData.setType(type);
   p.userData.mat.color.setHex(def.color);
   p.userData.glowMat.color.setHex(def.color);
   p.position.set((R() * 2 - 1) * 11, (R() * 2 - 1) * 6, world.spawnZ);
@@ -457,7 +473,18 @@ function activatePowerup(type) {
   game.runStats.powerups++;
   sfx.powerup();
   vib(30);
-  game.hooks.onToast?.(POWERUP_TYPES[type].label);
+  // first grab of each type this session explains what it does
+  const EXPLAIN = {
+    magnet: 'MAGNET — coins fly to you',
+    focus: 'HOURGLASS — time slows down',
+    doubler: 'CROWN — score doubled',
+  };
+  if (!seenHint[type]) {
+    seenHint[type] = true;
+    game.hooks.onToast?.(EXPLAIN[type]);
+  } else {
+    game.hooks.onToast?.(POWERUP_TYPES[type].label);
+  }
 }
 
 function updatePowerups(dt) {
@@ -589,7 +616,12 @@ function updateObstacles(dt) {
         game.runStats.crystals++;
         addFlow(0.05);
         sfx.nearMiss(Math.min(10, game.runStats.crystals % 11));
-        game.hooks.onToast?.(`+${pts}`);
+        if (!seenHint.coin) {
+          seenHint.coin = true;
+          game.hooks.onToast?.(`+${pts} STARDUST — buy upgrades in the store`);
+        } else {
+          game.hooks.onToast?.(`+${pts}`);
+        }
       }
     }
     if (c.position.z > world.killZ) { c.userData.active = false; c.visible = false; }
@@ -768,12 +800,9 @@ function loop(t) {
     updatePowerups(dt);
     updateWalls(dt);
 
-    const gp = ghostPos();
-    if (gp) {
-      world.ghostShip.visible = true;
-      world.ghostShip.position.set(gp.x, gp.y, -2.5);
-    } else {
-      world.ghostShip.visible = false;
+    // first-run tutorial hints
+    if (hintQueue.length && game.time >= hintQueue[0][0]) {
+      game.hooks.onToast?.(hintQueue.shift()[1]);
     }
   } else {
     deathT += dt;
@@ -817,7 +846,6 @@ game._debug = {
 let idleRaf = 0;
 export function startIdle() {
   cancelAnimationFrame(idleRaf);
-  world.ghostShip.visible = false;
   world.boss.visible = false;
   let last = performance.now();
   function idle(t) {

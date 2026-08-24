@@ -13,7 +13,7 @@ import { THEMES, themeColors, cosmetics, state } from './state.js';
 
 export const world = {
   scene: null, camera: null, renderer: null, composer: null,
-  ship: null, shipShield: null, ghostShip: null,
+  ship: null, shipShield: null,
   asteroids: [], enemies: [], gates: [], crystals: [], powerups: [], walls: [],
   boss: null,
   bounds: { x: 13, y: 7.5 },
@@ -112,13 +112,13 @@ export function initWorld() {
   camera.position.set(0, 2.6, 9);
   world.camera = camera;
 
-  scene.add(new THREE.AmbientLight(0x8899cc, 0.35));
-  keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+  scene.add(new THREE.AmbientLight(0x8899cc, 0.45));
+  scene.add(new THREE.HemisphereLight(0xbdd2ff, 0x403428, 0.65));
+  keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
   keyLight.position.set(6, 12, 6);
   scene.add(keyLight);
 
   buildShip();
-  buildGhostShip();
   buildStars();
   buildDust();
   buildPlanet();
@@ -142,6 +142,7 @@ export function initWorld() {
 
   applyTheme();
   loadRockGeometries();
+  loadPickupModels();
   loadHeroShip();
 
   addEventListener('resize', () => {
@@ -209,10 +210,11 @@ function buildShip() {
 
 // Per-model corrections: rotation so the nose faces -Z, plus scale-to-length.
 const MODEL_FIX = {
-  talon: { yaw: Math.PI, length: 4.6 },
-  striker: { yaw: Math.PI, length: 4.6 },
-  raider: { yaw: Math.PI, length: 4.4 },
-  bumble: { yaw: Math.PI, length: 3.8 },
+  crosswing: { yaw: 0, length: 4.8 },
+  viper: { yaw: Math.PI, length: 4.8 },
+  lance: { yaw: Math.PI, length: 4.8 },
+  quadra: { yaw: Math.PI, length: 4.6 },
+  shadow: { yaw: Math.PI, length: 4.6 },
 };
 
 async function loadModel(name) {
@@ -253,26 +255,6 @@ export async function loadHeroShip() {
   } catch (e) {
     console.warn('hero ship load failed, keeping placeholder', e);
   }
-}
-
-function buildGhostShip() {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x4df3ff, transparent: true, opacity: 0.22,
-    blending: THREE.AdditiveBlending, depthWrite: false });
-  themedMats.ghost = mat;
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.42, 2.4, 6), mat);
-  nose.rotation.x = -Math.PI / 2;
-  nose.position.z = -1.1;
-  g.add(nose);
-  for (const side of [-1, 1]) {
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 1.1), mat);
-    wing.position.set(side * 1.15, -0.08, 0.9);
-    wing.rotation.z = side * 0.28;
-    g.add(wing);
-  }
-  g.visible = false;
-  world.scene.add(g);
-  world.ghostShip = g;
 }
 
 // ── starfield + near-field dust for speed parallax ──
@@ -392,7 +374,7 @@ function buildAsteroids() {
     map: texLoader.load('assets/rock/color.jpg'),
     normalMap: texLoader.load('assets/rock/normal.jpg'),
     normalScale: new THREE.Vector2(1.1, 1.1),
-    emissive: 0x1a2040, emissiveIntensity: 0.25 });
+    emissive: 0x2a3050, emissiveIntensity: 0.45 });
   themedMats.rock = mat;
   const sizes = [1, 1.8, 3, 4.6];
   for (let i = 0; i < 42; i++) {
@@ -433,9 +415,26 @@ function buildEnemies() {
   }
 }
 
-// ── stretch gates ──
+// ── stretch gates: gold ring + a big arrow showing which way to move ──
+function arrowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(255,235,180,0.95)';
+  g.lineWidth = 14;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  // chevron arrow pointing RIGHT
+  g.beginPath();
+  g.moveTo(30, 64); g.lineTo(92, 64);
+  g.moveTo(66, 34); g.lineTo(98, 64); g.lineTo(66, 94);
+  g.stroke();
+  return new THREE.CanvasTexture(c);
+}
+
 function buildGates() {
   const mat = new THREE.MeshBasicMaterial({ color: 0xffd54d });
+  const arrowTex = arrowTexture();
   for (let i = 0; i < 3; i++) {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.35, 10, 40), mat));
@@ -447,37 +446,101 @@ function buildGates() {
       transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.scale.set(16, 16, 1);
     g.add(glow);
+    const arrow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: arrowTex, transparent: true, opacity: 0.9, depthWrite: false }));
+    arrow.scale.set(4.2, 4.2, 1);
+    g.add(arrow);
     g.visible = false;
-    g.userData = { active: false, radius: 5.2, pose: null, passed: false, vz: 0 };
+    g.userData = { active: false, radius: 5.2, pose: null, passed: false, vz: 0, arrow };
     world.scene.add(g);
     world.gates.push(g);
   }
 }
 
+// point a gate's arrow: 'left' | 'right' | 'up'
+export function setGateArrow(g, dir) {
+  const rot = { right: 0, left: Math.PI, up: Math.PI / 2 }[dir] ?? 0;
+  g.userData.arrow.material.rotation = rot;
+}
+
+// ── stardust: gold coins (placeholder octahedron until the glb lands) ──
 function buildCrystals() {
-  const mat = new THREE.MeshBasicMaterial({ color: 0x4df3ff });
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffd75c });
   themedMats.crystal = mat;
   for (let i = 0; i < 14; i++) {
-    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.55), mat);
-    m.visible = false;
-    m.userData = { active: false, radius: 1.4, vz: 0, spin: 2 + Math.random() * 3 };
-    world.scene.add(m);
-    world.crystals.push(m);
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.55), mat));
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture('rgba(255,220,120,0.9)'), color: 0xffd75c, transparent: true,
+      opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(2.4, 2.4, 1);
+    g.add(glow);
+    g.visible = false;
+    g.userData = { active: false, radius: 1.4, vz: 0, spin: 2 + Math.random() * 3 };
+    world.scene.add(g);
+    world.crystals.push(g);
   }
+}
+
+// ── power-ups: recognizable objects (magnet / hourglass / crown / star) ──
+const PICKUP_MODEL = { magnet: 'magnet', focus: 'hourglass', doubler: 'crown', shard: 'star' };
+const pickupProtos = {};
+
+async function loadPickupModels() {
+  // coin replaces the stardust placeholder
+  try {
+    const coin = (await gltfLoader.loadAsync('assets/pickups/coin.glb')).scene;
+    normalizeProto(coin, 1.15);
+    for (const c of world.crystals) {
+      c.remove(c.children[0]);
+      const m = coin.clone(true);
+      c.add(m);
+    }
+  } catch (e) { console.warn('coin load failed', e); }
+  for (const [type, file] of Object.entries(PICKUP_MODEL)) {
+    try {
+      const proto = (await gltfLoader.loadAsync(`assets/pickups/${file}.glb`)).scene;
+      normalizeProto(proto, type === 'shard' ? 1.0 : 1.3);
+      pickupProtos[type] = proto;
+    } catch (e) { console.warn(file, 'load failed', e); }
+  }
+}
+
+// center a prototype and scale it to a target radius
+function normalizeProto(obj, radius) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const sph = box.getBoundingSphere(new THREE.Sphere());
+  const s = radius / Math.max(sph.radius, 0.001);
+  obj.scale.setScalar(s);
+  const center = sph.center.multiplyScalar(s);
+  obj.position.sub(center);
 }
 
 function buildPowerups() {
   for (let i = 0; i < 6; i++) {
     const g = new THREE.Group();
+    const holder = new THREE.Group();
     const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    g.add(new THREE.Mesh(new THREE.TorusKnotGeometry(0.55, 0.18, 48, 8), mat));
+    holder.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.7), mat)); // placeholder
+    g.add(holder);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture('rgba(255,255,255,0.9)'), transparent: true, opacity: 0.5,
       blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(4, 4, 1);
+    glow.scale.set(4.5, 4.5, 1);
     g.add(glow);
     g.visible = false;
-    g.userData = { active: false, radius: 1.8, type: null, mat, glowMat: glow.material };
+    g.userData = {
+      active: false, radius: 1.8, type: null, mat, glowMat: glow.material,
+      setType(type) {
+        holder.clear();
+        const proto = pickupProtos[type];
+        if (proto) holder.add(proto.clone(true));
+        else {
+          const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), mat);
+          holder.add(m);
+        }
+      },
+    };
     world.scene.add(g);
     world.powerups.push(g);
   }
@@ -676,16 +739,17 @@ export function setShieldVisual(strength) {
 
 let rainbowTrail = false;
 
-export function applyTheme() {
+// Pick a fresh sky variant + planet arrangement. Called on theme change AND at
+// the start of every run so the belt never looks the same twice.
+export function randomizeBackdrop() {
   const t = THEMES[state().equippedTheme] ?? THEMES.theme_space;
-  const c = t.colors;
-  const cos = cosmetics();
 
-  // skybox + environment lighting (also drives PBR reflections)
-  if (currentSky !== t.sky) {
-    currentSky = t.sky;
+  const skyList = t.sky;
+  const sky = skyList[Math.floor(Math.random() * skyList.length)];
+  if (currentSky !== sky) {
+    currentSky = sky;
     new THREE.CubeTextureLoader()
-      .setPath(`assets/sky/${t.sky}/`)
+      .setPath(`assets/sky/${sky}/`)
       .load(['right.jpg', 'left.jpg', 'top.jpg', 'bottom.jpg', 'front.jpg', 'back.jpg'], (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         world.scene.background = tex;
@@ -694,24 +758,50 @@ export function applyTheme() {
       });
   }
 
-  // planet
-  texLoader.load(`assets/planets/${t.planet}.jpg`, (tex) => {
-    tex.colorSpace = THREE.SRGBColorSpace;
-    planet.material.map = tex;
-    planet.material.color.setHex(t.planetTint);
-    // faint self-illumination so the night side reads instead of going black
-    planet.material.emissiveMap = tex;
-    planet.material.emissive.setHex(t.planetTint).multiplyScalar(0.22);
-    planet.material.needsUpdate = true;
-  });
-  planetRing.visible = !!t.ring;
-  if (t.ring && !planetRing.material.map) {
-    texLoader.load('assets/planets/saturn_ring.png', (tex) => {
+  const pick = t.planets[Math.floor(Math.random() * t.planets.length)];
+  if (!pick) {
+    planet.visible = false;
+    planetRing.visible = false;
+  } else {
+    planet.visible = true;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const scale = 0.55 + Math.random() * 0.9;
+    planet.scale.setScalar(scale);
+    planet.position.set(side * (180 + Math.random() * 160), 20 + Math.random() * 150, -820 - Math.random() * 220);
+    planet.rotation.z = (Math.random() - 0.5) * 0.6;
+    texLoader.load(`assets/planets/${pick}.jpg`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
-      planetRing.material.map = tex;
-      planetRing.material.needsUpdate = true;
+      planet.material.map = tex;
+      planet.material.color.setHex(0xffffff);
+      // faint self-illumination so the night side reads instead of going black
+      planet.material.emissiveMap = tex;
+      planet.material.emissive.setHex(0xffffff).multiplyScalar(0.22);
+      planet.material.needsUpdate = true;
     });
+    planetRing.visible = pick === 'saturn';
+    if (planetRing.visible) {
+      planetRing.position.copy(planet.position);
+      planetRing.scale.setScalar(scale);
+      planetRing.rotation.set(Math.PI / 2.35 + (Math.random() - 0.5) * 0.3, 0.25, 0);
+      if (!planetRing.material.map) {
+        texLoader.load('assets/planets/saturn_ring.png', (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          planetRing.material.map = tex;
+          planetRing.material.needsUpdate = true;
+        });
+      }
+    }
+    // the sun flare hangs on the opposite side of the planet
+    sunLight.position.set(-side * (350 + Math.random() * 200), 180 + Math.random() * 160, -1100);
   }
+}
+
+export function applyTheme() {
+  const t = THEMES[state().equippedTheme] ?? THEMES.theme_space;
+  const c = t.colors;
+  const cos = cosmetics();
+
+  randomizeBackdrop();
 
   sunLight.color.setHex(t.sun);
   keyLight.color.setHex(t.sun);
@@ -720,8 +810,6 @@ export function applyTheme() {
   themedMats.hull.color.setHex(c.ship);
   themedMats.rock.color.setHex(c.rock);
   themedMats.rock.emissive.setHex(c.rockEmissive);
-  themedMats.crystal.color.setHex(c.accent);
-  themedMats.ghost?.color.setHex(c.accent);
   rainbowTrail = cos.trail.color === 'rainbow';
   const engineCol = rainbowTrail ? c.engine : (cos.trail.color ?? c.engine);
   engineMat.color.setHex(engineCol);
