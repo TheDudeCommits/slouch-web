@@ -176,18 +176,23 @@ footer.iconrow { position: absolute; bottom: calc(16px + var(--sab)); }
 @keyframes toast-rise { 0% { opacity: 0; transform: translateY(12px); }
   20% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px); } }
 
-/* ── boon offer ── */
+/* ── boon offer: readable over any world brightness ── */
 .boon { position: absolute; left: 0; right: 0; bottom: 20vh; display: flex;
-  flex-direction: column; align-items: center; gap: 14px; }
-.boon-row { display: flex; gap: 10vw; }
-.boon-card { width: 34vw; max-width: 170px; text-align: center; display: flex;
-  flex-direction: column; gap: 5px; }
-.boon-card b { font-family: var(--display); font-size: 15px; letter-spacing: 0.08em; color: var(--ink); }
-.boon-card span { font-size: 11px; color: var(--mut); letter-spacing: 0.04em; }
+  flex-direction: column; align-items: center; gap: 14px;
+  padding: 18px 0 22px;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 12, 0.66) 22%, rgba(4, 6, 12, 0.66) 78%, transparent);
+  backdrop-filter: blur(3px); }
+.boon-row { display: flex; gap: 9vw; }
+.boon-card { width: 38vw; max-width: 200px; text-align: center; display: flex;
+  flex-direction: column; gap: 6px; }
+.boon-card b { font-family: var(--display); font-size: 18px; letter-spacing: 0.08em; color: #ffffff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+.boon-card span { font-size: 13px; font-weight: 600; color: #dfe8f5; letter-spacing: 0.03em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 .boon-card i { height: 2px; background: rgba(92, 106, 138, 0.4); display: block; }
 .boon-card i::after { content: ""; display: block; height: 100%; width: 0%;
   background: var(--acc); box-shadow: 0 0 8px var(--acc); }
-.boon-card.leaning b { color: var(--acc); }
+.boon-card.leaning b { color: var(--acc); text-shadow: 0 0 14px var(--acc); }
 
 /* ── game over ── */
 .go-best { font-family: var(--display); color: var(--acc); font-size: 14px; letter-spacing: 0.3em;
@@ -219,7 +224,7 @@ footer.iconrow { position: absolute; bottom: calc(16px + var(--sab)); }
   justify-content: center; color: var(--mut); }
 .row .info { flex: 1; min-width: 0; }
 .row .name { font-weight: 700; font-size: 13px; letter-spacing: 0.1em; }
-.row .desc { color: var(--mut); font-size: 11px; letter-spacing: 0.03em; margin-top: 2px; }
+.row .desc { color: #b6c2da; font-size: 12px; letter-spacing: 0.03em; margin-top: 2px; }
 .row .act { font-family: var(--body); font-weight: 700; font-size: 12px; letter-spacing: 0.12em;
   color: var(--acc); padding: 8px 4px; white-space: nowrap; }
 .row .act:disabled { color: var(--mut); opacity: 0.6; }

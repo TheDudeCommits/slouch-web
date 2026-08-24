@@ -219,11 +219,11 @@ function buildShip() {
 
 // Per-model corrections: rotation so the nose faces -Z, plus scale-to-length.
 const MODEL_FIX = {
-  crosswing: { yaw: 0, length: 4.8 },
-  viper: { yaw: Math.PI, length: 4.8 },
-  lance: { yaw: Math.PI, length: 4.8 },
-  quadra: { yaw: Math.PI, length: 4.6 },
-  shadow: { yaw: Math.PI, length: 4.6 },
+  crosswing: { yaw: 0, length: 3.6 },
+  viper: { yaw: Math.PI, length: 3.6 },
+  lance: { yaw: Math.PI, length: 3.6 },
+  quadra: { yaw: Math.PI, length: 3.45 },
+  shadow: { yaw: Math.PI, length: 3.45 },
 };
 
 async function loadModel(name) {
@@ -760,8 +760,8 @@ export function updateWorld(dt, speed, shipVel) {
   // pack scenery: animation mixers, scrolling floor, god rays, looping decor
   for (const m of packMixers) m.update(dt);
   if (heroMixer) heroMixer.update(dt);
-  if (packEnv.floor) {
-    packEnv.floor.material.map.offset.y -= speed * dt * 0.0011;
+  for (const tex of packEnv.scrollTexs || []) {
+    tex.offset.y -= speed * dt * 0.1;   // repeat.y 120 over 1200 units = 0.1 per unit
   }
   if (packEnv.rays) {
     const base = packEnv.rays.userData.baseOpacity ?? 0.14;
@@ -980,6 +980,7 @@ export async function applyWorldPack(onProgress) {
   floor.position.set(0, env.floorY, -400);
   world.scene.add(floor);
   packEnv.floor = floor;
+  packEnv.scrollTexs = [floorTex];
 
   const rays = buildRays(env.ray);
   rays.userData.baseOpacity = env.rayOpacity ?? 0.14;
@@ -1005,12 +1006,14 @@ export async function applyWorldPack(onProgress) {
     const big = i % 5 === 0;
     const c = spawnCreature(target, file, { len: big ? 12 + Math.random() * 5 : 4.5 + Math.random() * 6 });
     if (!c) continue;
-    // hue/lightness jitter so a forest never looks copy-pasted
+    // hue/lightness jitter so scenery never looks copy-pasted; reefs get a
+    // wider rainbow spread than forests
+    const hueSpread = target === 'ocean' ? 0.22 : 0.05;
     c.obj.traverse(o => {
       if (o.isMesh && o.material?.color) {
         o.material = o.material.clone();
-        o.material.color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.12);
-        o.material.emissive?.copy(o.material.color).multiplyScalar(0.18);
+        o.material.color.offsetHSL((Math.random() - 0.5) * hueSpread, 0.05, (Math.random() - 0.5) * 0.12);
+        o.material.emissive?.copy(o.material.color).multiplyScalar(0.22);
       }
     });
     const side = i % 2 === 0 ? -1 : 1;
@@ -1038,6 +1041,7 @@ export async function applyWorldPack(onProgress) {
     world.scene.add(path);
     packEnv.decor.push(path);
     path.userData.isPath = true;
+    packEnv.scrollTexs.push(pathTex);
   }
 
   // ocean surface: a glowing sheet of light overhead, seen from below
@@ -1054,9 +1058,9 @@ export async function applyWorldPack(onProgress) {
 
   // ocean ambience: schools of small fish cruising the background
   if (env.swimmers) {
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < (env.swimmerCount ?? 7); i++) {
       const file = env.swimmers[i % env.swimmers.length];
-      const c = spawnCreature(target, file, { clip: 'Swimming_Normal', len: 1.4 + Math.random() * 1.2, yaw: Math.PI / 2 });
+      const c = spawnCreature(target, file, { clip: 'Swimming_Normal', len: 1.6 + Math.random() * 1.8, yaw: Math.PI / 2 });
       if (!c) continue;
       c.obj.position.set(-30 - Math.random() * 20, -6 + Math.random() * 14, -60 - Math.random() * 220);
       c.obj.userData.swim = { vx: 3 + Math.random() * 3, phase: Math.random() * Math.PI * 2 };

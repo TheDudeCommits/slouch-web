@@ -1,7 +1,7 @@
 // SLOUCH service worker — network-first with offline fallback, so deploys are
 // picked up immediately but the game still opens without a connection.
 
-const CACHE = 'slouch-v12';
+const CACHE = 'slouch-v13';
 const CORE = ['.', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon.svg'];
 
 self.addEventListener('install', (e) => {

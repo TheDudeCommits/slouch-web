@@ -127,7 +127,7 @@ export function applyVolumes() {
   if (!ctx) return;
   const s = state().settings;
   musicGain.gain.value = (s.music / 100) * 0.5;
-  sfxGain.gain.value = (s.sfx / 100) * 0.9;
+  sfxGain.gain.value = (s.sfx / 100) * 0.32;
 }
 
 export function resumeAudio() { if (ctx?.state === 'suspended') ctx.resume(); }

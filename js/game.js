@@ -149,12 +149,12 @@ function readControls(dt) {
     const ground = world.groundY + 1.1;
     const onGround = ship.y <= ground + 0.05;
     if (onGround && heroState.jumpArmed && ty > 0.15) {
-      heroState.jumpVel = 15 + Math.min(1, ty) * 11;   // bigger chin lift = bigger hop
+      heroState.jumpVel = 19 + Math.min(1, ty) * 13;   // bigger chin lift = bigger hop
       heroState.jumpArmed = false;
       vib(12);
     }
     if (ty < 0.1) heroState.jumpArmed = true;          // must reset the chin to hop again
-    heroState.jumpVel -= 52 * dt;                       // gravity
+    heroState.jumpVel -= 46 * dt;                       // gravity
     let yNext = ship.y + heroState.jumpVel * dt;
     if (yNext <= ground) { yNext = ground; heroState.jumpVel = 0; }
     ny = Math.min(yNext, ground + 12);

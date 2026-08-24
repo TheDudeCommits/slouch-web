@@ -53,12 +53,12 @@ export const PACKS = {
     env: {
       // bright tropical reef, not the abyss
       bg: ['#b8f0fa', '#5fd0ea', '#1e9ac4', '#0a6a92'],
-      fogColor: 0x3fb0d4, fogDensity: 0.0038,
+      fogColor: 0x3fb0d4, fogDensity: 0.0044,
       floor: 'floor.jpg', floorTint: 0xffF8e0, floorY: -9.5,
       ray: 0xffffff, rayOpacity: 0.14, particle: 0xe8fbff, accent: 0x3fd4ff,
       hemi: [0xf0ffff, 0x3a7a90, 1.5],
       exposure: 1.24,
-      decorCount: 30, sway: true, surface: true,
+      decorCount: 36, sway: true, surface: true, swimmerCount: 13,
       swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
     },
     heroes: {
@@ -72,7 +72,10 @@ export const PACKS = {
       { file: 'coral2.glb', anchor: 'floor', tall: true },
       { file: 'coral3.glb', anchor: 'floor', tall: true },
       { file: 'urchin.glb', anchor: 'floor', low: true },
-      { file: 'puffer.glb', anchor: 'free', bob: true },   // a fish — the only floater
+      { file: 'puffer.glb', anchor: 'free', bob: true },   // floaters guard the upper water
+      { file: 'puffer.glb', anchor: 'free', bob: true },
+      { file: 'octo1.glb', anchor: 'free', bob: true },
+      { file: 'octo2.glb', anchor: 'free', bob: true },
       { file: 'kelp.glb', anchor: 'floor', tall: true },
     ],
     enemies: [
@@ -227,14 +230,23 @@ export function spawnCreature(packId, file, { clip = null, len = null, r = null,
 }
 
 // ── environment texture builders ──
-export function gradientTexture(stops, treeline = false) {
+export function gradientTexture(stops) {
+  const W = 256, H = 1024;
   const c = document.createElement('canvas');
-  c.width = 64; c.height = 512;
+  c.width = W; c.height = H;
   const g = c.getContext('2d');
-  const grad = g.createLinearGradient(0, 0, 0, 512);
+  const grad = g.createLinearGradient(0, 0, 0, H);
   stops.forEach((col, i) => grad.addColorStop(i / (stops.length - 1), col));
   g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 512);
+  g.fillRect(0, 0, W, H);
+  // fine noise dithering kills the banding that plagues smooth sky gradients
+  const img = g.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 6;
+    d[i] += n; d[i + 1] += n; d[i + 2] += n;
+  }
+  g.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
