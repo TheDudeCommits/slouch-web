@@ -4,7 +4,7 @@
 import { world, updateWorld, render, explodeAt, setShieldVisual, setHyper, armWall, kickCamera, setGateArrow, randomizeBackdrop, POWERUP_TYPES } from './world.js';
 import { head, updateHead } from './head.js';
 import { state, activeEvent } from './state.js';
-import { sfx, setMusicIntensity } from './audio.js';
+import { sfx, setMusicIntensity, musicEvent } from './audio.js';
 import { mulberry32 } from './rng.js';
 import { BOONS, MUTATORS, LORE } from './content.js';
 import { beginReport, reportTick, noteTuck, noteGate, buildReport } from './report.js';
@@ -298,6 +298,8 @@ function nextSector() {
   const label = SECTOR_NAMES[game.sector];
   if (label) game.hooks.onToast?.(label);
   if (game.sector === 'lasers') wallT = 2;
+  if (game.sector === 'wormhole') musicEvent('wormhole');
+  else if (leaving === 'wormhole') musicEvent('restore');
   // wormhole exit gift: offer a boon
   if (leaving === 'wormhole' && boon.cooldown <= 0) offerBoon();
 }
@@ -349,6 +351,7 @@ function updateBoss(dt) {
     boss.wallsLeft = 4 + Math.min(3, boss.count);
     boss.wallT = 3;
     sfx.bossWarn();
+    musicEvent('boss');
     vib([80, 60, 80]);
     game.hooks.onBoss?.('DREADNOUGHT INBOUND');
     world.boss.visible = true;
@@ -378,6 +381,7 @@ function updateBoss(dt) {
       game.score += pts;
       addFlow(0.5);
       sfx.bossDown();
+      musicEvent('restore');
       game.hooks.onBoss?.(null);
       game.hooks.onToast?.(`DREADNOUGHT CLEARED +${pts}`);
       world.boss.visible = false;

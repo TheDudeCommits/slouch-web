@@ -1,15 +1,111 @@
-// SLOUCH — procedural WebAudio: an ambient synthwave loop plus arcade SFX.
-// Zero audio assets; everything is synthesized, so it loads instantly offline.
+// SLOUCH — audio: real synthwave soundtrack (see assets/ATTRIBUTION.txt),
+// streamed lazily per track through a flow-driven low-pass filter, plus
+// procedurally synthesized arcade SFX.
 
 import { state } from './state.js';
 
 let ctx = null;
-let musicGain, sfxGain, master;
-let musicTimer = null;
-let step = 0;
+let musicGain, sfxGain, master, musicFilter;
 let intensity = 0; // 0..1, driven by the in-game flow meter
 
-export function setMusicIntensity(v) { intensity = Math.max(0, Math.min(1, v)); }
+// ── track pools ──
+const POOLS = {
+  menu: ['eighties', 'spaceranger', 'chillwave'],
+  run: ['retrowave', 'synthwave', 'retro80s', 'neondrive', 'arcadenights', 'midnight'],
+  calm: ['calmambient', 'chillwave', 'spaceranger'],
+  loops: ['loop1', 'loop2', 'loop3', 'loop4', 'loop5'],   // wormhole + boss
+};
+const tracks = {};        // name -> {el, gain}
+let current = null;       // active {name, t}
+let stashed = null;       // run track paused during a temp (boss/wormhole) layer
+let lastPick = {};        // pool -> last track name (avoid repeats)
+
+function getTrack(name) {
+  if (tracks[name]) return tracks[name];
+  const el = new Audio(`assets/music/${name}.m4a`);
+  el.loop = true;
+  el.preload = 'auto';
+  el.crossOrigin = 'anonymous';
+  el.style.display = 'none';
+  document.body.appendChild(el);
+  const src = ctx.createMediaElementSource(el);
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  src.connect(gain);
+  gain.connect(musicFilter);
+  tracks[name] = { el, gain };
+  return tracks[name];
+}
+
+function fadeTo(track, v, dur = 0.8) {
+  track.gain.gain.cancelScheduledValues(ctx.currentTime);
+  track.gain.gain.setValueAtTime(track.gain.gain.value, ctx.currentTime);
+  track.gain.gain.linearRampToValueAtTime(v, ctx.currentTime + dur);
+}
+
+function pickFrom(pool) {
+  const list = POOLS[pool].filter(n => n !== lastPick[pool]);
+  const name = list[Math.floor(Math.random() * list.length)] ?? POOLS[pool][0];
+  lastPick[pool] = name;
+  return name;
+}
+
+function playTrack(name, fade = 0.9) {
+  if (!ctx) return;
+  if (current?.name === name) return;
+  if (current) {
+    const old = tracks[current.name];
+    fadeTo(old, 0, fade);
+    setTimeout(() => { if (current?.name !== old._n) old.el.pause(); }, fade * 1000 + 100);
+  }
+  const t = getTrack(name);
+  t._n = name;
+  t.el.play().catch(() => { /* needs a user gesture; retried on next action */ });
+  fadeTo(t, 1, fade);
+  current = { name };
+}
+
+// kind: 'menu' | 'run' | 'gameover'; opts.theme biases ocean runs to calm tracks
+export function startMusic(kind = 'run', opts = {}) {
+  if (!ctx) return;
+  stashed = null;
+  if (kind === 'menu' || kind === 'gameover') {
+    playTrack(pickFrom('menu'), 1.2);
+  } else {
+    const calm = opts.theme === 'theme_ocean' && Math.random() < 0.65;
+    playTrack(pickFrom(calm ? 'calm' : 'run'));
+  }
+}
+
+export function stopMusic() {
+  if (!ctx || !current) return;
+  fadeTo(tracks[current.name], 0, 0.7);
+  const c = current;
+  setTimeout(() => tracks[c.name]?.el.pause(), 900);
+  current = null;
+  stashed = null;
+}
+
+// temp layers: boss & wormhole swap in a retro loop, then restore the run track
+export function musicEvent(ev) {
+  if (!ctx) return;
+  if (ev === 'boss' || ev === 'wormhole') {
+    if (!stashed && current) stashed = current.name;
+    playTrack(pickFrom('loops'), 0.6);
+  } else if (ev === 'restore' && stashed) {
+    playTrack(stashed, 0.9);
+    stashed = null;
+  }
+}
+
+export function setMusicIntensity(v) {
+  intensity = Math.max(0, Math.min(1, v));
+  if (musicFilter) {
+    // low flow = muffled dream; high flow = full spectrum
+    const f = 900 + Math.pow(intensity, 1.4) * 15000;
+    musicFilter.frequency.setTargetAtTime(f, ctx.currentTime, 0.25);
+  }
+}
 
 export function initAudio() {
   if (ctx) return;
@@ -18,6 +114,10 @@ export function initAudio() {
   master.connect(ctx.destination);
   musicGain = ctx.createGain();
   sfxGain = ctx.createGain();
+  musicFilter = ctx.createBiquadFilter();
+  musicFilter.type = 'lowpass';
+  musicFilter.frequency.value = 16000;
+  musicFilter.connect(musicGain);
   musicGain.connect(master);
   sfxGain.connect(master);
   applyVolumes();
@@ -32,11 +132,6 @@ export function applyVolumes() {
 
 export function resumeAudio() { if (ctx?.state === 'suspended') ctx.resume(); }
 
-// ── music: minor-key arp over a slow pad, 112 BPM 16th-note scheduler ──
-const ROOTS = [110, 110, 87.31, 130.81];          // A, A, F, C
-const ARP = [0, 3, 7, 10, 12, 10, 7, 3];          // minor 7 shape (semitones)
-const BAR = 8;                                     // arp steps per chord
-
 function note(freq, t, dur, type, gain, dest, glideTo) {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
@@ -48,62 +143,6 @@ function note(freq, t, dur, type, gain, dest, glideTo) {
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g); g.connect(dest);
   o.start(t); o.stop(t + dur + 0.05);
-}
-
-function scheduleMusicStep(t) {
-  const chord = Math.floor(step / BAR) % ROOTS.length;
-  const root = ROOTS[chord];
-  const semi = ARP[step % ARP.length];
-  const freq = root * 2 * Math.pow(2, semi / 12);
-  note(freq, t, 0.22, 'sawtooth', 0.16, musicGain);
-  if (step % BAR === 0) {                                    // pad swell on chord change
-    note(root, t, 2.2, 'triangle', 0.22, musicGain);
-    note(root * Math.pow(2, 7 / 12), t, 2.2, 'triangle', 0.13, musicGain);
-  }
-  if (step % 4 === 0) {                                      // soft kick
-    note(120, t, 0.16, 'sine', 0.5, musicGain, 40);
-  }
-  // flow layers: hats come in at medium intensity, octave arp + extra kicks at high
-  if (intensity > 0.35 && step % 2 === 1) {
-    hat(t, 0.05 + intensity * 0.06);
-  }
-  if (intensity > 0.7) {
-    note(freq * 2, t + 0.02, 0.14, 'square', 0.06, musicGain);
-    if (step % 4 === 2) note(120, t, 0.12, 'sine', 0.3, musicGain, 45);
-  }
-  step++;
-}
-
-function hat(t, gain) {
-  const dur = 0.05;
-  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  const f = ctx.createBiquadFilter();
-  f.type = 'highpass'; f.frequency.value = 7000;
-  const g = ctx.createGain(); g.gain.value = gain;
-  src.connect(f); f.connect(g); g.connect(musicGain);
-  src.start(t);
-}
-
-export function startMusic() {
-  if (!ctx || musicTimer) return;
-  step = 0;
-  let nextT = ctx.currentTime + 0.1;
-  const interval = 60 / 112 / 4; // 16ths at 112bpm
-  musicTimer = setInterval(() => {
-    while (nextT < ctx.currentTime + 0.25) {
-      scheduleMusicStep(nextT);
-      nextT += interval;
-    }
-  }, 90);
-}
-
-export function stopMusic() {
-  clearInterval(musicTimer);
-  musicTimer = null;
 }
 
 // ── SFX ──

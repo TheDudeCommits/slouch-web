@@ -11,3 +11,10 @@ Planets: Solar System Scope textures (CC-BY 4.0)
 Skyboxes: generated with wwwtyro/space-3d (Unlicense)
 Lensflare textures: three.js examples (MIT)
 - gate.glb "Arrow2" (poly.pizza, CC-BY)
+Music:
+- "Retrowave" (NverAvetyanMusic), "Synthwave", "The 80s Retrowave", "Synthwave Retro 80s",
+  "Neon Drive Horizon", "Arcade Retro Nights", "Midnight Synthwave", "Chill Synthwave"
+  — Pixabay (Pixabay Content License, free for commercial use)
+- "Retro Synthwave Loops" x5 by Tomasz Kucza / Magnesus — OpenGameArt (CC-BY 4.0)
+- "Space Ranger" seamless loop — OpenGameArt (CC0)
+- "Calm Ambient 2 (Synthwave)" by The Cynic Project — OpenGameArt (CC0)

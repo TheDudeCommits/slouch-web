@@ -213,7 +213,7 @@ function openCalibration() {
 function launch() {
   stopIdle();
   show('hud');
-  startMusic();
+  startMusic('run', { theme: ST.state().equippedTheme });
   for (const id of ['hud-slouch', 'hud-gate', 'hud-boss', 'boon-offer', 'hud-pace']) $(id).classList.add('hidden');
   $('hud-powerups').innerHTML = '';
   const duel = pendingMode === 'duel';
@@ -296,10 +296,17 @@ const hooks = {
     toastTimer = setTimeout(() => el.classList.add('hidden'), 1300);
   },
   onGameOver(score, report, extra) {
-    stopMusic();
+    startMusic('gameover');
     finishRun(score, report, extra || {});
   },
 };
+
+// menu music starts on the first interaction (mobile autoplay rules)
+addEventListener('pointerdown', function firstTap() {
+  removeEventListener('pointerdown', firstTap);
+  initAudio(); resumeAudio(); applyVolumes();
+  if (!game.running) startMusic('menu');
+}, { once: true });
 
 // touch fallback for boon choice
 addEventListener('touchstart', (e) => {
@@ -730,7 +737,7 @@ $('btn-recal-pause').onclick = () => {
   openCalibration();
 };
 $('btn-quit').onclick = () => {
-  sfx.ui(); stopGame(); stopMusic();
+  sfx.ui(); stopGame(); startMusic('menu');
   refreshMenu(); show('screen-menu'); startIdle();
 };
 
