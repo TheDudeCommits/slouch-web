@@ -112,9 +112,9 @@ export function initWorld() {
   camera.position.set(0, 2.6, 9);
   world.camera = camera;
 
-  scene.add(new THREE.AmbientLight(0x8899cc, 0.45));
-  scene.add(new THREE.HemisphereLight(0xbdd2ff, 0x403428, 0.65));
-  keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+  scene.add(new THREE.AmbientLight(0x8899cc, 0.55));
+  scene.add(new THREE.HemisphereLight(0xbdd2ff, 0x403428, 0.9));
+  keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
   keyLight.position.set(6, 12, 6);
   scene.add(keyLight);
 
@@ -375,10 +375,10 @@ function buildAsteroids() {
     map: texLoader.load('assets/rock/color.jpg'),
     normalMap: texLoader.load('assets/rock/normal.jpg'),
     normalScale: new THREE.Vector2(1.1, 1.1),
-    emissive: 0x2a3050, emissiveIntensity: 0.6 });
+    emissive: 0x2a3050, emissiveIntensity: 0.8 });
   themedMats.rock = mat;
   const sizes = [1.5, 2.4, 3.6, 5.2];
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < 64; i++) {
     const size = sizes[Math.floor(Math.random() * sizes.length)];
     const m = new THREE.Mesh(makeFallbackRockGeo(1), mat);
     m.scale.setScalar(size);
@@ -832,7 +832,7 @@ export function applyTheme() {
   sunLight.color.setHex(t.sun);
   keyLight.color.setHex(t.sun);
 
-  world.scene.fog = new THREE.FogExp2(c.fog, 0.0032);
+  world.scene.fog = new THREE.FogExp2(c.fog, 0.0025);
   themedMats.hull.color.setHex(c.ship);
   themedMats.rock.color.setHex(c.rock);
   themedMats.rock.emissive.setHex(c.rockEmissive);

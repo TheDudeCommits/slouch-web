@@ -33,7 +33,7 @@ const graze = { combo: 0, t: 0 };
 const boon = { offer: null, chooseT: 0, cooldown: 0 };
 let R = Math.random;
 
-let spawnT = 0, enemyT = 0, crystalT = 0, gateT = 0, biasT = 0, powerT = 0, wallT = 0, sectorT = 0, shardT = 0;
+let spawnT = 0, enemyT = 0, crystalT = 0, gateT = 0, biasT = 0, powerT = 0, wallT = 0, sectorT = 0, shardT = 0, patternT = 0;
 let seenHint = {};   // one-time explanations per run session
 let hintQueue = [];  // [t, text] first-run tutorial toasts
 let bias = { x: 0, y: 0 };
@@ -77,7 +77,7 @@ export function startGame(mode, hooks, opts = {}) {
   graze.combo = 0; graze.t = 0;
   boon.offer = null; boon.chooseT = 0; boon.cooldown = 0;
   spawnT = 0.5; enemyT = 20; crystalT = 4; gateT = 12; biasT = 0; powerT = 14; wallT = 0;
-  sectorT = 26; shardT = 40;
+  sectorT = 26; shardT = 40; patternT = 5;
   deathT = -1; invulnT = 0; slowmoT = 0; hitStop = 0; burnSmash = 0;
   freeRevives = 0; usedRevive = false;
   for (const pool of [world.asteroids, world.enemies, world.gates, world.crystals, world.powerups, world.walls]) {
@@ -519,23 +519,80 @@ function updatePowerups(dt) {
 
 // ── spawning ──
 function spawnAsteroid(smallOnly = false) {
+  const bx = bias.x * 7, by = bias.y * 4;
+  placeRock(
+    clamp(bx + (R() - 0.5) * 30, -17, 17),
+    clamp(by + (R() - 0.5) * 17, -9.5, 9.5),
+    R() * 60, { smallOnly, drift: true });
+}
+
+function placeRock(x, y, dz, opts = {}) {
   const pool = world.asteroids.filter(o => !o.userData.active &&
-    (!smallOnly || o.userData.radius < 2.2));
+    (!opts.smallOnly || o.userData.radius < 2.6));
   const a = pool[Math.floor(R() * pool.length)];
   if (!a) return;
   a.userData.active = true;
   a.visible = true;
-  const bx = bias.x * 7, by = bias.y * 4;
-  a.position.set(
-    clamp(bx + (R() - 0.5) * 30, -17, 17),
-    clamp(by + (R() - 0.5) * 17, -9.5, 9.5),
-    world.spawnZ - R() * 60);
-  let driftMul = game.sector === 'debris' ? 2.2 : 1;
+  a.position.set(x, y, world.spawnZ - dz);
+  let driftMul = opts.drift ? (game.sector === 'debris' ? 2.2 : 1) : 0.15;
   if (game.boons.greed) driftMul *= 1.15;
   a.userData.vx = (R() - 0.5) * 2.5 * driftMul;
   a.userData.vy = (R() - 0.5) * 1.5 * driftMul;
   a.userData.missed = false;
   a.rotation.set(R() * 3, R() * 3, 0);
+}
+
+// ── rock choreography: formations that prescribe real neck movement.
+// Each pattern is a held or rhythmic stretch, not random noise.
+function spawnPattern() {
+  const kinds = ['slalom', 'sideWall', 'ceiling', 'floor', 'corridor'];
+  const kind = kinds[Math.floor(R() * kinds.length)];
+  const big = () => 1.5 + R() * 2;   // spacing jitter
+
+  if (kind === 'slalom') {
+    // alternating side clusters → rhythmic lateral tilts
+    const first = R() < 0.5 ? -1 : 1;
+    for (let i = 0; i < 5; i++) {
+      const side = first * (i % 2 === 0 ? 1 : -1);
+      for (let j = 0; j < 3; j++) {
+        placeRock(side * (7 + R() * 5), (R() - 0.5) * 13, i * 62 + R() * 14);
+      }
+    }
+  } else if (kind === 'sideWall') {
+    // a long wall blocking one side → hold the tilt to the open lane
+    const open = R() < 0.5 ? -1 : 1; // open side
+    for (let i = 0; i < 9; i++) {
+      placeRock(-open * (2 + R() * 12), (R() - 0.5) * 15, i * 34 + R() * 10);
+    }
+    // a couple of rocks guarding the open lane edge to keep it honest
+    placeRock(open * 13, (R() - 0.5) * 10, 90 + R() * 60);
+  } else if (kind === 'ceiling') {
+    // roof of rocks → hold the dive (chin down)
+    for (let i = 0; i < 8; i++) {
+      placeRock((R() - 0.5) * 26, 3 + R() * 5.5, i * 36 + R() * 12);
+    }
+  } else if (kind === 'floor') {
+    // floor of rocks → hold the climb (chin up, the anti-tech-neck direction)
+    for (let i = 0; i < 8; i++) {
+      placeRock((R() - 0.5) * 26, -3 - R() * 5.5, i * 36 + R() * 12);
+    }
+  } else {
+    // corridor: paired rocks form a channel that drifts across → follow it
+    const phase = R() * Math.PI * 2;
+    const vertical = R() < 0.4;
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      if (vertical) {
+        const cy = Math.sin(phase + t * 2.4) * 4.5;
+        placeRock((R() - 0.5) * 22, cy + 5.5 + big(), i * 44);
+        placeRock((R() - 0.5) * 22, cy - 5.5 - big(), i * 44);
+      } else {
+        const cx = Math.sin(phase + t * 2.4) * 8;
+        placeRock(cx + 6.5 + big(), (R() - 0.5) * 12, i * 44);
+        placeRock(cx - 6.5 - big(), (R() - 0.5) * 12, i * 44);
+      }
+    }
+  }
 }
 
 function spawnEnemy() {
@@ -761,9 +818,14 @@ function loop(t) {
       spawnT -= dt * (shield.active ? 1.8 : 1);
       if (spawnT <= 0) {
         spawnAsteroid(inDebris);
-        if ((inDebris || game.time > 45) && R() < 0.45) spawnAsteroid(inDebris);
-        const base = inDebris ? 0.5 : inLasers ? 1.6 : 1.1;
-        spawnT = Math.max(inDebris ? 0.16 : 0.28, base - game.time * 0.004);
+        if ((inDebris || game.time > 30) && R() < 0.55) spawnAsteroid(inDebris);
+        const base = inDebris ? 0.42 : inLasers ? 1.4 : 0.85;
+        spawnT = Math.max(inDebris ? 0.14 : 0.24, base - game.time * 0.004);
+      }
+      // choreographed formations in open belt: the real neck workout
+      if (!inDebris && !inLasers) {
+        patternT -= dt;
+        if (patternT <= 0) { spawnPattern(); patternT = 7 + R() * 5; }
       }
       enemyT -= dt * (game.mutator?.id === 'swarm' ? 2 : 1);
       if (enemyT <= 0 && game.time > 20) { spawnEnemy(); enemyT = 7 + R() * 6; }
