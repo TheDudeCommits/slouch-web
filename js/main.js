@@ -226,7 +226,7 @@ function openCalibration() {
 function launch() {
   stopIdle();
   show('hud');
-  startMusic('run', { theme: ST.state().equippedTheme });
+  startMusic('run');
   for (const id of ['hud-slouch', 'hud-gate', 'hud-boss', 'boon-offer', 'hud-pace']) $(id).classList.add('hidden');
   $('hud-powerups').innerHTML = '';
   const duel = pendingMode === 'duel';

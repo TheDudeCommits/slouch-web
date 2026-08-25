@@ -751,10 +751,12 @@ function updateObstacles(dt) {
 }
 
 function collideCheck(o, sx, sy, shipR) {
-  const r = o.userData.radius;
-  if (Math.abs(o.position.z) < r + 2) {
+  // hitboxes are deliberately smaller than the visuals — you die when you
+  // truly run into something, not when you brush past it
+  const r = o.userData.radius * 0.72;
+  if (Math.abs(o.position.z) < r + 1.6) {
     const d = Math.hypot(o.position.x - sx, o.position.y - sy);
-    if (d < r + shipR) {
+    if (d < r + shipR * 0.8) {
       if (shield.active) {
         explodeAt(o.position);
         o.userData.active = false; o.visible = false;
@@ -774,7 +776,7 @@ function collideCheck(o, sx, sy, shipR) {
       die();
       return;
     }
-    if (!o.userData.missed && d < r + shipR + 2.2) {
+    if (!o.userData.missed && d < r + shipR + 2.6) {
       o.userData.missed = true;
       const pts = Math.round(25 * game.mult);
       game.score += pts;

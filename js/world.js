@@ -825,7 +825,7 @@ export function updateWorld(dt, speed, shipVel) {
         a.userData.holder.position.y = Math.sin(now * 0.003 + a.id) * 0.5;
       }
       if (a.userData.active && a.userData.marker) {
-        a.userData.marker.material.opacity = 0.22 + Math.abs(Math.sin(now * 0.004 + a.id)) * 0.22;
+        a.userData.marker.material.opacity = 0.1 + Math.abs(Math.sin(now * 0.004 + a.id)) * 0.12;
       }
     }
     if (packEnv.caustics) {
@@ -1147,20 +1147,21 @@ export async function applyWorldPack(onProgress) {
     const def = pack.obstacles[Math.floor(Math.random() * pack.obstacles.length)];
     const size = a.userData.size;
     const c = spawnCreature(target, def.file, def.tall
-      ? { len: size * 2.6 } : { r: def.low ? size * 0.8 : size });
+      ? { len: size * 2.6 } : { r: def.low ? Math.min(size, 2.3) * 0.75 : size });
     a.userData.holder.clear();
     a.userData.holder.add(c ? c.obj : a.userData.rockMesh); // never an invisible collider
     a.userData.tall = !!def.tall;
     a.userData.low = !!def.low;
     a.userData.anchor = def.anchor || (pack.grounded ? 'floor' : 'free');
     a.userData.halfH = c ? c.dims.y / 2 : a.userData.radius;
+    if (def.low && c) a.userData.radius = Math.min(size, 2.3) * 0.8; // hop-able
     a.userData.bobFloat = !!def.bob;
     // danger marker: a pulsing warm halo — the universal "this one hurts" cue
     if (a.userData.marker) { a.remove(a.userData.marker); a.userData.marker = null; }
     const mk = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture('rgba(255,120,110,0.85)'), color: env.danger ?? 0xff5470,
-      transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
-    mk.scale.setScalar(Math.max(3.4, a.userData.radius * 2.6));
+      transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
+    mk.scale.setScalar(Math.max(2.8, a.userData.radius * 2.1));
     mk.position.y = a.userData.anchor === 'free' ? 0 : -a.userData.halfH * 0.35;
     a.add(mk);
     a.userData.marker = mk;

@@ -7,12 +7,24 @@ let ctx = null;
 let musicGain, sfxGain, master, musicFilter;
 let intensity = 0; // 0..1, driven by the in-game flow meter
 
-// ── track pools ──
-const POOLS = {
-  menu: ['eighties', 'spaceranger', 'chillwave'],
-  run: ['retrowave', 'synthwave', 'retro80s', 'neondrive', 'arcadenights', 'midnight'],
-  calm: ['calmambient', 'chillwave', 'spaceranger'],
-  loops: ['loop1', 'loop2', 'loop3', 'loop4', 'loop5'],   // wormhole + boss
+// ── track pools: each world owns its ENTIRE soundtrack.
+// Synthwave belongs to Space alone; the jungle strums, the ocean drifts.
+const WORLD_MUSIC = {
+  space: {
+    menu: ['eighties', 'spaceranger', 'chillwave'],
+    run: ['retrowave', 'synthwave', 'retro80s', 'neondrive', 'arcadenights', 'midnight'],
+    loops: ['loop1', 'loop2', 'loop3', 'loop4', 'loop5'],   // wormhole + boss swaps
+  },
+  jungle: {
+    menu: ['jg_uku1', 'jg_advent'],
+    run: ['jg_uku1', 'jg_uku2', 'jg_marimba', 'jg_advent'],
+    loops: null,   // no swap — the acoustic set carries boss moments
+  },
+  ocean: {
+    menu: ['oc_deep', 'oc_coastal'],
+    run: ['oc_chill', 'oc_vibes', 'oc_coconut', 'oc_coastal'],
+    loops: null,
+  },
 };
 const tracks = {};        // name -> {el, gain}
 let current = null;       // active {name, t}
@@ -43,9 +55,12 @@ function fadeTo(track, v, dur = 0.8) {
 }
 
 function pickFrom(pool) {
-  const list = POOLS[pool].filter(n => n !== lastPick[pool]);
-  const name = list[Math.floor(Math.random() * list.length)] ?? POOLS[pool][0];
-  lastPick[pool] = name;
+  const pools = WORLD_MUSIC[sfxWorld] || WORLD_MUSIC.space;
+  const src = pools[pool] || pools.run;
+  const key = sfxWorld + ':' + pool;
+  const list = src.filter(n => n !== lastPick[key]);
+  const name = list[Math.floor(Math.random() * list.length)] ?? src[0];
+  lastPick[key] = name;
   return name;
 }
 
@@ -64,16 +79,11 @@ function playTrack(name, fade = 0.9) {
   current = { name };
 }
 
-// kind: 'menu' | 'run' | 'gameover'; opts.theme biases ocean runs to calm tracks
-export function startMusic(kind = 'run', opts = {}) {
+// kind: 'menu' | 'run' | 'gameover' — pool comes from the equipped world
+export function startMusic(kind = 'run') {
   if (!ctx) return;
   stashed = null;
-  if (kind === 'menu' || kind === 'gameover') {
-    playTrack(pickFrom('menu'), 1.2);
-  } else {
-    const calm = opts.theme === 'theme_ocean' && Math.random() < 0.65;
-    playTrack(pickFrom(calm ? 'calm' : 'run'));
-  }
+  playTrack(pickFrom(kind === 'run' ? 'run' : 'menu'), kind === 'run' ? 0.9 : 1.2);
 }
 
 export function stopMusic() {
@@ -88,6 +98,7 @@ export function stopMusic() {
 // temp layers: boss & wormhole swap in a retro loop, then restore the run track
 export function musicEvent(ev) {
   if (!ctx) return;
+  if (!(WORLD_MUSIC[sfxWorld] || WORLD_MUSIC.space).loops) return; // only Space swaps
   if (ev === 'boss' || ev === 'wormhole') {
     if (!stashed && current) stashed = current.name;
     playTrack(pickFrom('loops'), 0.6);
@@ -127,7 +138,7 @@ export function applyVolumes() {
   if (!ctx) return;
   const s = state().settings;
   musicGain.gain.value = (s.music / 100) * 0.5;
-  sfxGain.gain.value = (s.sfx / 100) * 0.32;
+  sfxGain.gain.value = (s.sfx / 100) * 0.2;
 }
 
 export function resumeAudio() { if (ctx?.state === 'suspended') ctx.resume(); }

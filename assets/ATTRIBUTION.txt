@@ -31,3 +31,8 @@ Expansion packs (poly.pizza community models):
 - Floors: ambientCG Grass001 + Ground054 (CC0)
 World ambience & organic SFX (Pixabay Content License):
 - Underwater Ambience, Peaceful Morning Birds, Water Splash 02, Bubble Pop 06, Thump
+World music (Pixabay Content License):
+- Jungle: Happy Ukulele, Fun Happy Ukulele, Marimba Game Music (Playful Tropical
+  Jungle), Pirate Adventure (Acoustic)
+- Ocean: Ocean Waves Chill, Ocean Vibes, Tropical - Coconut Island, Coastal,
+  Deep Ocean
