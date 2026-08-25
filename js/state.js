@@ -11,6 +11,7 @@ const DEFAULTS = {
   equippedTheme: 'theme_space',
   equippedWorld: 'space',            // space | ocean | jungle
   oceanHero: 'hero_clown',
+  jungleHero: 'hero_bunny',
   equipped: { skin: 'skin_crosswing', trail: 'trail_theme', boom: 'boom_ember' },
   upgrades: { hyperdur: 0, hyperregen: 0, magnet: 0 },   // levels 0..3
   revives: 0,                                            // consumable stock
@@ -80,6 +81,12 @@ export const WORLD_PACKS = {
     name: 'Jungle Rush', price: 3000, world: 'jungle', size: '4 MB',
     desc: 'Run the undergrowth as a bunny. Everything here is faster than you.',
   },
+};
+
+// buyable runners once Jungle Rush is owned
+export const JUNGLE_HEROES = {
+  hero_bunny: { name: 'Bunny', price: 0, model: 'hero_bunny', desc: 'Fast, fluffy, carries a carrot everywhere.' },
+  hero_pig: { name: 'Piggy', price: 1500, model: 'hero_pig', desc: 'Bounds through the undergrowth with total joy.' },
 };
 
 // buyable hero fish once Open Ocean is owned

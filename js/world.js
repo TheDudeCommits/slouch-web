@@ -259,9 +259,13 @@ export async function loadHeroShip() {
   // pack worlds use a living creature as the hero
   if (world.packMode !== 'space') {
     const pack = PACKS[world.packMode];
-    const heroId = world.packMode === 'ocean' ? (state().oceanHero || 'hero_clown') : 'hero_bunny';
+    const heroId = world.packMode === 'ocean'
+      ? (state().oceanHero || 'hero_clown')
+      : (state().jungleHero || 'hero_bunny');
     const def = pack.heroes[heroId] || Object.values(pack.heroes)[0];
-    const c = spawnCreature(world.packMode, def.file, { clip: pack.heroClips.base, len: def.len, yaw: def.yaw });
+    heroClipMap = def.clips || pack.heroClips;   // some heroes ride their own rig
+    const c = spawnCreature(world.packMode, def.file,
+      { clip: heroClipMap.base, len: def.len, yaw: def.yaw, orig: true });
     if (!c) return;
     // the hero is always center-frame in its own shadow — give it extra fill
     c.obj.traverse(o => {
@@ -908,13 +912,14 @@ export function setShieldVisual(strength) {
 }
 
 // ── hero animation control (pack worlds) ──
-let heroMixer = null, heroActions = null, heroAction = null;
+let heroMixer = null, heroActions = null, heroAction = null, heroClipMap = null;
 
 export function setHeroMotion(name) {
   if (!heroActions) return;
   const pack = PACKS[world.packMode];
   if (!pack) return;
-  const clipName = pack.heroClips[name] || pack.heroClips.base;
+  const clips = heroClipMap || pack.heroClips;
+  const clipName = clips[name] || clips.base;
   const next = heroActions[clipName] ||
     heroActions[Object.keys(heroActions).find(k => k.includes(clipName))];
   if (!next || next === heroAction) return;

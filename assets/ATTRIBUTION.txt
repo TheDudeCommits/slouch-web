@@ -36,3 +36,4 @@ World music (Pixabay Content License):
   Jungle), Pirate Adventure (Acoustic)
 - Ocean: Ocean Waves Chill, Ocean Vibes, Tropical - Coconut Island, Coastal,
   Deep Ocean
+- hero_pig.glb "Pig" by dook (CC0, poly.pizza)

@@ -107,6 +107,9 @@ export const PACKS = {
     },
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
+      // the pig has no run cycle — its looping Jump clip reads as a happy bound
+      hero_pig: { file: 'hero_pig.glb', len: 2.9, yaw: Math.PI,
+        clips: { base: 'Jump', fast: 'Jump', jump: 'Jump', land: 'Idle', duck: 'Idle' } },
     },
     heroClips: { base: 'Run', fast: 'Run', jump: 'Jump_Idle', land: 'Jump_Land', duck: 'Duck' },
     obstacles: [
@@ -150,10 +153,20 @@ export async function loadPack(id, onProgress) {
   for (const f of files) {
     try {
       const g = await gltfLoader.loadAsync(pack.base + f);
-      // measure ONCE on the freshly loaded scene — skeleton clones can measure
-      // wrong, so every clone reuses these reference bounds
+      // measure ONCE on the freshly loaded scene — and for skinned models use
+      // SKELETON-APPLIED bounds (armatures can carry their own scale, so the
+      // static graph lies about rendered size — the pig taught us this)
       g.scene.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(g.scene);
+      const box = new THREE.Box3();
+      let sawSkinned = false;
+      g.scene.traverse(o => {
+        if (o.isSkinnedMesh) {
+          sawSkinned = true;
+          o.computeBoundingBox();
+          box.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));
+        }
+      });
+      if (!sawSkinned) box.setFromObject(g.scene);
       protos[f] = {
         scene: g.scene, clips: g.animations,
         size: box.getSize(new THREE.Vector3()),
@@ -182,10 +195,12 @@ export function normalizeBy(obj, { len = null, r = null }) {
 
 // clone a proto (skeleton-aware) and start a clip if requested.
 // Returns { obj, mixer, actions } — push mixer into your update list.
-export function spawnCreature(packId, file, { clip = null, len = null, r = null, yaw = 0 } = {}) {
+// orig: use the source scene itself (single-instance heroes) — some rigs
+// (e.g. the pig) break under SkeletonUtils.clone but play fine un-cloned.
+export function spawnCreature(packId, file, { clip = null, len = null, r = null, yaw = 0, orig = false } = {}) {
   const proto = loaded[packId]?.protos[file];
   if (!proto) return null;
-  const model = skeletonClone(proto.scene);
+  const model = orig ? proto.scene : skeletonClone(proto.scene);
   // skinned meshes keep their bind-pose bounds — disable culling or they vanish;
   // a touch of self-illumination keeps creatures readable in fog
   model.traverse(o => {
@@ -209,16 +224,29 @@ export function spawnCreature(packId, file, { clip = null, len = null, r = null,
     ? len / Math.max(proto.size.x, proto.size.y, proto.size.z, 0.001)
     : r / Math.max(proto.radius, 0.001);
   inner.scale.setScalar(s);
-  model.position.sub(proto.center);
+  // absolute (idempotent) centering — safe to re-wrap the same scene
+  model.position.set(-proto.center.x, -proto.center.y, -proto.center.z);
   inner.rotation.y = yaw;
   wrap.add(inner);
   let mixer = null;
-  const actions = {};
+  let actions = {};
   if (proto.clips.length) {
-    mixer = new THREE.AnimationMixer(model);
-    for (const c of proto.clips) {
-      const short = c.name.split('|').pop();
-      actions[short] = mixer.clipAction(c);
+    if (orig) {
+      proto._mixer = proto._mixer || new THREE.AnimationMixer(model);
+      mixer = proto._mixer;
+      proto._actions = proto._actions || {};
+      for (const c of proto.clips) {
+        const short = c.name.split('|').pop();
+        proto._actions[short] = proto._actions[short] || mixer.clipAction(c);
+      }
+      actions = proto._actions;
+      mixer.stopAllAction();
+    } else {
+      mixer = new THREE.AnimationMixer(model);
+      for (const c of proto.clips) {
+        const short = c.name.split('|').pop();
+        actions[short] = mixer.clipAction(c);
+      }
     }
     const want = clip && (actions[clip] || actions[Object.keys(actions).find(k => k.includes(clip))]);
     (want || Object.values(actions)[0])?.play();

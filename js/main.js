@@ -605,28 +605,29 @@ function renderStore() {
       }, s.points < wp.price);
       addRow(icon('i-star'), `${wp.name} · ${wp.size}`, wp.desc, btn);
     }
-    // hero fish variants once the ocean is owned
-    if (s.owned.includes('world_ocean')) {
-      for (const [id, h] of Object.entries(ST.OCEAN_HEROES)) {
+    // world hero variants once their pack is owned
+    const heroSection = (packId, heroes, key, worldId) => {
+      if (!s.owned.includes(packId)) return;
+      for (const [id, h] of Object.entries(heroes)) {
         const owned = s.owned.includes(id);
-        const on = s.oceanHero === id;
+        const on = s[key] === id;
+        const equipHero = () => {
+          s[key] = id; ST.save(); sfx.buy();
+          if (ST.currentWorld() === worldId) loadHeroShip();
+          renderStore();
+        };
         let btn;
         if (on) btn = mkBtn('ON', 'equipped');
-        else if (owned) btn = mkBtn('EQUIP', 'owned', () => {
-          s.oceanHero = id; ST.save(); sfx.buy();
-          if (ST.currentWorld() === 'ocean') loadHeroShip();
-          renderStore();
-        });
+        else if (owned) btn = mkBtn('EQUIP', 'owned', equipHero);
         else btn = mkBtn(price(h.price), '', () => {
-          if (ST.buy(id, h.price)) {
-            s.oceanHero = id; ST.save(); sfx.buy();
-            if (ST.currentWorld() === 'ocean') loadHeroShip();
-          } else sfx.denied();
+          if (ST.buy(id, h.price)) equipHero(); else sfx.denied();
           renderStore(); refreshMenu();
         }, s.points < h.price);
         addRow(icon('i-ship'), h.name, h.desc, btn);
       }
-    }
+    };
+    heroSection('world_ocean', ST.OCEAN_HEROES, 'oceanHero', 'ocean');
+    heroSection('world_jungle', ST.JUNGLE_HEROES, 'jungleHero', 'jungle');
     // space palettes (style the space world only)
     for (const [id, t] of Object.entries(ST.THEMES)) {
       const art = `<span class="swatch duo" style="--c1:${hex(t.colors.accent)};--c2:${hex(t.colors.fog)}"></span>`;
