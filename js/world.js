@@ -264,9 +264,24 @@ export async function loadHeroShip() {
       : (state().jungleHero || 'hero_bunny');
     const def = pack.heroes[heroId] || Object.values(pack.heroes)[0];
     heroClipMap = def.clips || pack.heroClips;   // some heroes ride their own rig
+    heroDefCur = def;
     const c = spawnCreature(world.packMode, def.file,
       { clip: heroClipMap.base, len: def.len, yaw: def.yaw, orig: true });
     if (!c) return;
+    // grounded heroes: drop the model so its FEET touch the grass (the ship
+    // origin rides at groundY+1.1 regardless of body height), plus a soft
+    // contact shadow that welds it to the ground
+    if (world.grounded) {
+      c.obj.position.y = c.dims.y / 2 - 1.1;
+      const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 20),
+        new THREE.MeshBasicMaterial({ color: 0x0a1a08, transparent: true, opacity: 0.32, depthWrite: false }));
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = -1.06;
+      c.obj.add(shadow);
+      heroShadow = shadow;
+    } else {
+      heroShadow = null;
+    }
     // the hero is always center-frame in its own shadow — give it extra fill
     c.obj.traverse(o => {
       if (o.isMesh && o.material?.emissive) {
@@ -786,6 +801,26 @@ export function updateWorld(dt, speed, shipVel) {
   // pack scenery: animation mixers, scrolling floor, god rays, looping decor
   for (const m of packMixers) m.update(dt);
   if (heroMixer) heroMixer.update(dt);
+
+  // grounded hero contact: bouncing gait synced to speed + shadow that
+  // shrinks when airborne — kills any sense of hovering
+  if (world.grounded && shipModelRoot.children.length) {
+    const heroObj = shipModelRoot.children[0];
+    const onGround = ship.position.y <= world.groundY + 1.25;
+    if (heroDefCur?.bounce && onGround) {
+      bouncePhase += dt * (4 + speed * 0.09);
+      heroObj.position.y = (heroDefCur ? heroObj.userData._baseY ?? (heroObj.userData._baseY = heroObj.position.y) : 0)
+        + Math.abs(Math.sin(bouncePhase)) * 0.34;
+      heroObj.rotation.x = Math.sin(bouncePhase * 2) * 0.05;
+    }
+    if (heroShadow) {
+      const h = ship.position.y - (world.groundY + 1.1);
+      heroShadow.material.opacity = Math.max(0.06, 0.32 - h * 0.03);
+      const sc = Math.max(0.45, 1 - h * 0.07);
+      heroShadow.scale.setScalar(sc);
+      heroShadow.position.y = -1.06 - (heroObj.position.y - (heroObj.userData._baseY ?? 0));
+    }
+  }
   for (const tex of packEnv.scrollTexs || []) {
     tex.offset.y -= speed * dt * 0.1;   // repeat.y 120 over 1200 units = 0.1 per unit
   }
@@ -913,6 +948,7 @@ export function setShieldVisual(strength) {
 
 // ── hero animation control (pack worlds) ──
 let heroMixer = null, heroActions = null, heroAction = null, heroClipMap = null;
+let heroDefCur = null, heroShadow = null, bouncePhase = 0;
 
 export function setHeroMotion(name) {
   if (!heroActions) return;
@@ -930,7 +966,9 @@ export function setHeroMotion(name) {
   if (heroAction) heroAction.crossFadeTo(next, 0.15, false);
   heroAction = next;
 }
-export function setHeroSpeed(mult) { if (heroMixer) heroMixer.timeScale = mult; }
+export function setHeroSpeed(mult) {
+  if (heroMixer) heroMixer.timeScale = mult * (heroDefCur?.animSpeed ?? 1);
+}
 
 // ── pack world application ──
 const packMixers = [];

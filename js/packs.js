@@ -108,7 +108,7 @@ export const PACKS = {
     heroes: {
       hero_bunny: { file: 'hero_bunny.glb', len: 2.6, yaw: Math.PI },
       // the pig has no run cycle — its looping Jump clip reads as a happy bound
-      hero_pig: { file: 'hero_pig.glb', len: 2.9, yaw: Math.PI,
+      hero_pig: { file: 'hero_pig.glb', len: 2.9, yaw: Math.PI, animSpeed: 2.3, bounce: true,
         clips: { base: 'Jump', fast: 'Jump', jump: 'Jump', land: 'Idle', duck: 'Idle' } },
     },
     heroClips: { base: 'Run', fast: 'Run', jump: 'Jump_Idle', land: 'Jump_Land', duck: 'Duck' },
