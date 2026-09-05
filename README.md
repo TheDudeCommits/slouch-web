@@ -1,125 +1,60 @@
-# 🚀 SLOUCH
+# Slouch
 
-**Fix your neck. Save the galaxy.**
+A little movement. A world away.
 
-Slouch is a third-person, on-rails arcade space dodger for your iPhone — steered
-entirely by your **neck**. The front camera tracks your head (fully on-device via
-MediaPipe; no video ever leaves your phone) and every control input is a movement
-that counteracts *tech neck*. Three minutes of dodging asteroids is three minutes
-of guided neck mobility.
+Slouch is a Three.js game for short desk breaks. Take a 1, 3, or 5 minute journey through an underwater reef, a forest trail, or an orbital belt using comfortable head movement, touch, or keyboard controls. Arcade challenges remain separate from finite breaks.
 
-![icon](icons/icon-180.png)
+## Run and build
 
-## Play it
+Use Node 24 (minimum 22.12).
 
-Open the game in **Safari on your iPhone** (camera requires HTTPS):
-
-**https://thedudecommits.github.io/slouch-web/**
-
-1. Tap a mode, allow camera access.
-2. Sit tall, look straight ahead, calibrate (3-2-1, hold still).
-3. Fly. For the full experience: **Share → Add to Home Screen** for fullscreen.
-
-Works in desktop Chrome/Safari with a webcam too. If the camera is denied or
-unavailable, a touch-control fallback kicks in.
-
-## Modes
-
-- **Casual Mode** — the ship simply follows your head. Small yaw/pitch movements,
-  tight response. Pure arcade.
-- **Tech Neck Mode** — controls are physiotherapy movements (see
-  [TECHNECK.md](TECHNECK.md)):
-  - **Ear-to-shoulder tilt** → steer left/right
-  - **Chin up / down** → climb / dive
-  - **Chin tuck** (glide head straight back) → **HYPERDRIVE**: massive speed surge,
-    2× score, smash straight through asteroids (works in Casual too)
-  - **Look over your shoulder & hold** → pass golden **Stretch Gates** for big bonuses
-  - **Slouch forward** and the ship sputters and your multiplier drains —
-    *SLOUCH DETECTED*
-
-## Features
-
-**Arcade**
-- **Sectors** — the belt rotates through debris fields, laser fence grids and
-  wormholes, each with its own hazards and rewards
-- **The Dreadnought** — a boss mining ship that shows up every couple of minutes
-  and sweeps laser walls you must thread (or breach in hyperdrive)
-- **Power-ups** — 🧲 stardust magnet, 🕰 Focus slow-mo, ×2 score doubler
-- **Flow meter** — near-misses, gates and threaded walls build your multiplier
-  (up to ×6) and the synthwave soundtrack layers up with it
-- **Ghost racer** — your best run flies alongside you as a translucent ghost
-- **Emergency Revive** — a purchasable one-per-run auto-resurrect
-
-**Therapeutic**
-- **Posture report** after every run: per-direction range of motion, time in
-  neutral, chin tucks, stretch score /100, and week-over-week trend
-- **Daily goal rings** (Move / Tucks / Stretches) with a stardust bonus for
-  closing all three
-- **Adaptive difficulty** — Stretch Gate thresholds tune themselves to your
-  measured range of motion over time
-- Best-effort **posture reminders** (full push notifications arrive with the
-  native build)
-
-**Retention & social**
-- Local **top-10 leaderboards** per mode + **Daily Challenge** (seeded — same
-  belt for everyone, resets at midnight)
-- **Duels** — share a link; your friend flies the same seeded belt and tries to
-  beat your score
-- **Share cards** — a rendered PNG flight report for any run
-- **18 achievements**, **daily streaks** with auto-consumed **Streak Freezes**,
-  and **seasonal events** (2× stardust during the Perseid Comet Festival, etc.)
-
-**Store**
-- Themes: Deep Space, Crimson Nebula, Emerald Void, Neon City, Ocean Dive
-  (*Jungle Rush* coming soon)
-- Ship skins, engine trails (incl. the color-cycling Prism), explosion styles
-- Upgrade tree: Hyper Capacity, Hyper Recharge, Magnet Core (3 levels each)
-- Utility: Streak Freezes, Emergency Revives
-
-**Deep loops**
-- **Wormhole boons** — every wormhole exit offers a choice of two run-long perks;
-  lean your head to pick
-- **Daily mutators** — each weekday warps the daily belt differently (Meteor
-  Monday, Wall Wednesday, …)
-- **Graze trains** — chained near-misses ladder up a pentatonic scale, dilate
-  time, and feed the flow meter
-- **Pilot XP & ranks** — Cadet → Legend, insignia on the menu and share card
-- **Daily missions** — 3 rotating objectives that quietly prescribe your neck's
-  daily movement dose
-- **Weekly tournament belt** — one fixed seed all week, its own board
-- **Lore shards** — rare pickups unlock the 12-signal story of the Atlas Core
-  in the Codex
-
-**Tech & art**
-- Stylized-PBR look: baked [space-3d](https://github.com/wwwtyro/space-3d)
-  nebula skyboxes per theme (also used as environment lighting), giant
-  [Solar System Scope](https://www.solarsystemscope.com/textures/) planets
-  (CC-BY 4.0), [Quaternius](https://quaternius.com) glTF hero ships (CC0),
-  [ambientCG](https://ambientcg.com) PBR rock textures (CC0), lensflare sun,
-  ACES tone mapping, bloom + chromatic aberration + hyperdrive speed-line shader
-- Music & SFX synthesized live in WebAudio; UI set in Zen Dots / Chakra Petch
-- Installable PWA with offline support
-
-## Tech
-
-- No build step. Static HTML + ES modules.
-- [Three.js](https://threejs.org/) (CDN) for the 3D world, UnrealBloom postprocessing.
-- [MediaPipe Face Landmarker](https://developers.google.com/mediapipe) (CDN, WASM/GPU)
-  — head yaw/pitch/roll + Z-translation from the facial transformation matrix.
-- `localStorage` persistence; installable PWA manifest.
-
-### Run locally
-
-```bash
-python3 -m http.server 8901
-# open http://localhost:8901
+```sh
+npm ci
+npm run dev
 ```
 
-To test on an iPhone against a local server you need HTTPS for camera access —
-easiest is just using the GitHub Pages URL, or `npx serve` behind a tunnel
-(e.g. `cloudflared`, `ngrok`).
+Development runs at `http://127.0.0.1:8901`. The first production build downloads the pinned MediaPipe face model and copies the pinned inference runtime into `vendor/`; subsequent builds reuse the model.
 
-## Disclaimer
+```sh
+npm test
+npm run build
+node scripts/verify-build.mjs
+npm run preview -- --port 8902
+```
 
-Slouch encourages gentle neck mobility and is not medical advice. Stop if any
-movement hurts, and see a professional for persistent pain.
+Serve **dist**, not the repository root. Vite bundles Three.js, local fonts, tracking, and application modules. Do not use the old Python-root-server instructions with version 2.
+
+## Controls
+
+- Camera: calibrate a comfortable centre, gently tilt to steer, and use small optional up/down movements. Turn sequences guide the character and allow skipping. A brief backward movement followed by a return triggers a bounded boost; holding cannot repeatedly trigger it.
+- Touch: drag on the playfield; release to return to centre. Use the Boost button.
+- Keyboard: arrows or WASD, Space to boost, Escape to pause.
+- Face loss, stale samples, backgrounding, and substantial device stalls pause the session. Re-centre before returning to camera play.
+- Settings provide a gentler movement range, independent turn/up-down switches, reduced motion, and graphics quality.
+
+Camera transforms are relative movement estimates, not measurements of spinal alignment or a medical assessment. Raw frames and face geometry are not uploaded or saved by Slouch.
+
+## Offline and progress
+
+Use Worlds to download a world and, separately, camera controls. Downloads verify content hashes and resume after interruption. The app shell, fonts, and world previews are cached automatically. Settings can remove downloaded content without clearing progress.
+
+Version 1 saves are backed up before migration. Inventory, history, XP and earned progress are retained. Ocean/Jungle are included for everyone; previous owners receive 2,500/3,000 stardust respectively. Old scores are archived because the rules changed. The removed Crosswing fan model is retained only in source; Quadra becomes its equipment fallback. Exports can move progress between web and iOS; this is not automatic account sync.
+
+## iOS
+
+The repository includes a Capacitor 8 / Swift project with a local ARKit tracking bridge, native file persistence, optional local reminders, haptics, and system sharing. All worlds and the fallback camera runtime are bundled. iOS 15 is the current deployment target; ARKit availability is checked at runtime.
+
+```sh
+npm run ios:sync
+npm run ios:open
+```
+
+Select an Apple development team before signing for an iPhone. Simulator compilation can validate the shell; it cannot validate ARKit tracking. See [iOS readiness](docs/IOS-READINESS.md) for device acceptance and remaining release work.
+
+## Release
+
+GitHub Actions builds and checks pull requests. The manual **Publish built web app** workflow uploads `dist` to Pages. Before publishing version 2, switch repository Settings → Pages → Source to **GitHub Actions**. Do not merge and continue serving raw `main` files with the old branch-based Pages setting.
+
+No App Store products, Game Center leaderboards, HealthKit records, or remote score service are configured. Stardust remains an earned game currency. Those integrations require a separate release decision and account configuration.
+
+[Current handover](HANDOVER.md) · [Original plan](docs/OVERHAUL-PLAN.md) · [Source asset inventory](docs/asset-inventory.json) · [Credits](credits.html) · [Privacy](privacy.html)

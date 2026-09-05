@@ -1,0 +1,12 @@
+import { readFileSync,existsSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const html=readFileSync('dist/index.html','utf8');
+assert.ok(html.includes('href="./manifest.webmanifest"'),'PWA manifest must resolve from the app root');
+assert.ok(!html.includes('src="js/main.js"'),'Ship the compiled entry point');
+assert.ok(!existsSync('dist/assets/ships/crosswing.glb'),'Fan model must remain outside distribution');
+const sw=readFileSync('dist/sw.js','utf8');
+const shell=JSON.parse(sw.match(/const CORE=(.*);/)[1]);
+assert.equal(shell.length,new Set(shell).size,'Cache.addAll rejects duplicate URLs');
+for(const path of shell)assert.ok(existsSync('dist/'+path),'Missing shell resource: '+path);
+assert.ok(existsSync('dist/vendor/vision/face_landmarker.task'));
+console.log(`Verified ${shell.length} shell files, local tracking model, root manifest and asset exclusions.`);

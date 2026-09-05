@@ -1,179 +1,192 @@
-// SLOUCH — on-device head tracking via MediaPipe Face Landmarker.
-// Extracts yaw/pitch/roll + Z-translation from the facial transformation matrix,
-// smooths them, and reports pose relative to a calibrated neutral.
-
+import TrackingWorker from './tracking.worker.js?worker';
+// Tracking is a replaceable provider. Only fresh, timestamped poses reach gameplay.
 import { state } from './state.js';
-
-const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-
-// Adaptive smoothing: barely-moving poses get heavy smoothing (no jitter),
-// fast deliberate movements pass through almost raw (low latency).
-function ema(cur, target, gain) {
-  const a = Math.min(0.85, 0.2 + Math.abs(target - cur) * gain);
-  return cur + (target - cur) * a;
-}
+import { fresh, stablePose, neutralPose } from './core/movement.ts';
+import { native, isNative } from './platform/native.js';
 
 export const head = {
-  ready: false,        // tracker initialized
-  hasFace: false,      // face currently detected
-  usingTouch: false,   // fallback mode
-  // raw absolute pose (degrees / cm-ish units)
-  yaw: 0, pitch: 0, roll: 0, z: 0,
-  // neutral pose captured at calibration
+  ready: false, hasFace: false, usingTouch: false, source: 'camera', provider: 'mediapipe',
+  yaw: 0, pitch: 0, roll: 0, z: 0, rYaw: 0, rPitch: 0, rRoll: 0, rZ: 0,
   neutral: { yaw: 0, pitch: 0, roll: 0, z: 0 },
-  // pose relative to neutral (what the game reads)
-  rYaw: 0, rPitch: 0, rRoll: 0, rZ: 0,
-  // touch fallback input, -1..1
-  touchX: 0, touchY: 0,
+  timestamp: 0, valid: false, touchX: 0, touchY: 0, manualBoost: false,
 };
+let worker, video, pending = false, lastVideo = -1, lastSubmit = 0, samples = [];
+let inputEnabled = false, dragging = false, nativeRunning = false, nativeListener;
+const keys = new Set();
+let fallback = null, previewImage = null, preferMainThread = false;
 
-let landmarker = null;
-let video = null;
-let lastVideoTime = -1;
-let lostFrames = 0;
+function resetFailedWorker() {
+  worker?.terminate(); worker = null; pending = false;
+  head.valid = false; head.hasFace = false; head.ready = false;
+  preferMainThread = true;
+}
+
+export function acceptPose(p) {
+  if (!p?.valid || ![p.yaw, p.pitch, p.roll, p.z, p.timestamp].every(Number.isFinite)) {
+    head.valid = false; head.hasFace = false; return;
+  }
+  const initial = !head.valid;
+  for (const k of ['yaw', 'pitch', 'roll', 'z']) {
+    const amount = initial ? 1 : Math.min(0.8, 0.3 + Math.abs(p[k] - head[k]) * (k === 'z' ? 0.12 : 0.05));
+    head[k] += (p[k] - head[k]) * amount;
+  }
+  head.timestamp = p.timestamp; head.valid = true;
+  head.hasFace = fresh(head, performance.now());
+  head.rYaw = head.yaw - head.neutral.yaw;
+  head.rPitch = head.pitch - head.neutral.pitch;
+  head.rRoll = head.roll - head.neutral.roll;
+  head.rZ = head.z - head.neutral.z;
+  samples.push({ ...p });
+  samples = samples.filter(s => p.timestamp - s.timestamp < 1500);
+}
+export function calibrationStable() { return stablePose(samples, performance.now()); }
 
 export async function initHead(onProgress) {
   video = document.getElementById('cam');
-  onProgress?.('loading vision engine…');
-  const { FaceLandmarker, FilesetResolver } = await import(
-    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'
-  );
-  const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
-  onProgress?.('loading face model…');
-  landmarker = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-    runningMode: 'VIDEO',
-    numFaces: 1,
-    outputFacialTransformationMatrixes: true,
-    outputFaceBlendshapes: false,
-  });
+  if (head.ready) return;
+  if (isNative) {
+    const support = await native.support();
+    if (support.faceTracking) {
+      head.provider = 'arkit'; head.ready = true; return;
+    }
+  }
+  onProgress?.('Preparing your private camera');
+  const root = new URL('vendor/vision/', document.baseURI).href;
+  try {
+    if (preferMainThread) throw new Error('Use compatible camera engine');
+    worker = new TrackingWorker();
+    await new Promise((resolve, reject) => {
+      let initialized = false;
+      const timeout = setTimeout(() => reject(new Error('Camera engine timed out')), 30000);
+      const failed = error => {
+        pending = false; head.valid = false; head.hasFace = false; clearTimeout(timeout);
+        if (initialized) resetFailedWorker(); else reject(error);
+      };
+      worker.onmessage = ({ data }) => {
+        if (data.type === 'ready') { initialized = true; clearTimeout(timeout); resolve(); }
+        else if (data.type === 'error') failed(new Error(data.message));
+        else { pending = false; acceptPose(data.pose); }
+      };
+      worker.onerror = e => failed(new Error(e.message));
+      worker.postMessage({ type: 'init', root });
+    });
+  } catch (error) {
+    worker?.terminate(); worker = null;
+    // Older WebKit versions can reject worker camera frames. Bounded fallback.
+    const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
+    const files = await FilesetResolver.forVisionTasks(root + 'wasm');
+    fallback = await FaceLandmarker.createFromOptions(files, {
+      baseOptions: { modelAssetPath: root + 'face_landmarker.task', delegate: 'GPU' },
+      runningMode: 'VIDEO', numFaces: 1, outputFacialTransformationMatrixes: true,
+    });
+    head.provider = 'mediapipe-main';
+  }
   head.ready = true;
 }
-
 export async function startCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-    audio: false,
-  });
-  video.srcObject = stream;
-  await video.play();
-  head.usingTouch = false;
+  video ||= document.getElementById('cam');
+  head.usingTouch = false; head.source = 'camera'; samples = [];
+  head.valid = false; head.hasFace = false;
+  if (head.provider === 'arkit') {
+    if (!nativeListener) nativeListener = await native.addListener('pose', p => {
+      // Native pose timestamps are emitted as age; use the same JS clock everywhere.
+      acceptPose({ ...p, timestamp: performance.now() - Math.max(0, p.ageMs || 0) });
+    });
+    await native.startTracking(); nativeRunning = true; return;
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+  video.srcObject = stream; await video.play(); lastVideo = -1;
 }
-
+export function stopCamera() {
+  if (nativeRunning) native.stopTracking().catch(() => {});
+  nativeRunning = false;
+  video?.srcObject?.getTracks().forEach(t => t.stop());
+  if (video) video.srcObject = null;
+  head.hasFace = false; head.valid = false; samples = []; keys.clear(); inputEnabled = false;
+}
 export function cameraRunning() {
-  return !!(video?.srcObject && video.srcObject.getVideoTracks().some(t => t.readyState === 'live'));
+  return nativeRunning || !!video?.srcObject?.getVideoTracks().some(t => t.readyState === 'live');
 }
-
-// Decompose the 4x4 facial transformation matrix (column-major) into euler angles.
-function matrixToPose(m) {
-  // rotation part
-  const r00 = m[0], r01 = m[4], r02 = m[8];
-  const r10 = m[1], r11 = m[5], r12 = m[9];
-  const r20 = m[2], r21 = m[6], r22 = m[10];
-  const pitch = Math.asin(Math.max(-1, Math.min(1, -r12)));
-  const yaw = Math.atan2(r02, r22);
-  const roll = Math.atan2(r10, r11);
-  const D = 180 / Math.PI;
-  // translation: tz grows negative as the face nears the camera
-  return { yaw: yaw * D, pitch: pitch * D, roll: roll * D, z: m[14] };
-}
-
-// Call once per rAF from the game loop. Cheap when no new video frame.
 export function updateHead() {
   if (head.usingTouch) {
-    // match camera sign conventions: rYaw>0 = left, rRoll>0 = right, rPitch>0 = down
-    head.rYaw = -head.touchX * 30;
-    head.rRoll = head.touchX * 30;
-    head.rPitch = -head.touchY * 20;
-    head.rZ = 0;
-    head.hasFace = true;
-    return;
-  }
-  if (!landmarker || !video || video.readyState < 2) return;
-  if (video.currentTime === lastVideoTime) return;
-  lastVideoTime = video.currentTime;
-
-  let result;
-  try {
-    result = landmarker.detectForVideo(video, performance.now());
-  } catch (e) { return; }
-
-  const mat = result?.facialTransformationMatrixes?.[0]?.data;
-  if (!mat) {
-    if (++lostFrames > 12) head.hasFace = false;
-    return;
-  }
-  lostFrames = 0;
-  head.hasFace = true;
-
-  const p = matrixToPose(mat);
-  head.yaw = ema(head.yaw, p.yaw, 0.06);
-  head.pitch = ema(head.pitch, p.pitch, 0.06);
-  head.roll = ema(head.roll, p.roll, 0.06);
-  head.z = ema(head.z, p.z, 0.14);
-
-  const n = head.neutral;
-  head.rYaw = head.yaw - n.yaw;
-  head.rPitch = head.pitch - n.pitch;
-  head.rRoll = head.roll - n.roll;
-  // MediaPipe camera-space z is ~-30cm at rest and more negative farther away, so
-  // rZ < 0 = head moved BACK (chin tuck), rZ > 0 = head crept FORWARD (slouch).
-  head.rZ = head.z - n.z;
-}
-
-// Average pose over `ms` to set the neutral. Resolves false if no face seen.
-export function calibrate(ms = 1500) {
-  return new Promise(resolve => {
-    const samples = [];
-    const t0 = performance.now();
-    function tick() {
-      updateHead();
-      if (head.hasFace) samples.push({ yaw: head.yaw, pitch: head.pitch, roll: head.roll, z: head.z });
-      if (performance.now() - t0 < ms) { requestAnimationFrame(tick); return; }
-      if (samples.length < 5) { resolve(false); return; }
-      const n = head.neutral;
-      for (const k of ['yaw', 'pitch', 'roll', 'z']) {
-        n[k] = samples.reduce((a, s) => a + s[k], 0) / samples.length;
-      }
-      state().calibrated = true;
-      resolve(true);
+    if (head.source === 'keyboard') {
+      head.touchX = Number(keys.has('ArrowRight') || keys.has('d')) - Number(keys.has('ArrowLeft') || keys.has('a'));
+      head.touchY = Number(keys.has('ArrowUp') || keys.has('w')) - Number(keys.has('ArrowDown') || keys.has('s'));
     }
-    tick();
-  });
+    head.rYaw = -head.touchX * 18; head.rRoll = head.touchX * 14; head.rPitch = -head.touchY * 12; head.rZ = 0;
+    head.hasFace = true; head.valid = true; head.timestamp = performance.now(); return;
+  }
+  head.hasFace = fresh(head, performance.now());
+  if (!head.ready || head.provider === 'arkit' || !video || video.readyState < 2 || pending || video.currentTime === lastVideo) return;
+  const now = performance.now();
+  if (now - lastSubmit < (worker ? 33 : 65)) return;
+  lastSubmit = now; lastVideo = video.currentTime;
+  if (worker) {
+    pending = true;
+    const activeWorker = worker;
+    createImageBitmap(video).then(frame => {
+      if (worker !== activeWorker) { frame.close(); return; }
+      try { activeWorker.postMessage({ type: 'frame', frame, timestamp: now }, [frame]); }
+      catch (error) { frame.close(); throw error; }
+    }).catch(resetFailedWorker);
+  } else if (fallback) {
+    try { acceptPose(poseFromMatrix(fallback.detectForVideo(video, now)?.facialTransformationMatrixes?.[0]?.data, now)); }
+    catch { head.valid = false; }
+  }
 }
-
-// Draw the (mirrored) camera feed into the calibration preview canvas.
+export function poseFromMatrix(m, timestamp) {
+  if (!m) return { valid: false, timestamp };
+  const D = 180 / Math.PI;
+  return { yaw: Math.atan2(m[8], m[10]) * D, pitch: Math.asin(Math.max(-1, Math.min(1, -m[9]))) * D,
+    roll: Math.atan2(m[1], m[5]) * D, z: m[14], timestamp, valid: true };
+}
+export async function calibrate() {
+  if (!calibrationStable()) return false;
+  head.neutral = neutralPose(samples.filter(p => performance.now() - p.timestamp < 1000));
+  head.rYaw = head.rPitch = head.rRoll = head.rZ = 0;
+  state().calibrated = true; return true;
+}
 export function drawPreview(canvas) {
-  if (!video || video.readyState < 2) return;
   const ctx = canvas.getContext('2d');
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw) return;
-  if (canvas.width !== canvas.clientWidth * 2) {
-    canvas.width = canvas.clientWidth * 2;
-    canvas.height = canvas.clientHeight * 2;
+  if (canvas.width !== canvas.clientWidth * 2) { canvas.width = canvas.clientWidth * 2; canvas.height = canvas.clientHeight * 2; }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (head.provider === 'arkit') { if(previewImage?.complete) ctx.drawImage(previewImage,0,0,canvas.width,canvas.height); return; }
+  if (!video || video.readyState < 2 || !video.videoWidth) return;
+  const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+  const dw = video.videoWidth * scale, dh = video.videoHeight * scale;
+  ctx.save(); ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+  ctx.drawImage(video, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh); ctx.restore();
+}
+let previewListener;
+export async function setTrackingPreview(enabled) {
+  if(head.provider!=='arkit')return;
+  if(!previewListener)previewListener=await native.addListener('preview',p=>{previewImage ||= new Image();previewImage.src=p.image;});
+  await native.setPreview({enabled});
+  if(!enabled)previewImage=null;
+}
+export function setInputEnabled(value) { inputEnabled = value; if (!value) { keys.clear(); head.touchX = head.touchY = 0; head.manualBoost = false; } }
+export function enableTouchFallback(source = 'pointer') {
+  stopCamera(); head.usingTouch = true; head.source = source; head.hasFace = true; head.valid = true;
+}
+function onPlayfield(e) { return e.target === document.getElementById('gl') || e.target === document.getElementById('hud'); }
+addEventListener('pointerdown', e => {
+  if (!inputEnabled || !head.usingTouch || !onPlayfield(e)) return;
+  dragging = true; head.source = 'pointer'; movePointer(e);
+});
+function movePointer(e) {
+  if (!dragging || !inputEnabled || !head.usingTouch) return;
+  head.touchX = Math.max(-1, Math.min(1, (e.clientX / innerWidth * 2 - 1) * 1.3));
+  head.touchY = Math.max(-1, Math.min(1, -(e.clientY / innerHeight * 2 - 1) * 1.3));
+}
+addEventListener('pointermove', movePointer);
+addEventListener('pointerup', () => { dragging = false; head.touchX = head.touchY = 0; });
+addEventListener('pointercancel', () => { dragging = false; head.touchX = head.touchY = 0; });
+addEventListener('keydown', e => {
+  if (!inputEnabled || !head.usingTouch || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'a', 's', 'd', ' '].includes(e.key)) {
+    e.preventDefault(); head.source = 'keyboard'; keys.add(e.key);
+    if (e.key === ' ' && !e.repeat) head.manualBoost = true;
   }
-  const scale = Math.max(canvas.width / vw, canvas.height / vh);
-  const dw = vw * scale, dh = vh * scale;
-  ctx.drawImage(video, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
-}
-
-// ── touch fallback (camera denied / unsupported) ──
-export function enableTouchFallback() {
-  head.usingTouch = true;
-  head.hasFace = true;
-  const set = (e) => {
-    const t = e.touches?.[0]; if (!t) return;
-    head.touchX = (t.clientX / innerWidth) * 2 - 1;
-    head.touchY = -((t.clientY / innerHeight) * 2 - 1);
-  };
-  addEventListener('touchstart', set, { passive: true });
-  addEventListener('touchmove', set, { passive: true });
-  addEventListener('touchend', () => { head.touchX = 0; head.touchY = 0; }, { passive: true });
-  addEventListener('mousemove', (e) => {
-    if (e.buttons || true) {
-      head.touchX = (e.clientX / innerWidth) * 2 - 1;
-      head.touchY = -((e.clientY / innerHeight) * 2 - 1);
-    }
-  });
-}
+});
+addEventListener('keyup', e => keys.delete(e.key));
+addEventListener('blur', () => { keys.clear(); dragging = false; head.touchX = head.touchY = 0; });

@@ -1,0 +1,765 @@
+[
+  {
+    "file": "assets/packs/jungle/bear.glb",
+    "bytes": 146668,
+    "sha256": "1af9e1e3ddcd2ce59d3d54eb5652b2e170a3c1a1a40e51c39f89158a1922944e",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 666,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/carrot.glb",
+    "bytes": 14888,
+    "sha256": "2bc765298aca931542d385e21e8e5194e5be71b4c20922f8d0f83a3bef439e08",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 598,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/cheetah.glb",
+    "bytes": 324664,
+    "sha256": "4209e580a8c0775f0677233eccdab3305806ff99b14073a16799cad17dbd6bbb",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 980,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/hero_bunny.glb",
+    "bytes": 462500,
+    "sha256": "d931c3599cb5c8ad67d6b850e68d0df84bb1373fa07edbfdb3c50ffe87dfcdd5",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 6,
+    "primitives": 6,
+    "triangles": 8284,
+    "animations": [
+      "CharacterArmature|Death",
+      "CharacterArmature|Duck",
+      "CharacterArmature|HitReact",
+      "CharacterArmature|Idle",
+      "CharacterArmature|Jump",
+      "CharacterArmature|Jump_Idle",
+      "CharacterArmature|Jump_Land",
+      "CharacterArmature|No",
+      "CharacterArmature|Punch",
+      "CharacterArmature|Run",
+      "CharacterArmature|Walk",
+      "CharacterArmature|Wave",
+      "CharacterArmature|Weapon",
+      "CharacterArmature|Yes"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/hero_pig.glb",
+    "bytes": 159724,
+    "sha256": "4bb5fc230a35db446fa2ea043f77dfc077f0b21d6e59d0235b15f01d01b05525",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 562,
+    "animations": [
+      "Armature|Idle",
+      "Armature|Jump"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/jaguar.glb",
+    "bytes": 357524,
+    "sha256": "d5c37ddfb199af080cb81f14d3b9d667164a9bba882ffbe4cbfaa92fb9206ab8",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 1020,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/lion.glb",
+    "bytes": 321336,
+    "sha256": "1830fe2ffb12312be7cfdbd1380a9c7f0cf61d2dd4d4bba82f074dca39cd6019",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 1350,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/log.glb",
+    "bytes": 13904,
+    "sha256": "7c3489a6d7f39025dc86278f17ba005a62466061067a385fec88a61f79d03844",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 202,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/palms.glb",
+    "bytes": 491336,
+    "sha256": "340dd72ef14c2bf87ce19e92d22a7380350af6dbf42edabd6101bfa5dc13798a",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 10,
+    "triangles": 1920,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/snake.glb",
+    "bytes": 425860,
+    "sha256": "096db68cd990cc66ad750778a03c0ce305c16c2ac7fd9e02a0c6ecb4dac12d62",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 826,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/stump.glb",
+    "bytes": 41864,
+    "sha256": "0cd8c064db03ab10178e6420f7e5b6ec9032ad6e2133ce357a5d8f49878bee3a",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 700,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/tiger.glb",
+    "bytes": 227164,
+    "sha256": "7247cb1a4d28033d347cadbc8e053472773f441fd171fa9c56090497da9f7863",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 742,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/tree1.glb",
+    "bytes": 70188,
+    "sha256": "13a45f89430f2a171f25bf42516819bda1298d787da78d816abd2767c7d03c4e",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 932,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/tree2.glb",
+    "bytes": 43020,
+    "sha256": "38374eabf17b0662e0817ade17537b35e2b155be091634f20d7c52242995f5d5",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 420,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/tree3.glb",
+    "bytes": 54052,
+    "sha256": "d533b2e7485a38bc7757ee9018780ffa7a92fe9f94b7cb147a118dd365222760",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 694,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/tree4.glb",
+    "bytes": 120560,
+    "sha256": "a3372137388d635447e3d279bf77d6c49aab1fbc20134282f45e85ee76ec5472",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 1210,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/jungle/wolf.glb",
+    "bytes": 901224,
+    "sha256": "f06e66930ef14279254c36b6471f9422142622b7745f68b222cd030aa8aed215",
+    "asset": {
+      "generator": "glTF-Transform v4.4.2",
+      "version": "2.0"
+    },
+    "materials": 4,
+    "primitives": 4,
+    "triangles": 1962,
+    "animations": [
+      "Attack",
+      "Death",
+      "Eating",
+      "Gallop",
+      "Gallop_Jump",
+      "Idle_HitReact_Left",
+      "Idle_HitReact_Right",
+      "Jump_ToIdle",
+      "Walk",
+      "Idle_2_HeadLow",
+      "Idle_2",
+      "Idle",
+      "AnimalArmature|Attack",
+      "AnimalArmature|Death",
+      "AnimalArmature|Eating",
+      "AnimalArmature|Gallop",
+      "AnimalArmature|Gallop_Jump",
+      "AnimalArmature|Idle",
+      "AnimalArmature|Idle_2",
+      "AnimalArmature|Idle_2_HeadLow",
+      "AnimalArmature|Idle_HitReact_Left",
+      "AnimalArmature|Idle_HitReact_Right",
+      "AnimalArmature|Jump_ToIdle",
+      "AnimalArmature|Walk"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/angler.glb",
+    "bytes": 182328,
+    "sha256": "cf839231b3e84a88ca9b57163c9e67183ba8ff12ef3823638137ddfda37434c0",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 6,
+    "primitives": 6,
+    "triangles": 1870,
+    "animations": [
+      "Fish_Armature|Attack",
+      "Fish_Armature|Death",
+      "Fish_Armature|Out_Of_Water",
+      "Fish_Armature|Swimming_Fast",
+      "Fish_Armature|Swimming_Impulse",
+      "Fish_Armature|Swimming_Normal"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/coral1.glb",
+    "bytes": 395956,
+    "sha256": "6e88ef745c36a30e62c251c6d4a5f99d072d241cb7ac42263aac81bbaf3687f0",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 8,
+    "triangles": 6080,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/coral2.glb",
+    "bytes": 264136,
+    "sha256": "41ea50085ae867a659050e0e7a38e86f7d46f0f6b822e93d8b3d7623fe631497",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 8,
+    "triangles": 3200,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/coral3.glb",
+    "bytes": 160056,
+    "sha256": "905ef2c048ac0bda8de4d05eaedd2b428aae715b3d587a58e512b01972196b5d",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 2472,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/hero_clown.glb",
+    "bytes": 166084,
+    "sha256": "d1d0b1f83848337299ef163b7ec5b207b5c34e3933da1367000e1dcd6d856bf1",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 4,
+    "primitives": 4,
+    "triangles": 1530,
+    "animations": [
+      "Fish_Armature|Attack",
+      "Fish_Armature|Death",
+      "Fish_Armature|Out_Of_Water",
+      "Fish_Armature|Swimming_Fast",
+      "Fish_Armature|Swimming_Impulse",
+      "Fish_Armature|Swimming_Normal"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/hero_mandarin.glb",
+    "bytes": 181204,
+    "sha256": "b747a9e0e82ddddf7c785eb66b264d343e7c6c2d14befb812a540dcddd0afce1",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 4,
+    "primitives": 4,
+    "triangles": 1378,
+    "animations": [
+      "Fish_Armature|Attack",
+      "Fish_Armature|Death",
+      "Fish_Armature|Out_Of_Water",
+      "Fish_Armature|Swimming_Fast",
+      "Fish_Armature|Swimming_Impulse",
+      "Fish_Armature|Swimming_Normal"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/hero_tang.glb",
+    "bytes": 146644,
+    "sha256": "c5724eae43799510667e24d2f32508363cb52e5f57853880257e148bfaaadbcf",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 1342,
+    "animations": [
+      "Fish_Armature|Attack",
+      "Fish_Armature|Death",
+      "Fish_Armature|Out_Of_Water",
+      "Fish_Armature|Swimming_Fast",
+      "Fish_Armature|Swimming_Impulse",
+      "Fish_Armature|Swimming_Normal"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/kelp.glb",
+    "bytes": 25144,
+    "sha256": "971c92e5218c868c639d1974d512b22d10cde2f62e61893836f3fb81781394f5",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 888,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/octo1.glb",
+    "bytes": 45312,
+    "sha256": "ed0bbfd46466dfbd34a6889f957868f35d7bd7b4a7810eb0713cab512f0cb227",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 792,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/octo2.glb",
+    "bytes": 114716,
+    "sha256": "2185fc9735f35704010bf75a220a82551c1aba5d1e87c5d12ef9c6aa7b30f257",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 1620,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/puffer.glb",
+    "bytes": 93016,
+    "sha256": "2bfb39ab7a099ce93cef80fbbb7cb3bccc9e6d294755cbbe4925deb933e9f63b",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 5,
+    "primitives": 5,
+    "triangles": 2400,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/scenic_whale.glb",
+    "bytes": 31092,
+    "sha256": "7e4dafaee288ef6a65df48a4f9d75df354ec1330dea3494a14ea73f223bcf27a",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 448,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/shark.glb",
+    "bytes": 166372,
+    "sha256": "5e42d1b316799910e428a12326fa1ed91c666be14c9b82aef7b848dc9a44ff9f",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 5,
+    "primitives": 5,
+    "triangles": 2218,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/shark2.glb",
+    "bytes": 77732,
+    "sha256": "6d5cf3cd7ea749583b622a306cfcae4de85432efcc74a1ec6f52e5430cf13aff",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 644,
+    "animations": [
+      "Armature|Swim"
+    ],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/urchin.glb",
+    "bytes": 16396,
+    "sha256": "28f34c51a05cce667a9f170a380f601bb7b0919b385403c2f23ec5d3c414c04e",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 142,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/packs/ocean/whale.glb",
+    "bytes": 177004,
+    "sha256": "a945542da925aac0a10252794a831919a303757439ce7e884231a5dacdebfda2",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 4,
+    "primitives": 13,
+    "triangles": 2124,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/coin.glb",
+    "bytes": 13812,
+    "sha256": "7b4e95e9f9ec58e4ca0334759ceb7dc63ac0db4666dc443d0f07058298569944",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 206,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/crown.glb",
+    "bytes": 66808,
+    "sha256": "74a2d366d1ba835c4ba5fac63a61fd407142ab6f47f27f5d73133b38ff5616a2",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 3120,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/gate.glb",
+    "bytes": 47956,
+    "sha256": "93b32f20c7ebb1e929f57c946f74a9d1b054aa4359675274eb9459711a1f23b3",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 9,
+    "triangles": 612,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/hourglass.glb",
+    "bytes": 230492,
+    "sha256": "f4c2451ba205d0423256078bea31f650e5ac396a99947c8ac206f269d30f0c1d",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 19,
+    "triangles": 2873,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/magnet.glb",
+    "bytes": 18312,
+    "sha256": "ac985a57745c1928bbf169b5b3df6af17e15fb89fd0cac93e34d76909c6f1565",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 2,
+    "primitives": 2,
+    "triangles": 776,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/pickups/star.glb",
+    "bytes": 23072,
+    "sha256": "0e14eb8279f64fd8dc3de7332efbd35235d39d3a0a21cc12c4d06211af370138",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 960,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/rock/rock1.glb",
+    "bytes": 18380,
+    "sha256": "b302046e7573af7ba32d72a4602159181958e7b59e975b80901333fae91b9d78",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 224,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/rock/rock2.glb",
+    "bytes": 18076,
+    "sha256": "c601f06428037dca25ca91d31f9923df8f9aaeeec90506d9329f7214568e9caf",
+    "asset": {
+      "generator": "FBX2glTF v0.9.7",
+      "version": "2.0"
+    },
+    "materials": 1,
+    "primitives": 1,
+    "triangles": 210,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/ships/crosswing.glb",
+    "bytes": 299440,
+    "sha256": "432198574f2255a9f3edcb285e38e493a62147a2c1e2ec0abc74714f23f25dcf",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 6,
+    "primitives": 72,
+    "triangles": 3174,
+    "animations": [],
+    "status": "excluded-from-build",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/ships/lance.glb",
+    "bytes": 22512,
+    "sha256": "5c4d5f828437c104d682550904977bc827e245d96ef8158926ed354c6d3e64b1",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 270,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/ships/quadra.glb",
+    "bytes": 20604,
+    "sha256": "47b55a7fc11e046db0c286d7d67667d3b801b61ad6737d003d893cf7aa1842bf",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 242,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/ships/shadow.glb",
+    "bytes": 21824,
+    "sha256": "0e699ed02f678197eb01b82fddf3a33f6464cd95af2d4033c1257d13dfa3d853",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 252,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  },
+  {
+    "file": "assets/ships/viper.glb",
+    "bytes": 19076,
+    "sha256": "0eff43e730655b0658ce6ad44fe42ca42d82318d392bba4f2c15e475b98ed985",
+    "asset": {
+      "generator": "obj2gltf",
+      "version": "2.0"
+    },
+    "materials": 3,
+    "primitives": 3,
+    "triangles": 218,
+    "animations": [],
+    "status": "existing-source-asset",
+    "sourceEvidence": "assets/ATTRIBUTION.txt; docs/asset-source-catalog.json where matched; embedded asset metadata"
+  }
+]

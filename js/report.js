@@ -1,3 +1,6 @@
+import { percentile } from './core/movement.ts';
+import { weeklyActivity } from './core/history.ts';
+import { isNative,shareNativeFile } from './platform/native.js';
 // SLOUCH — posture reports: samples head pose during a run, computes range of
 // motion / time-in-neutral / stretch score, and renders a shareable card.
 
@@ -6,9 +9,9 @@ import { state, dayStamp, GOAL_TARGETS } from './state.js';
 
 let acc = null;
 
-export function beginReport(mode) {
+export function beginReport(mode, options = {}) {
   acc = {
-    mode, t: 0, neutralT: 0, moveT: 0, hyperT: 0,
+    mode, options, samples: [], lastPose:null, lastMotionAt:-1000, lastSample: 0, trackedT: 0, t: 0, neutralT: 0, moveT: 0, hyperT: 0,
     rom: { yawL: 0, yawR: 0, pitchU: 0, pitchD: 0, rollL: 0, rollR: 0, tuck: 0 },
     tucks: 0, gates: 0, slouchT: 0,
   };
@@ -18,6 +21,16 @@ export function beginReport(mode) {
 export function reportTick(dt, hyperActive, slouchActive) {
   if (!acc || head.usingTouch) { if (acc) acc.t += dt; return; }
   acc.t += dt;
+  if (!head.hasFace) return;
+  acc.trackedT += dt;
+  if (head.timestamp !== acc.lastSample) {
+    const previous=acc.lastPose;const elapsed=previous?(head.timestamp-previous.timestamp)/1000:0;
+    if(elapsed>0&&elapsed<.3){const speed=Math.max(Math.abs(head.rYaw-previous.yaw),Math.abs(head.rPitch-previous.pitch),Math.abs(head.rRoll-previous.roll))/elapsed;if(speed>4)acc.lastMotionAt=head.timestamp;}
+    acc.lastPose={yaw:head.rYaw,pitch:head.rPitch,roll:head.rRoll,timestamp:head.timestamp};
+    acc.lastSample = head.timestamp;
+    acc.samples.push({ yawL: Math.max(0,head.rYaw), yawR: Math.max(0,-head.rYaw), pitchD: Math.max(0,head.rPitch), pitchU: Math.max(0,-head.rPitch), rollR: Math.max(0,head.rRoll), rollL: Math.max(0,-head.rRoll), tuck: Math.max(0,-head.rZ) });
+    if (acc.samples.length > 18000) acc.samples.shift();
+  }
   const r = acc.rom;
   // rYaw>0 = left, rPitch>0 = down, rRoll>0 = right tilt
   r.yawL = Math.max(r.yawL, head.rYaw);
@@ -30,7 +43,7 @@ export function reportTick(dt, hyperActive, slouchActive) {
 
   const mag = Math.max(Math.abs(head.rYaw), Math.abs(head.rPitch), Math.abs(head.rRoll));
   if (mag < 6 && Math.abs(head.rZ) < 3) acc.neutralT += dt;
-  if (mag > 8) acc.moveT += dt;
+  if (head.timestamp-acc.lastMotionAt<150) acc.moveT += dt;
   if (hyperActive) acc.hyperT += dt;
   if (slouchActive) acc.slouchT += dt;
 }
@@ -40,23 +53,14 @@ export function noteGate() { if (acc) acc.gates++; }
 
 // Stretch score 0–100: rewards movement coverage in every direction, time
 // spent actively moving, tucks and gates; penalizes sustained slouching.
-export function buildReport(score) {
+export function buildReport(score, outcome = {}) {
   if (!acc) return null;
-  const r = acc.rom;
-  const dirScore = (v, target) => Math.min(1, v / target);
-  const coverage = (
-    dirScore(r.yawL, 25) + dirScore(r.yawR, 25) +
-    dirScore(r.pitchU, 18) + dirScore(r.pitchD, 18) +
-    dirScore(r.rollL, 18) + dirScore(r.rollR, 18)) / 6;
-  const activity = Math.min(1, acc.moveT / Math.max(30, acc.t * 0.35));
-  const tucks = Math.min(1, acc.tucks / 6);
-  const gates = Math.min(1, acc.gates / 3);
-  const slouchPenalty = Math.min(0.3, acc.slouchT / Math.max(1, acc.t) * 1.5);
-  const stretchScore = Math.round(Math.max(0,
-    (coverage * 45 + activity * 25 + tucks * 15 + gates * 15) * (1 - slouchPenalty)));
+  const r = Object.fromEntries(Object.keys(acc.rom).map(k => [k, percentile(acc.samples.map(p => p[k]), 0.95)]));
+  const stretchScore = Math.round(100 * acc.moveT / Math.max(1,acc.t)); // Legacy field: activity fraction only.
 
   const report = {
-    date: dayStamp(), mode: acc.mode, score,
+    version: 2, date: dayStamp(), mode: acc.mode, score, world: acc.options.world, provider: head.usingTouch ? head.source : head.provider, completed: !!outcome.completed,
+    trackingPct: head.usingTouch ? 0 : Math.round(acc.trackedT / Math.max(1,acc.t) * 100),
     duration: Math.round(acc.t),
     rom: { yawL: Math.round(r.yawL), yawR: Math.round(r.yawR),
       pitchU: Math.round(r.pitchU), pitchD: Math.round(r.pitchD),
@@ -74,98 +78,34 @@ export function buildReport(score) {
 
 // weekly average stretch score from history, for "improving?" context
 export function weeklyTrend() {
-  const h = state().history;
-  if (h.length < 2) return null;
-  const recent = h.slice(0, 7), prior = h.slice(7, 14);
-  const avg = arr => arr.reduce((a, r) => a + (r.stretchScore || 0), 0) / Math.max(1, arr.length);
-  if (!prior.length) return null;
-  return Math.round(avg(recent) - avg(prior));
+  const w = weeklyActivity(state().history, dayStamp());
+  return w.recent || w.previous ? w.delta : null;
 }
 
 // ── share card: 1080×1350 PNG rendered on a canvas ──
 export function drawShareCard(report, opts = {}) {
-  const W = 1080, H = 1350;
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const g = c.getContext('2d');
-
-  const bg = g.createRadialGradient(W / 2, H * 0.3, 80, W / 2, H * 0.45, H);
-  bg.addColorStop(0, '#141b3e');
-  bg.addColorStop(1, '#05060f');
-  g.fillStyle = bg;
-  g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 90; i++) {
-    g.fillStyle = `rgba(207,228,255,${0.2 + Math.random() * 0.6})`;
-    g.beginPath();
-    g.arc(Math.random() * W, Math.random() * H, Math.random() * 2.2, 0, 7);
-    g.fill();
-  }
-
-  g.textAlign = 'center';
-  g.fillStyle = '#5ce1ff';
-  g.font = '400 120px "Zen Dots", system-ui';
-  g.shadowColor = '#5ce1ff'; g.shadowBlur = 40;
-  g.fillText('SLOUCH', W / 2, 190);
-  g.shadowBlur = 0;
-  g.fillStyle = '#5c6a8a';
-  g.font = '600 34px "Chakra Petch", system-ui';
-  g.fillText(opts.duel ? 'DUEL CHALLENGE' : (report.mode === 'daily' ? 'DAILY CHALLENGE' : 'FLIGHT REPORT'), W / 2, 250);
-
-  g.fillStyle = '#ffffff';
-  g.font = '400 150px "Zen Dots", system-ui';
-  g.shadowColor = '#5ce1ff'; g.shadowBlur = 26;
-  g.fillText(report.score.toLocaleString(), W / 2, 470);
-  g.shadowBlur = 0;
-  g.fillStyle = '#e9f1ff';
-  g.font = '800 40px "Chakra Petch", system-ui';
-  g.fillText((opts.tag || state().lastTag) + ' · ' + ({ techneck: 'TECH NECK', casual: 'CASUAL', daily: 'DAILY', duel: 'DUEL', weekly: 'WEEKLY' }[report.mode] || 'FLIGHT'), W / 2, 540);
-
-  // stretch ring
-  const cx = W / 2, cy = 800, R = 150;
-  g.lineWidth = 26; g.lineCap = 'round';
-  g.strokeStyle = 'rgba(122,132,173,0.25)';
-  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
-  g.strokeStyle = '#5ce1ff';
-  g.beginPath();
-  g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + (report.stretchScore / 100) * Math.PI * 2);
-  g.stroke();
-  g.fillStyle = '#fff';
-  g.font = '400 84px "Zen Dots", system-ui';
-  g.fillText(String(report.stretchScore), cx, cy + 20);
-  g.fillStyle = '#5c6a8a';
-  g.font = '700 30px "Chakra Petch", system-ui';
-  g.fillText('STRETCH SCORE', cx, cy + 70);
-
-  const rows = report.touch
-    ? [['MODE', 'TOUCH'], ['TIME', report.duration + 's']]
-    : [
-      ['↔ ROTATION', `${report.rom.yawL}° / ${report.rom.yawR}°`],
-      ['↕ FLEX / EXT', `${report.rom.pitchD}° / ${report.rom.pitchU}°`],
-      ['⤿ SIDE BEND', `${report.rom.rollL}° / ${report.rom.rollR}°`],
-      ['CHIN TUCKS', String(report.tucks)],
-      ['STRETCH GATES', String(report.gates)],
-    ];
-  g.font = '700 34px "Chakra Petch", system-ui';
-  let y = 1030;
-  for (const [k, v] of rows) {
-    g.textAlign = 'left'; g.fillStyle = '#5c6a8a'; g.fillText(k, 140, y);
-    g.textAlign = 'right'; g.fillStyle = '#e8ecff'; g.fillText(v, W - 140, y);
-    y += 56;
-  }
-  g.textAlign = 'center';
-  g.fillStyle = '#5ce1ff';
-  g.font = '700 30px "Chakra Petch", system-ui';
-  g.fillText(opts.duel ? 'Beat my score → slouch. fix your neck.' : 'fix your neck · save the galaxy', W / 2, 1300);
-  return c;
+  const c=document.createElement('canvas');c.width=1080;c.height=1350;const g=c.getContext('2d');
+  const palette={ocean:['#143c36','#c8e2d1'],jungle:['#344c2c','#d4deb3'],space:['#444465','#d7d4e7']}[report.world]||['#143c36','#c8e2d1'];
+  g.fillStyle='#f7f5ed';g.fillRect(0,0,c.width,c.height);g.fillStyle=palette[1];g.beginPath();g.arc(900,390,340,0,Math.PI*2);g.fill();
+  g.fillStyle=palette[0];g.textAlign='left';g.font='500 76px Fraunces,Georgia';g.fillText('slouch.',90,150);
+  g.font='500 88px Fraunces,Georgia';g.fillText(opts.duel?'A friendly challenge.':'A moment',90,340);if(!opts.duel)g.fillText('well spent.',90,440);
+  g.font='500 30px "DM Sans",sans-serif';g.fillText({ocean:'Open Ocean',jungle:'Jungle Rush',space:'Deep Space'}[report.world]||'Slouch',90,540);
+  g.fillStyle=palette[0];g.font='500 170px Fraunces,Georgia';g.fillText(opts.duel?report.score.toLocaleString():`${Math.floor(report.duration/60)}:${String(report.duration%60).padStart(2,'0')}`,90,800);
+  g.font='500 26px "DM Sans",sans-serif';g.fillText(opts.duel?'ARCADE POINTS':'TIME FOR YOURSELF',98,860);
+  const rows=report.touch?[['Controls','Touch / keys'],['Head movement','Not measured']]:[['Moving time',report.moveSec+' seconds'],['Gentle returns',String(report.tucks)],['Tracking coverage',report.trackingPct+'%']];
+  let y=975;for(const [label,value]of rows){g.textAlign='left';g.fillText(label,90,y);g.textAlign='right';g.fillText(value,990,y);y+=58;}
+  g.textAlign='left';g.font='400 22px "DM Sans",sans-serif';g.fillText(report.touch?'A little adventure. A change of scene.':'Camera-relative activity estimates, not a medical assessment.',90,1220);
+  g.fillText(report.date+'  ·  A little movement. A world away.',90,1270);return c;
 }
 
 export async function shareCard(report, opts = {}) {
   const canvas = drawShareCard(report, opts);
   const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  if(isNative)return shareNativeFile(blob,'slouch-break.png');
   const file = new File([blob], 'slouch-run.png', { type: 'image/png' });
   const text = opts.duel
-    ? `⚔️ I scored ${report.score.toLocaleString()} in SLOUCH — beat me: ${opts.url}`
-    : `I scored ${report.score.toLocaleString()} in SLOUCH 🚀 stretch score ${report.stretchScore}/100`;
+    ? `A friendly Slouch challenge: ${report.score.toLocaleString()} points. ${opts.url}`
+    : `I took ${report.duration} seconds for a little Slouch adventure. A little movement. A world away.`;
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], text }); return true; } catch { /* cancelled */ }
   } else if (navigator.share) {

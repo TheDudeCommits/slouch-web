@@ -52,12 +52,12 @@ export const PACKS = {
     grounded: false,
     env: {
       // bright tropical reef, not the abyss
-      bg: ['#b8f0fa', '#5fd0ea', '#1e9ac4', '#0a6a92'],
-      fogColor: 0x3fb0d4, fogDensity: 0.0044,
-      floor: 'floor.jpg', floorTint: 0xffF8e0, floorY: -9.5,
-      ray: 0xffffff, rayOpacity: 0.14, particle: 0xe8fbff, accent: 0x3fd4ff,
+      bg: ['#e9f5d9','#9ad8ce','#68bdba','#4a9ea9'],
+      fogColor: 0x70beb9, fogDensity: 0.005,
+      floor: 'floor.jpg', floorTint: 0xd5c69d, floorY: -9.5,
+      ray: 0xffffff, rayOpacity: 0.025, particle: 0xe8fbff, accent: 0x3fd4ff,
       hemi: [0xf0ffff, 0x3a7a90, 1.5],
-      exposure: 1.24,
+      exposure: 1.05,
       decorCount: 36, sway: true, surface: true, swimmerCount: 13, dunes: true, danger: 0xff5470,
       swimmers: ['hero_tang.glb', 'hero_mandarin.glb', 'hero_clown.glb'],
     },
@@ -86,7 +86,7 @@ export const PACKS = {
       { file: 'octo2.glb', len: 4.5, yaw: 0, clip: null, bob: true },
     ],
     boss: { file: 'whale.glb', len: 30, yaw: 0 },
-    decor: ['coral1.glb', 'coral2.glb', 'coral3.glb'],   // coral only on the seabed
+    decor: ['coral1.glb', 'coral2.glb', 'coral3.glb','scenic_whale.glb'],   // coral only on the seabed
     coin: null,   // keeps the gold coin
     wallColor: 0x2fae72,   // kelp-green energy fences
   },
@@ -96,13 +96,13 @@ export const PACKS = {
     groundY: -6.5,
     env: {
       // pleasant storybook daylight: readable, lush, never blinding
-      bg: ['#9fd8f2', '#cfeab8', '#9cd478', '#6fbc60'],
+      bg: ['#e4eed1','#d4e1ad','#b7cf9e','#94b996'],
       treeline: true,
-      fogColor: 0x9fcc80, fogDensity: 0.0026,
-      floor: 'floor.jpg', floorTint: 0xf0ffb8, floorY: -7.2,
-      ray: 0xfff6d0, rayOpacity: 0.07, particle: 0xffe9a0, accent: 0x7ddf4a,
+      fogColor: 0xb3ca9a, fogDensity: 0.004,
+      floor: 'floor.jpg', floorTint: 0xaec17f, floorY: -6.5,
+      ray: 0xfff6d0, rayOpacity: 0.025, particle: 0xffe9a0, accent: 0x7ddf4a,
       hemi: [0xfff4d0, 0x5a8a3a, 1.4],
-      exposure: 1.18,
+      exposure: 1.1,
       decorCount: 30, path: true, danger: 0xff8a3c,
     },
     heroes: {
@@ -173,7 +173,7 @@ export async function loadPack(id, onProgress) {
         center: box.getCenter(new THREE.Vector3()),
         radius: box.getBoundingSphere(new THREE.Sphere()).radius,
       };
-    } catch (e) { console.warn('pack file failed', f, e); }
+    } catch (e) { throw new Error(`World asset unavailable: ${f}`,{cause:e}); }
     done++;
     onProgress?.(done / files.size);
   }
@@ -197,15 +197,34 @@ export function normalizeBy(obj, { len = null, r = null }) {
 // Returns { obj, mixer, actions } — push mixer into your update list.
 // orig: use the source scene itself (single-instance heroes) — some rigs
 // (e.g. the pig) break under SkeletonUtils.clone but play fine un-cloned.
-export function spawnCreature(packId, file, { clip = null, len = null, r = null, yaw = 0, orig = false } = {}) {
+export function spawnCreature(packId, file, { clip = null, len = null, r = null, yaw = 0, orig = false, variant = 0 } = {}) {
   const proto = loaded[packId]?.protos[file];
   if (!proto) return null;
+  if (packId === 'ocean' && ['coral1.glb','coral2.glb'].includes(file)) {
+    // These source files are model catalogues. Extract one item, preserving
+    // its authoring transform, instead of placing the entire display grid.
+    if (!proto.pieces) {
+      proto.scene.updateMatrixWorld(true); proto.pieces=[];
+      proto.scene.traverse(o=>{ if(o.isMesh){
+        const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld); geometry.computeBoundingBox();
+        const size=geometry.boundingBox.getSize(new THREE.Vector3());
+        geometry.translate(...geometry.boundingBox.getCenter(new THREE.Vector3()).negate().toArray());
+        proto.pieces.push({geometry,material:o.material,size});
+      }});
+    }
+    const p=proto.pieces[variant%proto.pieces.length], obj=new THREE.Group();
+    const mesh=new THREE.Mesh(p.geometry,p.material);mesh.userData.sharedAsset=true;obj.add(mesh);
+    const scale=len?len/Math.max(p.size.x,p.size.y,p.size.z):r/Math.max(p.size.length()/2,.001);
+    obj.scale.setScalar(scale);obj.rotation.y=yaw;
+    return {obj,mixer:null,actions:{},dims:p.size.clone().multiplyScalar(scale),radius:p.size.length()*scale/2};
+  }
   const model = orig ? proto.scene : skeletonClone(proto.scene);
+  if(!orig)model.traverse(o=>{if(o.isSkinnedMesh)o.userData.ownedSkeleton=true;});
   // skinned meshes keep their bind-pose bounds — disable culling or they vanish;
   // a touch of self-illumination keeps creatures readable in fog
   model.traverse(o => {
     if (o.isMesh) {
-      o.frustumCulled = false;
+      o.frustumCulled = !o.isSkinnedMesh; o.userData.sharedAsset=true;
       const m = o.material;
       if (m && !m.userData._lit) {
         m.userData._lit = true;

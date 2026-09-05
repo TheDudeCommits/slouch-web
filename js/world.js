@@ -3,6 +3,8 @@
 // (ambientCG), lensflare sun and a cinematic post stack.
 
 import * as THREE from 'three';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createScenery } from './scenery.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -13,7 +15,7 @@ import { THEMES, themeColors, cosmetics, state, currentWorld, OCEAN_HEROES } fro
 import { PACKS, loadPack, packLoaded, spawnCreature, gradientTexture, treelineTexture, buildRays } from './packs.js';
 
 export const world = {
-  scene: null, camera: null, renderer: null, composer: null,
+  inMenu:true, journeyProgress:0, reducedMotion:false, ready:null, scene: null, camera: null, renderer: null, composer: null,
   ship: null, shipShield: null,
   asteroids: [], enemies: [], gates: [], crystals: [], powerups: [], walls: [],
   boss: null,
@@ -44,7 +46,9 @@ const gltfLoader = new GLTFLoader();
 const modelCache = {};
 let rockGeos = null;        // loaded from glb, fallback = displaced icosahedra
 let currentSky = null;
-let postPass = null;
+const planetTextures=new Map();
+let postPass = null, scenery = null, bloomPass = null;
+let modelRevision=0;
 
 // soft caustic web pattern for the seafloor light
 function causticTexture() {
@@ -68,7 +72,9 @@ function causticTexture() {
   return tex;
 }
 
+const glowCache=new Map();
 function glowTexture(inner = 'rgba(255,255,255,1)', outer = 'rgba(255,255,255,0)') {
+  const cacheKey=inner+'|'+outer;if(glowCache.has(cacheKey))return glowCache.get(cacheKey);
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d');
@@ -78,7 +84,7 @@ function glowTexture(inner = 'rgba(255,255,255,1)', outer = 'rgba(255,255,255,0)
   grad.addColorStop(1, outer);
   g.fillStyle = grad;
   g.fillRect(0, 0, 64, 64);
-  return new THREE.CanvasTexture(c);
+  const tex=new THREE.CanvasTexture(c);tex.userData.sharedEffect=true;glowCache.set(cacheKey,tex);return tex;
 }
 
 // ── post shader: chromatic aberration, vignette, grain, hyper speed-lines ──
@@ -104,7 +110,7 @@ const PostShader = {
       vec2 c = uv - 0.5;
       float r2 = dot(c, c);
       // chromatic aberration: subtle at rest, strong in hyper
-      float ca = 0.0016 + hyper * 0.008;
+      float ca = hyper * 0.001;
       vec2 off = c * r2 * ca * 14.0;
       vec3 col;
       col.r = texture2D(tDiffuse, uv + off).r;
@@ -119,16 +125,16 @@ const PostShader = {
         col += tint * mask * 0.5;
       }
       // vignette — gentle; heavy corners read as gloom on bright worlds
-      col *= 1.0 - r2 * (0.28 - hyper * 0.1);
+      col *= 1.0 - r2 * (0.12 - hyper * 0.05);
       // grain
-      col += (hash(uv * vec2(1917.0, 1033.0) + fract(time)) - 0.5) * 0.035;
+      col += (hash(uv * vec2(1917.0, 1033.0) + fract(time)) - 0.5) * 0.004;
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
 
 export function initWorld() {
   const canvas = document.getElementById('gl');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
   renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -164,17 +170,13 @@ export function initWorld() {
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.65, 0.6, 0.78));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth/2,innerHeight/2),0.18,0.4,1.2); composer.addPass(bloomPass);
   postPass = new ShaderPass(PostShader);
   postPass.uniforms.aspect.value = innerWidth / innerHeight;
-  composer.addPass(postPass);
+  composer.addPass(postPass); composer.addPass(new OutputPass());
   world.composer = composer;
 
-  applyTheme();
-  loadRockGeometries();
-  loadPickupModels();
-  loadGateModel();
-  loadHeroShip();
+  world.ready=Promise.all([loadRockGeometries(),loadPickupModels(),loadGateModel()]);
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
@@ -241,7 +243,6 @@ function buildShip() {
 
 // Per-model corrections: rotation so the nose faces -Z, plus scale-to-length.
 const MODEL_FIX = {
-  crosswing: { yaw: 0, length: 3.6 },
   viper: { yaw: Math.PI, length: 3.6 },
   lance: { yaw: Math.PI, length: 3.6 },
   quadra: { yaw: Math.PI, length: 3.45 },
@@ -256,6 +257,8 @@ async function loadModel(name) {
 }
 
 export async function loadHeroShip() {
+  const revision=++modelRevision;
+  if(heroShadow){heroShadow.geometry.dispose();heroShadow.material.dispose();heroShadow.removeFromParent();heroShadow=null;}
   // pack worlds use a living creature as the hero
   if (world.packMode !== 'space') {
     const pack = PACKS[world.packMode];
@@ -284,26 +287,26 @@ export async function loadHeroShip() {
     }
     // the hero is always center-frame in its own shadow — give it extra fill
     c.obj.traverse(o => {
-      if (o.isMesh && o.material?.emissive) {
-        o.material = o.material.clone();
+      if (o.isMesh && o.material?.emissive && !o.material.userData.heroLit) {
+        o.material = o.material.clone();o.material.userData.heroLit=true;
         o.material.emissive.copy(o.material.color).multiplyScalar(0.32);
       }
     });
-    shipModelRoot.clear();
+    releaseChildren(shipModelRoot);
     shipModelRoot.add(c.obj);
     heroMixer = c.mixer;
     heroActions = c.actions;
     heroAction = null;
     setHeroMotion('base');
-    engineFx.visible = world.packMode === 'ocean'; // bubble trail underwater, nothing in jungle
+    engineFx.visible = false; // bubble trail underwater, nothing in jungle
     if (world.packMode === 'ocean') engineFx.position.set(0, 0, def.len / 2 + 0.4);
     return;
   }
   engineFx.visible = true;
   const skin = cosmetics().skin;
-  const name = skin.model || 'talon';
+  const name = skin.model || 'quadra';
   try {
-    const src = await loadModel(name);
+    const src = await loadModel(name); if(revision!==modelRevision)return;
     const model = src.clone(true);
     const fix = MODEL_FIX[name] || { yaw: Math.PI, length: 4.4 };
     // normalize: center, face -Z, scale so length ≈ fix.length
@@ -314,19 +317,20 @@ export async function loadHeroShip() {
     model.position.sub(center);
     wrap.add(model);
     wrap.rotation.y = fix.yaw;
-    const s = fix.length / Math.max(size.z, 0.001);
+    const s = 4 / Math.max(size.x,size.y,size.z,0.001);
     wrap.scale.setScalar(s);
     model.traverse(o => {
       if (o.isMesh) {
+        o.material=o.material.clone();o.userData.sharedAsset=true;o.userData.ownedMaterial=true;
         o.material.metalness = Math.min(0.6, o.material.metalness ?? 0.4);
         o.material.roughness = Math.max(0.35, o.material.roughness ?? 0.6);
         o.material.envMapIntensity = 0.9;
       }
     });
-    shipModelRoot.clear();
+    releaseChildren(shipModelRoot);
     shipModelRoot.add(wrap);
     // engine FX sits at the model's tail
-    engineFx.position.set(0, 0.1, (size.z * s) / 2 + 0.25);
+    engineFx.position.set(0,0.1,(size.z*s)/2+0.25); engineFx.scale.setScalar(.55);
   } catch (e) {
     console.warn('hero ship load failed, keeping placeholder', e);
   }
@@ -334,7 +338,7 @@ export async function loadHeroShip() {
 
 // ── starfield + near-field dust for speed parallax ──
 function buildStars() {
-  const N = 1200;
+  const N = 500;
   const pos = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -351,7 +355,7 @@ function buildStars() {
 }
 
 function buildDust() {
-  const N = 300;
+  const N = 100;
   const pos = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     pos[i * 3] = (Math.random() - 0.5) * 44;
@@ -453,11 +457,11 @@ function buildAsteroids() {
   themedMats.rock = mat;
   const sizes = [1.5, 2.4, 3.6, 5.2];
   for (let i = 0; i < 64; i++) {
-    const size = sizes[Math.floor(Math.random() * sizes.length)];
+    const size = sizes[i%sizes.length];
     const g = new THREE.Group();
     const holder = new THREE.Group();
     const rockMesh = new THREE.Mesh(makeFallbackRockGeo(1), mat);
-    rockMesh.scale.setScalar(size);
+    rockMesh.userData.sharedAsset=true;rockMesh.scale.setScalar(size);
     holder.add(rockMesh);
     g.add(holder);
     g.visible = false;
@@ -581,17 +585,17 @@ function buildCrystals() {
 // ── power-ups: recognizable objects (magnet / hourglass / crown / star) ──
 const PICKUP_MODEL = { magnet: 'magnet', focus: 'hourglass', doubler: 'crown', shard: 'star' };
 const pickupProtos = {};
+let coinPrototype=null;
 
 async function loadPickupModels() {
   // coin replaces the stardust placeholder
   try {
     const coin = (await gltfLoader.loadAsync('assets/pickups/coin.glb')).scene;
     normalizeProto(coin, 1.7);
-    selfIlluminate(coin, 0.65);
+    selfIlluminate(coin, 0.65);coin.traverse(o=>{if(o.isMesh)o.userData.sharedAsset=true;});coinPrototype=coin;
     for (const c of world.crystals) {
-      c.remove(c.children[0]);
-      const m = coin.clone(true);
-      c.add(m);
+      const old=c.children[0];c.remove(old);old.geometry?.dispose();
+      const m=coin.clone(true);c.add(m);c.userData.visual=m;
     }
   } catch (e) { console.warn('coin load failed', e); }
   for (const [type, file] of Object.entries(PICKUP_MODEL)) {
@@ -747,7 +751,7 @@ export function explodeAt(p) {
   for (let i = 0; i < pos.count; i++) {
     pos.setXYZ(i, p.x, p.y, p.z);
     const a = Math.random() * Math.PI * 2, b = Math.acos(Math.random() * 2 - 1);
-    const sp = 4 + Math.random() * 14;
+    const sp = 4 + Math.random() * (14+state().upgrades.hyperregen*3);
     explosion.vel[i * 3] = Math.sin(b) * Math.cos(a) * sp;
     explosion.vel[i * 3 + 1] = Math.sin(b) * Math.sin(a) * sp;
     explosion.vel[i * 3 + 2] = Math.cos(b) * sp;
@@ -763,6 +767,8 @@ const trail = [];
 export function updateWorld(dt, speed, shipVel) {
   const ship = world.ship;
   const now = performance.now();
+  trailPts.material.opacity=(world.packMode==='ocean'?.25:.4)+state().upgrades.hyperdur*.05;
+  scenery?.update(dt,speed);
 
   trail.unshift({ x: ship.position.x, y: ship.position.y - 0.05, z: ship.position.z + 1.9 });
   if (trail.length > 60) trail.pop();
@@ -848,7 +854,7 @@ export function updateWorld(dt, speed, shipVel) {
     d.position.z += speed * dt;
     if (d.position.z > 20) {
       d.position.z -= 460;
-      d.position.x = (d.position.x < 0 ? -1 : 1) * (15 + Math.random() * 14);
+      // Recycle in the same authored depth row.
     }
   }
   // gentle bob for static pack creatures (keeps them feeling alive)
@@ -901,24 +907,25 @@ export function updateWorld(dt, speed, shipVel) {
 
   // hyperdrive: FOV punch + shake + post uniforms
   hyperLevel += (hyperTarget - hyperLevel) * Math.min(1, dt * 5);
-  const fov = 72 + hyperLevel * 16;
+  const fov = (innerWidth<600?64:58) + (world.reducedMotion?0:hyperLevel*4);
   if (Math.abs(fov - world.camera.fov) > 0.05) {
     world.camera.fov = fov;
     world.camera.updateProjectionMatrix();
   }
   postPass.uniforms.time.value = now * 0.001;
-  postPass.uniforms.hyper.value = hyperLevel;
+  postPass.uniforms.hyper.value = world.reducedMotion?0:hyperLevel;
 
   const cam = world.camera;
-  const shake = hyperLevel * 0.09 + camKick;
+  const shake = world.reducedMotion?0:camKick*.15;
   camKick = Math.max(0, camKick - dt * 1.6);
-  const targetX = ship.position.x * 0.86;
-  const targetY = ship.position.y * 0.82 + 2.6;
+  const targetX = ship.position.x * 0.55 + (world.inMenu && innerWidth>=900 ? -6 : 0);
+  const targetY = ship.position.y * 0.8 + (world.packMode==='jungle'?4.5:4);
   cam.position.x += (targetX - cam.position.x) * Math.min(1, dt * 6) + (Math.random() - 0.5) * shake;
   cam.position.y += (targetY - cam.position.y) * Math.min(1, dt * 6) + (Math.random() - 0.5) * shake;
-  cam.position.z = ship.position.z + 9;
-  cam.lookAt(ship.position.x * 0.5, ship.position.y * 0.5, ship.position.z - 30);
-  cam.rotation.z += -shipVel.x * 0.006;
+  cam.position.z = ship.position.z + (world.inMenu ? 14 : 16);
+  cam.lookAt(ship.position.x*.35+(world.inMenu&&innerWidth>=900?-10:0),world.inMenu?ship.position.y-4:ship.position.y*.6+1,ship.position.z-28);
+  // Stable horizon: head movement steers the hero, never tilts the camera.
+  if(world.packMode==='ocean'&&shipModelRoot.children[0])shipModelRoot.rotation.y=world.inMenu?-.55:-.2;
 
   if (explosion.t < 1.4) {
     explosion.t += dt;
@@ -937,7 +944,7 @@ export function updateWorld(dt, speed, shipVel) {
 }
 
 let camKick = 0;
-export function kickCamera(strength = 0.35) { camKick = Math.min(0.8, camKick + strength); }
+export function kickCamera(strength = 0.35) { if(world.reducedMotion)return; camKick = Math.min(0.8, camKick + strength); }
 
 export function setHyper(active) { hyperTarget = active ? 1 : 0; }
 
@@ -975,16 +982,23 @@ const packMixers = [];
 const packEnv = { floor: null, rays: null, decor: [] };
 
 function clearPackEnv() {
+  scenery?.dispose(); scenery=null;
+  // Generated floor/effect resources have unique ownership; cached model resources remain reusable.
+  const dispose=disposeRuntime;
+  if(world.scene.background?.isTexture)world.scene.background.dispose();
+  world.scene.background=new THREE.Color(0xe5eadd);world.scene.environment=null;
+  for(const tex of packEnv.scrollTexs||[])tex.dispose();packEnv.scrollTexs=[];packEnv.caustics=null;
   if (packEnv.lamp) { world.ship.remove(packEnv.lamp); packEnv.lamp = null; }
   for (const key of ['floor', 'rays', 'hemi']) {
-    if (packEnv[key]) { world.scene.remove(packEnv[key]); packEnv[key] = null; }
+    if (packEnv[key]) { dispose(packEnv[key]); world.scene.remove(packEnv[key]); packEnv[key] = null; }
   }
-  for (const d of packEnv.decor) world.scene.remove(d);
+  for (const d of packEnv.decor) { dispose(d);world.scene.remove(d); }
   packEnv.decor = [];
   packMixers.length = 0;
 }
 
 export async function applyWorldPack(onProgress) {
+  await world.ready;
   const target = currentWorld();
   if (target !== 'space' && !packLoaded(target)) {
     await loadPack(target, onProgress);
@@ -998,6 +1012,7 @@ export async function applyWorldPack(onProgress) {
   heroMixer = null; heroActions = null; heroAction = null;
 
   if (target === 'space') {
+    for(const a of world.asteroids){a.userData.radius=a.userData.size*1.05;a.userData.tall=false;a.userData.halfH=null;a.userData.anchor='free';}
     currentSky = null;
     planet.visible = true;
     sunLight.visible = true;
@@ -1006,29 +1021,29 @@ export async function applyWorldPack(onProgress) {
     world.renderer.toneMappingExposure = 1.15;
     postPass.uniforms.tint.value.set(0.55, 0.85, 1.0);
     for (const a of world.asteroids) {
-      a.userData.holder.clear();
+      releaseChildren(a.userData.holder);
       a.userData.holder.add(a.userData.rockMesh);
-      if (a.userData.marker) { a.remove(a.userData.marker); a.userData.marker = null; }
+      if (a.userData.marker) { a.userData.marker.material.dispose();a.remove(a.userData.marker); a.userData.marker = null; }
     }
     for (const e of world.enemies) {
-      e.userData.holder.clear();
+      releaseChildren(e.userData.holder);
       const dart = makeDart();
       for (const ch of [...dart.children]) e.userData.holder.add(ch);
       e.userData.bob = false;
     }
-    world.boss.userData.holder.clear();
+    releaseChildren(world.boss.userData.holder);
     const dn = makeDreadnought();
     world.boss.userData.eye = dn.userData.eye;
     for (const ch of [...dn.children]) world.boss.userData.holder.add(ch);
     dust.material.color.setHex(0x8fb8ff);
     for (const w of world.walls) w.userData.mat.color.setHex(0xff3c5a);
-    applyTheme();
-    loadHeroShip();
-    return;
+    replaceCoins(coinPrototype);applyTheme();
+    await loadHeroShip(); scenery=await createScenery(world,target);
+    applyGraphics(); return;
   }
 
   trailPts.visible = target !== 'jungle';
-  if (target === 'ocean') trailPts.material.color.setHex(0xcfeaff);
+  if(target==='ocean'){trailPts.material.color.setHex(0xd5ede1);trailPts.material.size=.13;trailPts.material.opacity=.25+state().upgrades.hyperdur*.05;}else{trailPts.material.size=.2;trailPts.material.opacity=.4+state().upgrades.hyperdur*.1;}
 
   const env = pack.env;
   world.renderer.toneMappingExposure = env.exposure ?? 1.25;
@@ -1037,7 +1052,8 @@ export async function applyWorldPack(onProgress) {
   shieldMat.color.setHex(env.accent);
   world.ship.userData.glow.material.color.setHex(env.accent);
   world.ship.userData.engineLight.color.setHex(env.accent);
-  world.scene.background = env.treeline ? treelineTexture(env.bg) : gradientTexture(env.bg);
+  world.scene.background = gradientTexture(env.bg);
+  keyLight.color.setHex(target==='jungle'?0xffedd4:0xf3fff4); keyLight.intensity=2.5;
   world.scene.environment = null;
   world.scene.fog = new THREE.FogExp2(env.fogColor, env.fogDensity);
   planet.visible = false; planetRing.visible = false;
@@ -1046,21 +1062,12 @@ export async function applyWorldPack(onProgress) {
 
   const floorTex = texLoader.load(pack.base + env.floor);
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(10, 120);
+  floorTex.repeat.set(5,40);
   floorTex.colorSpace = THREE.SRGBColorSpace;
-  // the seabed rolls in soft dunes; jungle ground stays flat for the path
-  const floorGeo = new THREE.PlaneGeometry(140, 1200, 28, 140);
-  if (env.dunes) {
-    const p = floorGeo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), yy = p.getY(i);
-      p.setZ(i, Math.sin(x * 0.09) * Math.sin(yy * 0.045 + x * 0.02) * 1.5 +
-        Math.sin(x * 0.23 + yy * 0.11) * 0.45);
-    }
-    floorGeo.computeVertexNormals();
-  }
+  // Flat contact surface keeps every rooted model on the actual seabed.
+  const floorGeo=new THREE.PlaneGeometry(140,1200);
   const floor = new THREE.Mesh(floorGeo,
-    new THREE.MeshStandardMaterial({ map: floorTex, color: env.floorTint, roughness: 1 }));
+    new THREE.MeshStandardMaterial({ map: target==='ocean'?null:floorTex, color: env.floorTint, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, env.floorY, -400);
   world.scene.add(floor);
@@ -1114,7 +1121,7 @@ export async function applyWorldPack(onProgress) {
 
   // dense roadside scenery in depth rows, every base EXACTLY on the surface,
   // stood perfectly vertical, with gentle per-prop color variation for lushness
-  const decorCount = env.decorCount ?? 12;
+  const decorCount = 0; // scenery.js owns the authored route rows.
   for (let i = 0; i < decorCount; i++) {
     const file = pack.decor[i % pack.decor.length];
     const big = i % 5 === 0;
@@ -1145,18 +1152,15 @@ export async function applyWorldPack(onProgress) {
 
   // worn dirt path under the runner
   if (env.path) {
-    const pathTex = texLoader.load(pack.base + env.floor);
-    pathTex.wrapS = pathTex.wrapT = THREE.RepeatWrapping;
-    pathTex.repeat.set(1.4, 120);
-    pathTex.colorSpace = THREE.SRGBColorSpace;
-    const path = new THREE.Mesh(new THREE.PlaneGeometry(9, 1200),
-      new THREE.MeshStandardMaterial({ map: pathTex, color: 0xffe8b0, roughness: 1 }));
+    const strip=document.createElement('canvas');strip.width=256;strip.height=4;const ctx=strip.getContext('2d');const edge=ctx.createLinearGradient(0,0,256,0);for(const [at,col]of [[0,'#000'],[.15,'#fff'],[.85,'#fff'],[1,'#000']])edge.addColorStop(at,col);ctx.fillStyle=edge;ctx.fillRect(0,0,256,4);const pathTex=new THREE.CanvasTexture(strip);
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(22,1200),
+      new THREE.MeshStandardMaterial({color:0xc7ad78,roughness:1,alphaMap:pathTex,transparent:true,depthWrite:false}));
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, env.floorY + 0.05, -400);
     world.scene.add(path);
     packEnv.decor.push(path);
     path.userData.isPath = true;
-    packEnv.scrollTexs.push(pathTex);
+
   }
 
   // ocean surface: a glowing sheet of light overhead, seen from below
@@ -1187,20 +1191,21 @@ export async function applyWorldPack(onProgress) {
 
   world.floorY = env.floorY;
   for (const a of world.asteroids) {
-    const def = pack.obstacles[Math.floor(Math.random() * pack.obstacles.length)];
+    const def = pack.obstacles[world.asteroids.indexOf(a)%pack.obstacles.length];
     const size = a.userData.size;
     const c = spawnCreature(target, def.file, def.tall
       ? { len: size * 2.6 } : { r: def.low ? Math.min(size, 2.3) * 0.75 : size });
-    a.userData.holder.clear();
+    releaseChildren(a.userData.holder);
     a.userData.holder.add(c ? c.obj : a.userData.rockMesh); // never an invisible collider
     a.userData.tall = !!def.tall;
     a.userData.low = !!def.low;
     a.userData.anchor = def.anchor || (pack.grounded ? 'floor' : 'free');
     a.userData.halfH = c ? c.dims.y / 2 : a.userData.radius;
+    a.userData.radius=size*1.05;
     if (def.low && c) a.userData.radius = Math.min(size, 2.3) * 0.8; // hop-able
     a.userData.bobFloat = !!def.bob;
     // danger marker: a pulsing warm halo — the universal "this one hurts" cue
-    if (a.userData.marker) { a.remove(a.userData.marker); a.userData.marker = null; }
+    if (a.userData.marker) { a.userData.marker.material.dispose();a.remove(a.userData.marker); a.userData.marker = null; }
     const mk = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture('rgba(255,120,110,0.85)'), color: env.danger ?? 0xff5470,
       transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -1211,9 +1216,9 @@ export async function applyWorldPack(onProgress) {
   }
 
   for (const e of world.enemies) {
-    const def = pack.enemies[Math.floor(Math.random() * pack.enemies.length)];
+    const def = pack.enemies[world.enemies.indexOf(e)%pack.enemies.length];
     const c = spawnCreature(target, def.file, { clip: def.clip, len: def.len, yaw: def.yaw });
-    e.userData.holder.clear();
+    releaseChildren(e.userData.holder);
     if (c) {
       e.userData.holder.add(c.obj);
       if (c.mixer) packMixers.push(c.mixer);
@@ -1228,25 +1233,19 @@ export async function applyWorldPack(onProgress) {
 
   const b = spawnCreature(target, pack.boss.file, { len: pack.boss.len, yaw: pack.boss.yaw });
   if (b) {
-    world.boss.userData.holder.clear();
+    releaseChildren(world.boss.userData.holder);
     world.boss.userData.holder.add(b.obj);
     world.boss.userData.eye = null;
     if (b.mixer) packMixers.push(b.mixer);
   }
 
-  if (pack.coin) {
-    const proto = spawnCreature(target, pack.coin.file, { r: pack.coin.r });
-    if (proto) {
-      for (const cr of world.crystals) {
-        cr.remove(cr.children[0]);
-        cr.add(proto.obj.clone());
-      }
-    }
-  }
+  const pickup=pack.coin?spawnCreature(target,pack.coin.file,{r:pack.coin.r})?.obj:coinPrototype;
+  replaceCoins(pickup);
 
   for (const w of world.walls) w.userData.mat.color.setHex(pack.wallColor);
 
-  loadHeroShip();
+  await loadHeroShip(); scenery=await createScenery(world,target);
+  applyGraphics();
 }
 
 let rainbowTrail = false;
@@ -1258,12 +1257,13 @@ export function randomizeBackdrop() {
   const t = THEMES[state().equippedTheme] ?? THEMES.theme_space;
 
   const skyList = t.sky;
-  const sky = skyList[Math.floor(Math.random() * skyList.length)];
+  const sky = skyList[0];
   if (currentSky !== sky) {
     currentSky = sky;
     new THREE.CubeTextureLoader()
       .setPath(`assets/sky/${sky}/`)
       .load(['right.jpg', 'left.jpg', 'top.jpg', 'bottom.jpg', 'front.jpg', 'back.jpg'], (tex) => {
+        if(world.packMode!=='space'||currentSky!==sky){tex.dispose();return;}
         tex.colorSpace = THREE.SRGBColorSpace;
         world.scene.background = tex;
         world.scene.environment = tex;
@@ -1271,18 +1271,18 @@ export function randomizeBackdrop() {
       });
   }
 
-  const pick = t.planets[Math.floor(Math.random() * t.planets.length)];
+  const pick = t.planets[0]||'saturn';
   if (!pick) {
     planet.visible = false;
     planetRing.visible = false;
   } else {
     planet.visible = true;
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const scale = 0.55 + Math.random() * 0.9;
+    const side = 1;
+    const scale = 1.05;
     planet.scale.setScalar(scale);
-    planet.position.set(side * (180 + Math.random() * 160), 20 + Math.random() * 150, -820 - Math.random() * 220);
+    planet.position.set(180,80,-750);
     planet.rotation.z = (Math.random() - 0.5) * 0.6;
-    texLoader.load(`assets/planets/${pick}.jpg`, (tex) => {
+    const applyPlanet=(tex)=>{
       tex.colorSpace = THREE.SRGBColorSpace;
       planet.material.map = tex;
       planet.material.color.setHex(0xffffff);
@@ -1290,7 +1290,9 @@ export function randomizeBackdrop() {
       planet.material.emissiveMap = tex;
       planet.material.emissive.setHex(0xffffff).multiplyScalar(0.22);
       planet.material.needsUpdate = true;
-    });
+    };
+    if(!planetTextures.has(pick)){const tex=texLoader.load(`assets/planets/${pick}.jpg`);tex.colorSpace=THREE.SRGBColorSpace;planetTextures.set(pick,tex);}
+    applyPlanet(planetTextures.get(pick));
     planetRing.visible = pick === 'saturn';
     if (planetRing.visible) {
       planetRing.position.copy(planet.position);
@@ -1334,5 +1336,28 @@ export function applyTheme() {
 }
 
 export function render() {
+  world.renderer.info.autoReset=false; world.renderer.info.reset();
   world.composer.render();
+  world.performance={calls:world.renderer.info.render.calls,triangles:world.renderer.info.render.triangles,textures:world.renderer.info.memory.textures,geometries:world.renderer.info.memory.geometries};
 }
+
+export function applyGraphics() {
+  const settings=state().settings;
+  world.reducedMotion=settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.body.classList.toggle('reduced-motion',world.reducedMotion);
+  const low=settings.quality==='low';
+  const ratio=low?1:Math.min(devicePixelRatio,settings.quality==='high'?2:1.5);
+  world.renderer.setPixelRatio(ratio);world.renderer.setSize(innerWidth,innerHeight);
+  world.composer.setPixelRatio(ratio);world.composer.setSize(innerWidth,innerHeight);
+  bloomPass.enabled=!low;
+  dust.visible=!low;
+}
+
+function replaceCoins(proto){if(!proto)return;for(const c of world.crystals){if(c.userData.visual)c.remove(c.userData.visual);const model=proto.clone(true);c.add(model);c.userData.visual=model;}}
+function disposeRuntime(root){root?.traverse(o=>{
+ if(!o.isMesh&&!o.isSprite)return;
+ if(o.isSkinnedMesh&&o.userData.ownedSkeleton)o.skeleton.dispose();
+ if(!o.userData.sharedAsset&&!o.userData.sharedGeometry)o.geometry?.dispose();
+ if(!o.userData.sharedAsset||o.userData.ownedMaterial){for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m)continue;for(const key of ['map','alphaMap','normalMap'])if(m[key]&&!m[key].userData.sharedEffect&&!o.userData.sharedAsset)m[key].dispose();m.dispose();}}
+});}
+function releaseChildren(root){for(const c of [...root.children]){disposeRuntime(c);root.remove(c);}}
