@@ -2,6 +2,8 @@
 
 Updated **5 September 2026**. Repository: [TheDudeCommits/slouch-web](https://github.com/TheDudeCommits/slouch-web). Checkout: `/Users/amir/Claude/slouch`. Branch: **`codex/slouch-overhaul`**, based on `670ed9dea09979131c9cb0c485370605f0d285a8`.
 
+Implementation commit: **`5ddc5b5746c475245a04d6ccaf3e8b1b5ad58880`**. Review: [draft PR #1](https://github.com/TheDudeCommits/slouch-web/pull/1). Its [first GitHub build/regression run passed](https://github.com/TheDudeCommits/slouch-web/actions/runs/33962800751). Subsequent documentation-only commits record this publication metadata; check the PR for its latest head/checks.
+
 The user approved implementing the visual, playability and iOS recommendations. This branch contains a working v2 implementation and a compile-verified native foundation. **It has not been deployed publicly or distributed through TestFlight.** Physical iPhone acceptance and the release work below remain open. The old handover is preserved verbatim in [docs/HANDOVER-v1.md](docs/HANDOVER-v1.md); its CDN, root-serving, cache-bump and deployment instructions no longer apply to v2.
 
 ## Product and direction

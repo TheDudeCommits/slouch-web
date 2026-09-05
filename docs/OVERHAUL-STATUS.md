@@ -2,6 +2,8 @@
 
 5 September 2026. A substantial web overhaul and buildable iOS foundation are implemented. Later production and release gates remain as listed below.
 
+Code revision: `5ddc5b5746c475245a04d6ccaf3e8b1b5ad58880`. [Draft PR #1](https://github.com/TheDudeCommits/slouch-web/pull/1); [GitHub CI passed](https://github.com/TheDudeCommits/slouch-web/actions/runs/33962800751). The PR tracks any later documentation-only revision.
+
 ## Review the experience
 
 Start with a three-minute Ocean break: home, setup, travel corridor, protected gate, whale crossing and completion form the reference flow. Compare Jungle grounding/jumps and Space visibility. All worlds are included; former pack owners receive a once-only migration credit.
