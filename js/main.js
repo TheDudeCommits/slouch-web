@@ -1,8 +1,17 @@
+import { packStatus, downloadPack, clearDownloads } from './platform/downloads.js';
+import '@fontsource/dm-sans/latin-400.css';
+import '@fontsource/dm-sans/latin-500.css';
+import '@fontsource/dm-sans/latin-600.css';
+import '@fontsource/fraunces/latin-400.css';
+import '@fontsource/fraunces/latin-500.css';
+import '@fontsource/fraunces/latin-400-italic.css';
+import { nativeLoad, reminder, isNative, shareNativeFile } from './platform/native.js';
+import { DEFAULT_COMFORT } from './core/movement.ts';
 // SLOUCH — app shell: screens, HUD wiring, store, ranks, missions, codex.
 
-import { initWorld, applyTheme, loadHeroShip, applyWorldPack } from './world.js';
-import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head, updateHead } from './head.js';
-import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon } from './game.js';
+import { initWorld, applyTheme, loadHeroShip, applyWorldPack, applyGraphics, world } from './world.js';
+import { initHead, startCamera, cameraRunning, calibrate, drawPreview, enableTouchFallback, head, updateHead, stopCamera, calibrationStable, setInputEnabled, setTrackingPreview, acceptPose } from './head.js';
+import { startGame, stopGame, pauseGame, startIdle, stopIdle, game, chooseBoon, endSession, skipGate } from './game.js';
 import { initAudio, resumeAudio, applyVolumes, startMusic, stopMusic, sfx, setAmbience, setSfxWorld } from './audio.js';
 import { todaySeed, hashSeed, mulberry32 } from './rng.js';
 import { shareCard, weeklyTrend } from './report.js';
@@ -14,6 +23,10 @@ import * as ST from './state.js';
 // restyle the whole UI to match the equipped world: colors, font, labels
 function applyWorldSkin() {
   const w = ST.currentWorld();
+  document.body.classList.toggle('world-space', w === 'space');
+  document.body.dataset.world = w;
+  const names = { ocean: ['01 / OPEN OCEAN','A change of current.','Sunlit reefs. Small discoveries. Room to drift.','Open Ocean'], jungle: ['02 / JUNGLE RUSH','Take the scenic route.','A leafy trail. A little hop. A lighter day.','Jungle Rush'], space: ['03 / DEEP SPACE','A little breathing room.','Beyond the atmosphere. Back to yourself.','Deep Space'] }[w];
+  ['world-index','world-heading','world-subtitle','world-name'].forEach((id,i)=>$(id).textContent=names[i]);
   document.body.classList.toggle('world-ocean', w === 'ocean');
   document.body.classList.toggle('world-jungle', w === 'jungle');
   $('btn-retry').textContent = (WORLD_TEXT[w] || WORLD_TEXT.space).retry;
@@ -25,14 +38,18 @@ const $ = (id) => document.getElementById(id);
 const screens = [...document.querySelectorAll('.screen')];
 
 function show(...ids) {
-  for (const s of screens) s.classList.toggle('active', ids.includes(s.id));
+  for (const s of screens) { const active = ids.includes(s.id); s.classList.toggle('active',active); s.inert = !active; s.setAttribute('aria-hidden',String(!active)); }
+  if (world) world.inMenu = ids.includes('screen-menu');
+  const target = $(ids[ids.length - 1]); if(target && target.id !== 'hud') { target.tabIndex=-1; target.focus({preventScroll:true}); }
 }
 function icon(name, cls = 'ic') {
   return `<svg class="${cls}"><use href="#${name}"/></svg>`;
 }
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 
-let pendingMode = 'techneck';
+let pendingMode = 'break';
+let resumeAfterCalibration = false, setupOnly = false;
+const escapeText = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let pendingOpts = {};
 let calibratedThisSession = false;
 let camPreviewRaf = 0;
@@ -40,30 +57,18 @@ let duelIncoming = null;
 
 // ── boot ──
 async function boot() {
-  initWorld();
-  if (ST.currentWorld() !== 'space') applyWorldPack();
-  applyWorldSkin();
-  startIdle();
-  ST.tickStreak(false);
-  refreshMenu();
-  parseDuelLink();
-  registerSW();
-
-  const fill = $('loader-fill'), msg = $('loader-msg');
-  fill.style.width = '30%';
-  msg.textContent = 'warming up engines';
   try {
-    await initHead((m) => { msg.textContent = m; fill.style.width = '65%'; });
-    fill.style.width = '100%';
-  } catch (e) {
-    console.error(e);
-    msg.textContent = 'face tracking unavailable — touch mode on';
-    enableTouchFallback();
-  }
-  setTimeout(() => {
+    const saved = await nativeLoad(); if (saved) ST.restoreNative(saved);
+    ST.save(); initWorld();
+    $('loader-msg').textContent = 'Finding your little escape';
+    await applyWorldPack(p => $('loader-fill').style.width = (15 + p * 80) + '%');
+    applyWorldSkin(); applyGraphics(); startIdle(); ST.tickStreak(false); refreshMenu(); parseDuelLink(); registerSW();
+    show(duelIncoming ? 'screen-duel' : 'screen-menu');
     if (duelIncoming) showDuelBanner();
-    else show('screen-menu');
-  }, 400);
+  } catch (error) {
+    $('load-error-message').textContent = 'Reconnect to download your world, then try again.';
+    show('screen-load-error'); console.error(error);
+  }
 }
 
 // ── daily missions ──
@@ -96,9 +101,14 @@ function renderMissions(el, runStats = null) {
 // ── menu ──
 function refreshMenu() {
   const s = ST.state();
+  $('set-motion').checked = s.settings.reducedMotion; $('set-vertical').checked = s.settings.vertical; $('set-turns').checked = s.settings.turns;
+  $('set-quality').value = s.settings.quality; $('set-comfort').value = s.settings.comfort.roll < 13 ? 'gentle' : 'standard';
+  document.querySelectorAll('[data-duration]').forEach(b=>{const selected=Number(b.dataset.duration)===s.settings.duration;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
+  $('btn-break').firstChild.textContent = `Take a ${s.settings.duration / 60}-minute break `;
+  $('btn-input').firstChild.textContent = s.settings.input === 'camera' ? 'Move with your camera ' : 'Play with touch or keys ';
   $('points-count').textContent = s.points;
   $('streak-count').textContent = s.streak.count;
-  const bestAll = Math.max(s.best.techneck, s.best.casual);
+  const bestAll = Math.max(s.best[ST.scoreScope('techneck')],s.best[ST.scoreScope('casual')]);
   $('menu-best').textContent = bestAll > 0 ? bestAll.toLocaleString() : '';
   $('set-music').value = s.settings.music;
   $('set-sfx').value = s.settings.sfx;
@@ -115,7 +125,7 @@ function refreshMenu() {
   banner.classList.toggle('hidden', !ev);
   if (ev) banner.textContent = `${ev.name} — ${ev.desc}`;
 
-  const daily = ST.dailyToday();
+  const daily = ST.dailyScores();
   const mut = MUTATORS[new Date().getDay()];
   $('daily-label').textContent = mut.name;
   $('daily-status').textContent = daily.best > 0 ? `best ${daily.best.toLocaleString()}` : mut.desc;
@@ -138,10 +148,11 @@ function setRing(id, r, frac) {
 // ── duel links ──
 function parseDuelLink() {
   const p = new URLSearchParams(location.search);
-  if (p.has('duel')) {
+  if (p.has('duel') && p.get('rules')==='2' && ['ocean','jungle','space'].includes(p.get('world'))) {
     duelIncoming = {
       seed: Number(p.get('duel')) || todaySeed(),
       score: Number(p.get('s')) || 0,
+      mutatorId:p.get('mutator'),world:p.get('world'),input:p.get('input')==='manual'?'pointer':'camera',
       tag: (p.get('by') || 'RIVAL').slice(0, 8).toUpperCase(),
     };
     history.replaceState(null, '', location.pathname);
@@ -155,76 +166,65 @@ function showDuelBanner() {
 
 // ── play flow ──
 async function requestPlay(mode, opts = {}) {
-  pendingMode = mode;
-  pendingOpts = opts;
+  pendingMode = mode; pendingOpts = { ...opts, duration: ST.state().settings.duration };
+  setupOnly = false; refreshSetup(); show('screen-setup');
+}
+function refreshSetup() {
+  document.querySelectorAll('[data-input]').forEach(b=>{ const selected=ST.state().settings.input===b.dataset.input; b.classList.toggle('selected',selected); b.setAttribute('aria-pressed',String(selected)); });
+  $('setup-note').textContent = ST.state().settings.input === 'camera'
+    ? 'Your camera stays on your device. Move within a comfortable range; skip anything that hurts.'
+    : 'Drag to move, or use the arrow keys. Release to return to centre. This mode does not record head movement.';
+  $('btn-setup-start').firstChild.textContent = setupOnly ? 'Save controls ' : ST.state().settings.input === 'camera' ? 'Get comfortable ' : 'Start your adventure ';
+}
+async function startPrepared() {
+  if (setupOnly) { refreshMenu(); show('screen-menu'); return; }
   initAudio(); resumeAudio(); applyVolumes();
-  sfx.ui();
-  if (head.usingTouch) { launch(); return; }
-  if (!cameraRunning()) {
-    try { await startCamera(); }
-    catch (e) {
-      $('camerr-msg').textContent = e.name === 'NotAllowedError'
-        ? 'Camera denied. Enable in Settings › Safari › Camera — or fly with touch. Nothing is ever uploaded.'
-        : 'Camera unavailable on this device. You can still fly with touch.';
-      show('screen-camerr');
-      return;
-    }
-  }
-  if (!head.ready) { enableTouchFallback(); launch(); return; }
-  if (calibratedThisSession) launch();
-  else openCalibration();
+  if (ST.state().settings.input !== 'camera') { enableTouchFallback(); launch(); return; }
+  const b=$('btn-setup-start'); b.disabled=true;
+  try {
+    await initHead(m=>{$('setup-note').textContent=m;});
+    if (!cameraRunning()) await startCamera();
+    openCalibration();
+  } catch (e) {
+    stopCamera(); $('camerr-msg').textContent='The camera is unavailable. Allow camera access to use head controls, or continue with touch and keys.';
+    show('screen-camerr');
+  } finally { b.disabled=false; }
 }
 
 // Hands-free calibration: as soon as a face is stable in frame it captures
 // the neutral pose and launches. No button.
 let calState = 'idle';
-function openCalibration() {
-  show('screen-calibrate');
-  $('cal-count').textContent = '';
-  $('cal-msg').textContent = 'get your face in the frame';
-  const canvas = $('cal-preview');
-  cancelAnimationFrame(camPreviewRaf);
-  calState = 'watching';
-  let stable = 0;
-  let last = performance.now();
+function openCalibration(resume = false) {
+  resumeAfterCalibration = resume;
+  show('screen-calibrate'); $('cal-count').textContent='';
+  setTrackingPreview(true).catch(console.warn); const canvas=$('cal-preview'); cancelAnimationFrame(camPreviewRaf); calState='watching';
   (async function draw() {
-    if (calState === 'done') return;
-    camPreviewRaf = requestAnimationFrame(draw);
-    drawPreview(canvas);
-    updateHead();
-    const now = performance.now();
-    const dt = (now - last) / 1000;
-    last = now;
     if (calState !== 'watching') return;
-    if (head.hasFace) {
-      stable += dt;
-      $('cal-msg').textContent = 'sit tall · hold still';
-      $('cal-count').textContent = '·'.repeat(1 + Math.min(2, Math.floor(stable * 4)));
-      if (stable >= 0.7) {
-        calState = 'capturing';
-        const ok = await calibrate(1100);
-        if (ok) {
-          calState = 'done';
-          calibratedThisSession = true;
-          $('cal-count').textContent = '✓';
-          sfx.gate();
-          setTimeout(() => { cancelAnimationFrame(camPreviewRaf); launch(); }, 350);
-        } else {
-          calState = 'watching';
-          stable = 0;
-          $('cal-msg').textContent = 'lost you — center yourself, add light';
-        }
+    updateHead(); drawPreview(canvas);
+    $('cal-msg').textContent=head.hasFace ? 'Settle into a comfortable position' : 'Centre your face · add a little light';
+    if (head.provider==='arkit') $('cal-msg').textContent=head.hasFace ? 'Face found · settle into a comfortable position' : 'Look toward your screen';
+    if (calibrationStable()) {
+      calState='capturing'; const ok=await calibrate();
+      if (ok) {
+        calState='done'; calibratedThisSession=true; $('cal-count').textContent='Ready'; sfx.gate();
+        setTimeout(()=>{
+          if(calState!=='done')return;
+          if(resumeAfterCalibration) { setTrackingPreview(false).catch(console.warn); show('hud'); game.interrupted=false; pauseGame(false); }
+          else launch();
+        },700);
+        return;
       }
-    } else {
-      stable = 0;
-      $('cal-count').textContent = '';
-      $('cal-msg').textContent = 'get your face in the frame';
+      calState='watching';
     }
+    camPreviewRaf=requestAnimationFrame(draw);
   })();
 }
 
 function launch() {
+  setTrackingPreview(false).catch(console.warn);
   stopIdle();
+  document.body.classList.toggle('is-break',pendingMode==='break');
+  document.body.classList.toggle('manual-input',head.usingTouch);
   show('hud');
   startMusic('run');
   for (const id of ['hud-slouch', 'hud-gate', 'hud-boss', 'boon-offer', 'hud-pace']) $(id).classList.add('hidden');
@@ -238,6 +238,20 @@ function launch() {
 // ── HUD hooks ──
 let toastTimer = 0;
 const hooks = {
+  onPerformancePause() {
+    $('pause-title').textContent='A little breathing room.'; $('pause-message').textContent='The device needed a moment. Your session is paused; resume when ready.';
+    $('btn-resume').textContent='Resume'; show('hud','screen-pause');
+  },
+  onTrackingPause() {
+    $('pause-title').textContent='Let’s find you again.'; $('pause-message').textContent='Your adventure is safely paused. Re-centre when you’re ready.';
+    $('btn-resume').textContent='Re-centre & resume'; show('hud','screen-pause');
+  },
+  onJourney(route) {
+    $('hud-section').textContent=route.title; $('hud-time').textContent=`${Math.floor(route.remaining/60)}:${String(route.remaining%60).padStart(2,'0')}`;
+    $('hud-session-fill').style.width=route.progress*100+'%';
+    $('movement-cue-text').textContent=head.usingTouch ? (route.phase==='arrive' ? 'Drag gently · release to centre' : route.safe ? 'A moment to enjoy the view' : 'Follow the trail · space to boost') : route.cue;
+    $('movement-cue').dataset.phase=route.phase;
+  },
   onScore(score, mult) {
     $('hud-score').textContent = score.toLocaleString();
     $('hud-mult').textContent = '×' + mult.toFixed(1).replace(/\.0$/, '');
@@ -272,6 +286,7 @@ const hooks = {
   onSlouch(active) { $('hud-slouch').classList.toggle('hidden', !active); },
   onFaceLost(lost) { $('hud-face-lost').classList.toggle('hidden', !lost); },
   onGate(label) {
+    $('btn-skip-gate').classList.toggle('hidden',!label);
     const el = $('hud-gate');
     if (label) { el.textContent = label; el.classList.remove('hidden'); }
     else el.classList.add('hidden');
@@ -310,7 +325,7 @@ const hooks = {
   },
   onGameOver(score, report, extra) {
     startMusic('gameover');
-    finishRun(score, report, extra || {});
+    stopCamera(); calibratedThisSession=false; finishRun(score, report, extra || {});
   },
 };
 
@@ -339,8 +354,8 @@ function finishRun(score, report, extra) {
 
   const ev = ST.activeEvent();
   const evMult = ev?.stardustMult ?? 1;
-  let earned = Math.round(score / 10) * evMult;
-  ST.tickStreak(true);
+  let earned = mode === 'break' ? Math.round((report?.duration || 0)/3) + (extra.completed ? 100 : 0) : Math.round(score/10)*evMult;
+  if ((report?.duration || 0)>=30) ST.tickStreak(true);
   lastRun = { score, mode, submitted: false, report };
 
   if (report && !report.touch) {
@@ -368,7 +383,7 @@ function finishRun(score, report, extra) {
 
   // XP + rank
   const before = levelFromXp(s.xp);
-  const xpGain = Math.round(score / 100) + freshMissions.length * 50;
+  const xpGain = mode === 'break' ? (extra.completed ? 50 : 10) : Math.round(score / 100) + freshMissions.length * 50;
   ST.addXp(xpGain);
   const after = levelFromXp(s.xp);
   $('go-xp').textContent = '+' + xpGain;
@@ -380,12 +395,12 @@ function finishRun(score, report, extra) {
   }
 
   // boards
-  const boardMode = mode === 'casual' ? 'casual' : mode === 'techneck' ? 'techneck' : null;
+  const boardMode = ['casual','techneck'].includes(mode)?ST.scoreScope(mode,report):null;
   let isBest = false;
   if (boardMode) {
     isBest = score > s.best[boardMode];
   } else if (mode === 'daily') {
-    const d = ST.dailyToday();
+    const d = ST.dailyScores(report);
     d.runs++;
     isBest = score > d.best;
     if (isBest) d.best = score;
@@ -395,7 +410,7 @@ function finishRun(score, report, extra) {
     d.list = d.list.slice(0, 10);
     ST.save();
   } else if (mode === 'weekly') {
-    const w = ST.weeklyNow();
+    const w = ST.weeklyScores(report);
     isBest = score > w.best;
     if (isBest) w.best = score;
     w.list.push({ tag: s.lastTag, score });
@@ -405,7 +420,7 @@ function finishRun(score, report, extra) {
   }
 
   // "so close" framing
-  const best = boardMode ? s.best[boardMode] : mode === 'daily' ? ST.dailyToday().best : ST.weeklyNow().best;
+  const best = boardMode ? s.best[boardMode] : mode === 'daily' ? ST.dailyScores(report).best : ST.weeklyScores(report).best;
   const closeEl = $('go-close');
   if (!isBest && best > 0 && score > best * 0.35) {
     closeEl.classList.remove('hidden');
@@ -449,17 +464,21 @@ function finishRun(score, report, extra) {
   $('go-title').textContent = { daily: 'DAILY RUN COMPLETE', duel: 'DUEL OVER', weekly: 'WEEKLY RUN LOGGED' }[mode]
     || (WORLD_TEXT[ST.currentWorld()] || WORLD_TEXT.space).death;
 
+  $('go-summary').textContent = mode==='break' ? (extra.completed ? 'A little less screen. A little more you.' : 'Every little break counts. Come back whenever you like.') : 'Good exploring. Your next adventure is waiting.';
+  $('break-stats').innerHTML = report ? `<div><b>${Math.floor(report.duration/60)}:${String(report.duration%60).padStart(2,'0')}</b><span>time away</span></div><div><b>${report.touch ? '—' : report.moveSec+'s'}</b><span>${report.touch ? 'touch / keys' : 'moving'}</span></div><div><b>${earned}</b><span>stardust earned</span></div>` : '';
+  if(mode==='break') $('go-title').textContent=extra.completed ? 'Break complete.' : 'A moment well spent.';
+  $('btn-retry').textContent=mode==='break' ? 'Another little escape' : 'Play again';
   const qualifies = boardMode && ST.qualifiesForBoard(boardMode, score);
   $('go-name-entry').classList.toggle('hidden', !qualifies);
   if (qualifies) $('go-name').value = s.lastTag;
+  $('btn-duel-send').classList.toggle('hidden',game.seed==null||mode==='break');
   show('screen-gameover');
 }
 
 function submitPendingScore() {
   if (lastRun.submitted) return;
   lastRun.submitted = true;
-  const boardMode = lastRun.mode === 'casual' ? 'casual'
-    : lastRun.mode === 'techneck' ? 'techneck' : null;
+  const boardMode=['casual','techneck'].includes(lastRun.mode)?ST.scoreScope(lastRun.mode,lastRun.report):null;
   if (!boardMode) return;
   if (ST.qualifiesForBoard(boardMode, lastRun.score)) {
     const tag = ($('go-name').value.trim().toUpperCase() || 'ACE').slice(0, 8);
@@ -474,13 +493,13 @@ function submitPendingScore() {
 function renderReport() {
   const r = lastRun.report;
   if (!r) return;
-  setRing('report-ring', 52, (r.stretchScore || 0) / 100);
-  $('report-stretch').textContent = r.stretchScore ?? 0;
+  setRing('report-ring',52,r.touch?0:r.moveSec/Math.max(1,r.duration));
+  $('report-stretch').textContent=r.touch?'—':r.moveSec+'s';
   const trend = weeklyTrend();
-  $('report-trend').textContent = trend == null ? 'fly more runs to unlock weekly trends'
-    : trend >= 0 ? `+${trend} VS LAST WEEK` : `${trend} VS LAST WEEK`;
+  $('report-trend').textContent = trend == null ? 'Your activity will appear here as you play'
+    : trend >= 0 ? `+${trend}s moving over the previous 7 days` : `${trend}s moving over the previous 7 days`;
 
-  const rows = r.touch ? [['touch mode — no posture data', '', 0]] : [
+  const rows = r.touch ? [['Touch / keys · no head movement measured', '', 0]] : [
     ['ROTATION L', `${r.rom.yawL}°`, r.rom.yawL / 40],
     ['ROTATION R', `${r.rom.yawR}°`, r.rom.yawR / 40],
     ['CHIN UP', `${r.rom.pitchU}°`, r.rom.pitchU / 30],
@@ -489,7 +508,7 @@ function renderReport() {
     ['SIDE BEND R', `${r.rom.rollR}°`, r.rom.rollR / 30],
     ['IN NEUTRAL', `${r.neutralPct}%`, r.neutralPct / 100],
     ['MOVING', `${r.moveSec}s`, Math.min(1, r.moveSec / 120)],
-    ['HYPERDRIVE', `${r.hyperSec}s`, Math.min(1, r.hyperSec / 60)],
+    ['VALID TRACKING', `${r.trackingPct}%`, r.trackingPct/100],
   ];
   $('report-rows').innerHTML = rows.map(([k, v, f]) => `
     <div class="report-row"><span class="k">${k}</span>
@@ -500,38 +519,22 @@ function renderReport() {
   const goal = (label, val, target) => `
     <div class="g ${val >= target ? 'done' : ''}"><b>${Math.min(Math.round(val), target)}/${target}</b>${label}</div>`;
   $('report-goals').innerHTML =
-    goal('MOVE', g.moveSec, T.moveSec) + goal('TUCKS', g.tucks, T.tucks) + goal('STRETCH', g.stretches, T.stretches);
+    goal('MOVE', g.moveSec, T.moveSec) + goal('RETURNS', g.tucks, T.tucks) + goal('GATES', g.stretches, T.stretches);
 }
 
 // ── flight log + ROM progress ──
 function renderHistory() {
   const h = ST.state().history;
-  // range-of-motion progress: newest 5 runs vs oldest 5 on record
   const romEl = $('rom-progress');
-  const camRuns = h.filter(r => !r.touch);
-  if (camRuns.length >= 6) {
-    const newest = camRuns.slice(0, 5), oldest = camRuns.slice(-5);
-    const avg = (arr, k) => arr.reduce((a, r) => a + r.rom[k], 0) / arr.length;
-    const lines = [
-      ['ROTATION', ['yawL', 'yawR']], ['EXTENSION', ['pitchU']], ['SIDE BEND', ['rollL', 'rollR']],
-    ].map(([label, keys]) => {
-      const d = keys.reduce((a, k) => a + (avg(newest, k) - avg(oldest, k)), 0) / keys.length;
-      const cls = d >= 0 ? '' : 'down';
-      return `<div class="rom-line"><span class="mut">${label}</span>
-        <span class="delta ${cls}">${d >= 0 ? '+' : ''}${d.toFixed(1)}° since your first flights</span></div>`;
-    }).join('');
-    romEl.innerHTML = lines;
-  } else {
-    romEl.innerHTML = '<div class="rom-line"><span class="mut">RANGE-OF-MOTION TREND</span><span class="mut">needs 6+ camera runs</span></div>';
-  }
-
+  const trend=weeklyTrend();
+  romEl.innerHTML=`<div class="rom-line"><span class="mut">Moving time · last 7 days</span><span>${trend==null ? 'Start a camera break to begin' : (trend>=0?'+':'')+trend+'s vs previous 7 days'}</span></div><p class="privacy-note">Only valid camera sessions from this version are compared. Your earlier sessions are preserved below.</p>`;
   $('history-list').innerHTML = h.length === 0
-    ? '<p class="mut small center">no flights logged</p>'
+    ? '<p class="mut small center">Your next little break starts your story</p>'
     : h.map(r => `<div class="hist-row">
-        <span class="h-date">${r.date}</span>
-        <span class="h-mode">${{ techneck: 'NECK', casual: 'CASUAL', daily: 'DAILY', duel: 'DUEL', weekly: 'WEEK' }[r.mode] || ''}</span>
+        <span class="h-date">${escapeText(r.date)}</span>
+        <span class="h-mode">${{ break:'BREAK', techneck: 'ARCADE', casual: 'CASUAL', daily: 'DAILY', duel: 'DUEL', weekly: 'WEEK' }[r.mode] || ''}</span>
         <span class="h-score">${r.score.toLocaleString()}</span>
-        <span class="h-stretch">${r.touch ? '—' : r.stretchScore}</span>
+        <span class="h-stretch">${r.touch ? 'touch / keys' : (r.moveSec||0)+'s moving'}</span>
       </div>`).join('');
 }
 
@@ -584,7 +587,7 @@ function renderStore() {
       ST.equipWorld(worldId);
       sfx.buy();
       renderStore();
-      hooks.onToast?.('loading world…');
+      hooks.onToast?.('Finding your world…');
       await applyWorldPack();
       applyWorldSkin();
       renderStore();
@@ -691,21 +694,21 @@ function renderStore() {
 let boardMode = 'techneck';
 function renderBoard() {
   const list = $('board-list');
-  const rows = boardMode === 'daily' ? (ST.dailyToday().list || [])
-    : boardMode === 'weekly' ? ST.weeklyNow().list
-    : ST.state().boards[boardMode];
+  const rows = boardMode === 'daily' ? (ST.dailyScores().list || [])
+    : boardMode === 'weekly' ? ST.weeklyScores().list
+    : ST.state().boards[ST.scoreScope(boardMode)];
   $('btn-play-weekly').classList.toggle('hidden', boardMode !== 'weekly');
   list.innerHTML = '';
   if (!rows.length) {
     list.innerHTML = `<li class="empty">${{
       daily: 'same belt for every pilot · resets at midnight',
       weekly: 'one fixed belt all week · leave your mark',
-    }[boardMode] || 'no flights logged'}</li>`;
+    }[boardMode] || 'Your next little break starts your story'}</li>`;
     return;
   }
   rows.forEach((r, i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="rank">${i + 1}</span><span class="tag">${r.tag}</span>
+    li.innerHTML = `<span class="rank">${i + 1}</span><span class="tag">${escapeText(r.tag)}</span>
       <span class="val">${r.score.toLocaleString()}</span>`;
     list.appendChild(li);
   });
@@ -736,8 +739,8 @@ function renderLore() {
 async function sendDuel() {
   sfx.ui();
   const tag = ST.state().lastTag || 'ACE';
-  const seed = hashSeed(`${lastRun.score}|${ST.dayStamp()}|${tag}`);
-  const url = `${location.origin}${location.pathname}?duel=${seed}&s=${lastRun.score}&by=${encodeURIComponent(tag)}`;
+  const seed = game.seed; if(seed==null){hooks.onToast?.('Play a daily challenge to share its matching route.');return;}
+  const url = `${location.origin}${location.pathname}?duel=${seed}&s=${lastRun.score}&by=${encodeURIComponent(tag)}&rules=2&world=${lastRun.report?.world||ST.currentWorld()}&input=${lastRun.report?.touch?'manual':'camera'}&mutator=${game.mutator?.id||''}`;
   if (lastRun.report) {
     await shareCard({ ...lastRun.report, score: lastRun.score }, { duel: true, url, tag });
   } else if (navigator.share) {
@@ -753,6 +756,7 @@ let reminderTimer = 0;
 async function toggleReminders(on) {
   ST.state().settings.reminders = on;
   ST.save();
+  if (isNative) { const r=await reminder(on); $('settings-status').textContent=r.granted ? 'A gentle reminder is set for four hours from now.' : 'Reminders are off. You can allow them in iOS Settings.'; return; }
   if (!on) { clearTimeout(reminderTimer); return; }
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') await Notification.requestPermission();
@@ -760,7 +764,7 @@ async function toggleReminders(on) {
 }
 function scheduleReminder() {
   clearTimeout(reminderTimer);
-  if (!ST.state().settings.reminders || Notification?.permission !== 'granted') return;
+  if (!ST.state().settings.reminders || globalThis.Notification?.permission !== 'granted') return;
   reminderTimer = setTimeout(async () => {
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
@@ -772,7 +776,7 @@ function scheduleReminder() {
 }
 
 function registerSW() {
-  if ('serviceWorker' in navigator) {
+  if (import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => { });
   }
 }
@@ -782,31 +786,29 @@ $('btn-play-techneck').onclick = () => requestPlay('techneck');
 $('btn-play-casual').onclick = () => requestPlay('casual');
 $('btn-daily').onclick = () => requestPlay('daily', { seed: todaySeed() });
 $('btn-play-weekly').onclick = () => requestPlay('weekly', { seed: hashSeed(ST.isoWeek()) });
-$('btn-duel-accept').onclick = () => {
+$('btn-duel-accept').onclick = async () => {
   const d = duelIncoming;
   duelIncoming = null;
-  requestPlay('duel', { seed: d.seed, duelTarget: d.score });
+  ST.state().settings.input=d.input;ST.equipWorld(d.world);await applyWorldPack();applyWorldSkin();
+  requestPlay('duel',{seed:d.seed,duelTarget:d.score,mutatorId:d.mutatorId});
 };
 $('btn-duel-decline').onclick = () => { duelIncoming = null; sfx.ui(); show('screen-menu'); };
 
 $('btn-cal-back').onclick = () => {
-  calState = 'done';
-  cancelAnimationFrame(camPreviewRaf);
-  sfx.ui(); show('screen-menu');
+  calState = 'cancelled'; cancelAnimationFrame(camPreviewRaf); setTrackingPreview(false).catch(console.warn);
+  if(resumeAfterCalibration) show('hud','screen-pause'); else { stopCamera(); sfx.ui(); show('screen-menu'); }
 };
 
-$('btn-pause').onclick = () => { pauseGame(true); sfx.ui(); show('hud', 'screen-pause'); };
-$('btn-resume').onclick = () => { sfx.ui(); show('hud'); pauseGame(false); };
-$('btn-recal-pause').onclick = () => {
-  sfx.ui(); stopGame(); stopMusic(); calibratedThisSession = false;
-  openCalibration();
+$('btn-pause').onclick = () => {
+  pauseGame(true); sfx.ui(); $('pause-title').textContent='The world can wait.';
+  $('pause-message').textContent='Resume whenever you’re comfortable.'; $('btn-resume').textContent='Resume'; show('hud','screen-pause');
 };
+$('btn-resume').onclick = async () => { resumeAudio();startMusic('run');sfx.ui(); if(!head.usingTouch) { try { await initHead(); if(!cameraRunning())await startCamera(); openCalibration(true); } catch { show('screen-camerr'); } } else { show('hud'); pauseGame(false); } };
+$('btn-recal-pause').onclick = () => $('btn-resume').onclick();
 $('btn-quit').onclick = () => {
-  sfx.ui(); stopGame(); startMusic('menu');
-  refreshMenu(); show('screen-menu'); startIdle();
+  if(game.mode==='break') endSession(); else { stopGame(); stopCamera(); refreshMenu(); show('screen-menu'); startIdle(); }
 };
-
-$('btn-retry').onclick = () => { submitPendingScore(); sfx.ui(); launch(); };
+$('btn-retry').onclick = () => { submitPendingScore(); sfx.ui(); requestPlay(lastRun.mode,{seed:game.seed??undefined,mutatorId:game.mutator?.id,duelTarget:game.duelTarget}); };
 $('btn-go-menu').onclick = () => {
   submitPendingScore(); sfx.ui();
   refreshMenu(); show('screen-menu'); startIdle();
@@ -851,18 +853,18 @@ $('btn-trophies-back').onclick = () => { sfx.ui(); show('screen-menu'); };
 $('btn-settings').onclick = () => { sfx.ui(); show('screen-settings'); };
 $('btn-settings-back').onclick = () => { sfx.ui(); refreshMenu(); show('screen-menu'); };
 $('btn-history').onclick = () => { sfx.ui(); renderHistory(); show('screen-history'); };
-$('btn-history-back').onclick = () => { sfx.ui(); show('screen-settings'); };
+$('btn-history-back').onclick = () => { sfx.ui(); show('screen-menu'); };
 $('btn-lore').onclick = () => { sfx.ui(); renderLore(); show('screen-lore'); };
 $('btn-lore-back').onclick = () => { sfx.ui(); show('screen-settings'); };
 $('btn-recalibrate').onclick = async () => {
   sfx.ui();
   if (head.usingTouch) return;
-  try { if (!cameraRunning()) await startCamera(); openCalibration(); }
+  try { await initHead(); if (!cameraRunning()) await startCamera(); pendingMode='break'; openCalibration(); }
   catch { show('screen-camerr'); }
 };
 $('btn-reset').onclick = () => {
   if (confirm('Wipe all scores, streaks, purchases and settings?')) {
-    ST.resetAll(); applyVolumes(); applyTheme(); loadHeroShip(); refreshMenu(); sfx.denied();
+    ST.resetAll(); location.reload();
   }
 };
 
@@ -875,17 +877,64 @@ for (const [id, key] of [['set-music', 'music'], ['set-sfx', 'sfx'], ['set-sens'
 $('set-mirror').onchange = () => { ST.state().settings.mirror = $('set-mirror').checked; ST.save(); };
 $('set-reminders').onchange = () => toggleReminders($('set-reminders').checked);
 
-$('btn-cam-retry').onclick = () => { sfx.ui(); requestPlay(pendingMode, pendingOpts); };
-$('btn-cam-touch').onclick = () => { sfx.ui(); enableTouchFallback(); launch(); };
+$('btn-cam-retry').onclick = async()=>{if(game.running){try{await initHead();await startCamera();openCalibration(true);}catch{$('camerr-msg').textContent='Camera access is still unavailable.';}}else await startPrepared();};
+$('btn-cam-touch').onclick = () => { sfx.ui(); enableTouchFallback(); if(game.running) { show('hud'); document.body.classList.add('manual-input'); pauseGame(false); } else launch(); };
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    scheduleReminder();
+    scheduleReminder();stopMusic();
     if (game.running && !game.paused) {
       pauseGame(true);
-      show('hud', 'screen-pause');
+      $('pause-title').textContent='Welcome back.'; $('pause-message').textContent='Your adventure waited for you.'; show('hud', 'screen-pause');
     }
+    if(!head.usingTouch) stopCamera();
   }
 });
 
 boot();
+
+$('btn-break').onclick=()=>requestPlay('break');
+$('btn-input').onclick=()=>{ setupOnly=true; refreshSetup(); show('screen-setup'); };
+$('btn-setup-start').onclick=startPrepared;
+$('btn-setup-back').onclick=()=>{ refreshMenu(); show('screen-menu'); };
+$('btn-load-retry').onclick=()=>location.reload();
+$('btn-worlds').onclick=()=>{show('screen-worlds');refreshDownloads();};
+$('btn-worlds-back').onclick=()=>show('screen-menu');
+$('btn-arcade').onclick=()=>show('screen-arcade');
+$('btn-arcade-back').onclick=()=>show('screen-menu');
+$('btn-home-history').onclick=()=>{renderHistory();show('screen-history');};
+$('btn-manual-boost').onclick=()=>{if(game.running&&!game.paused)head.manualBoost=true;};
+for(const b of document.querySelectorAll('[data-duration]')) b.onclick=()=>{ ST.state().settings.duration=Number(b.dataset.duration); ST.save(); refreshMenu(); };
+for(const b of document.querySelectorAll('[data-input]')) b.onclick=()=>{ ST.state().settings.input=b.dataset.input; ST.save(); refreshSetup(); };
+for(const b of document.querySelectorAll('button[data-world]')) b.onclick=async()=>{
+  const previous=ST.currentWorld(); document.querySelectorAll('button[data-world]').forEach(b=>b.disabled=true); stopIdle();
+  try { ST.equipWorld(b.dataset.world); await applyWorldPack(p=>$('world-load-status').textContent=`Preparing your world · ${Math.round(p*100)}%`); applyWorldSkin(); refreshMenu(); startIdle(); show('screen-menu'); }
+  catch(e) { ST.equipWorld(previous); try{await applyWorldPack();applyWorldSkin();startIdle();}catch{} $('world-load-status').textContent='That download was interrupted. Reconnect and try again.'; }
+  finally { document.querySelectorAll('button[data-world]').forEach(b=>b.disabled=false); }
+};
+for(const [id,key] of [['set-motion','reducedMotion'],['set-vertical','vertical'],['set-turns','turns']]) $(id).onchange=()=>{ ST.state().settings[key]=$(id).checked; ST.save(); applyGraphics(); };
+$('set-quality').onchange=()=>{ST.state().settings.quality=$('set-quality').value;ST.save();applyGraphics();};
+$('set-comfort').onchange=()=>{ ST.state().settings.comfort=$('set-comfort').value==='gentle'?{roll:9,pitch:8,yaw:12,tuck:1.8}:{...DEFAULT_COMFORT};ST.save(); };
+$('btn-export').onclick=async()=>{if(isNative){await shareNativeFile(new Blob([ST.exportSave()],{type:'application/json'}),'slouch-progress.json');return;}const a=document.createElement('a');const url=URL.createObjectURL(new Blob([ST.exportSave()],{type:'application/json'}));a.href=url;a.download='slouch-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('save-import').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{ST.importSave(await file.text());location.reload();}catch(e){$('settings-status').textContent=e.message;}};
+addEventListener('slouch-storage-error',()=>{$('settings-status').textContent='Storage is full. Export your progress before clearing space.';});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&game.running&&!game.paused)$('btn-pause').click();});
+
+async function refreshDownloads(){
+  for(const id of ['ocean','jungle','space','camera']){
+    const b=document.querySelector(`[data-download="${id}"]`);if(!b)continue;
+    try{const s=await packStatus(id);const name={ocean:'Ocean',jungle:'Jungle',space:'Space',camera:'Camera'}[id];b.textContent=`${name} · `+(s.ready?(isNative?'Included':'Ready offline'):`Keep offline · ${(s.bytes/1048576).toFixed(1)} MB`);b.disabled=s.ready;}
+    catch{b.textContent='Download unavailable';}
+  }
+}
+for(const b of document.querySelectorAll('[data-download]'))b.onclick=async()=>{
+  b.disabled=true;
+  try{await downloadPack(b.dataset.download,p=>b.textContent=`Downloading · ${Math.round(p*100)}%`);await refreshDownloads();}
+  catch(e){b.disabled=false;b.textContent='Retry download';$('world-load-status').textContent=e.message;}
+};
+
+$('btn-skip-gate').onclick=skipGate;
+
+$('btn-clear-downloads').onclick=async()=>{if(isNative){$('settings-status').textContent='Worlds are included with this iOS build.';return;}await clearDownloads();$('settings-status').textContent='Downloads removed. Your progress is still saved.';};
+
+if(import.meta.env.DEV)window.__slouch={game,world,head,acceptPose,state:ST.state,pauseGame,skipGate,enableTouchFallback,stopGame,startIdle,stopIdle,applyWorldPack,equipWorld:ST.equipWorld};

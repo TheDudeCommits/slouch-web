@@ -1,18 +1,22 @@
+import { DEFAULT_COMFORT } from './core/movement.ts';
+import { migrateSave, safeImport } from './core/save.ts';
+import { nativeSave } from './platform/native.js';
 // SLOUCH — persistent state (localStorage). No servers: scores, streaks,
 // purchases, goals, reports and ghosts live on-device.
 
 const KEY = 'slouch.save.v1';
 
-const DEFAULTS = {
+export const DEFAULTS = {
+  version: 2,
   points: 0,
-  settings: { music: 60, sfx: 80, sensitivity: 100, mirror: true, ghost: true, reminders: false },
+  settings: { music: 35, sfx: 55, sensitivity: 100, mirror: true, ghost: false, reminders: false, input: 'camera', duration: 180, reducedMotion: false, vertical: true, turns: true, quality: 'auto', comfort: { ...DEFAULT_COMFORT } },
   streak: { count: 0, lastDay: null, freezes: 0 },
-  owned: ['theme_space', 'skin_crosswing', 'trail_theme', 'boom_ember', 'hero_clown', 'hero_bunny'],
+  owned: ['theme_space', 'skin_quadra', 'world_ocean', 'world_jungle', 'trail_theme', 'boom_ember', 'hero_clown', 'hero_bunny'],
   equippedTheme: 'theme_space',
-  equippedWorld: 'space',            // space | ocean | jungle
+  equippedWorld: 'ocean',            // space | ocean | jungle
   oceanHero: 'hero_clown',
   jungleHero: 'hero_bunny',
-  equipped: { skin: 'skin_crosswing', trail: 'trail_theme', boom: 'boom_ember' },
+  equipped: { skin: 'skin_quadra', trail: 'trail_theme', boom: 'boom_ember' },
   upgrades: { hyperdur: 0, hyperregen: 0, magnet: 0 },   // levels 0..3
   revives: 0,                                            // consumable stock
   boards: { techneck: [], casual: [] },                  // [{tag, score, date}]
@@ -63,7 +67,7 @@ export const THEMES = {
       rock: 0xeadcf8, rockEmissive: 0x6a3a80 },
   },
   theme_ocean: {
-    name: 'Ocean Dive', icon: '🌊', price: 3500,
+    name: 'Pelagic Blue', icon: '🌊', price: 3500,
     desc: 'The belt drowned. Dodge through bioluminescent deep-sea wreckage.',
     sky: ['ocean'], planets: ['neptune', 'moon', null], sun: 0xaad4ff,
     colors: { ship: 0xc0f0ff, engine: 0x2ca0ff, accent: 0x40c8ff, fog: 0x02121f,
@@ -74,11 +78,11 @@ export const THEMES = {
 // ── expansion worlds: full visual swaps, downloaded only after purchase ──
 export const WORLD_PACKS = {
   world_ocean: {
-    name: 'Open Ocean', price: 2500, world: 'ocean', size: '2 MB',
+    name: 'Open Ocean', price: 0, world: 'ocean', size: 'included',
     desc: 'Swim the reef as a clownfish. Sharks, octopuses, and a whale with opinions.',
   },
   world_jungle: {
-    name: 'Jungle Rush', price: 3000, world: 'jungle', size: '4 MB',
+    name: 'Jungle Rush', price: 0, world: 'jungle', size: 'included',
     desc: 'Run the undergrowth as a bunny. Everything here is faster than you.',
   },
 };
@@ -98,13 +102,11 @@ export const OCEAN_HEROES = {
 
 // glTF hero starfighters (poly.pizza community models, CC-BY — see assets/ATTRIBUTION.txt)
 export const SKINS = {
-  skin_crosswing: { name: 'Crosswing', price: 0, model: 'crosswing',
-    desc: 'Four S-foils, locked in attack position. The factory hull.' },
   skin_viper: { name: 'Viper', price: 1500, model: 'viper',
     desc: 'Twin-cannon patrol fighter in rebel white-and-red.' },
   skin_lance: { name: 'Lance', price: 2200, model: 'lance',
     desc: 'A thrown spear with an engine. Nothing turns tighter.' },
-  skin_quadra: { name: 'Quadra', price: 2800, model: 'quadra',
+  skin_quadra: { name: 'Quadra', price: 0, model: 'quadra',
     desc: 'Quad-wing interceptor. Reads as trouble from every angle.' },
   skin_shadow: { name: 'Vanguard', price: 3500, model: 'shadow',
     desc: 'Heavy assault frame. Twin cannon housings, zero apologies.' },
@@ -125,9 +127,9 @@ export const BOOMS = {
 };
 
 export const UPGRADES = {
-  hyperdur: { name: 'Hyper Capacity', icon: '⚡', desc: 'Longer boost burns',
+  hyperdur: { name: 'Trail Luminance', icon: '⚡', desc: 'A brighter trail in Ocean and Space, with the same comfortable boost',
     prices: [800, 2000, 4500] },
-  hyperregen: { name: 'Hyper Recharge', icon: '🔋', desc: 'Faster boost refills',
+  hyperregen: { name: 'Impact Sparkles', icon: '🔋', desc: 'Wider sparkles when you break through a hazard',
     prices: [700, 1800, 4000] },
   magnet: { name: 'Magnet Core', icon: '🧲', desc: 'Stronger coin pull',
     prices: [600, 1500, 3500] },
@@ -163,28 +165,21 @@ let S = load();
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
-      const d = structuredClone(DEFAULTS);
-      const merged = { ...d, ...s };
-      for (const k of ['settings', 'streak', 'best', 'daily', 'goals', 'totals', 'adaptive', 'upgrades', 'equipped', 'missions', 'weekly']) {
-        merged[k] = { ...d[k], ...(s[k] || {}) };
-      }
-      merged.boards = { ...structuredClone(d.boards), ...(s.boards || {}) };
-      merged.ghosts = s.ghosts || {};
-      merged.achievements = s.achievements || {};
-      merged.history = s.history || [];
-      for (const item of d.owned) if (!merged.owned.includes(item)) merged.owned.push(item);
-      // migrate saves from older skin generations
-      if (!SKINS[merged.equipped.skin]) merged.equipped.skin = 'skin_crosswing';
-      if (!merged.owned.includes('skin_crosswing')) merged.owned.push('skin_crosswing');
-      return merged;
-    }
-  } catch (e) { /* corrupted save — start fresh */ }
-  return structuredClone(DEFAULTS);
+    if (!raw) return structuredClone(DEFAULTS);
+    const parsed = JSON.parse(raw);
+    if (parsed.version !== 2) localStorage.setItem('slouch.save.v1.backup', raw);
+    return migrateSave(parsed, DEFAULTS);
+  } catch { return structuredClone(DEFAULTS); }
 }
-
-export function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+export function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(S));
+    nativeSave(JSON.stringify(S)).catch(() => {});
+  } catch { window.dispatchEvent(new CustomEvent('slouch-storage-error')); }
+}
+export function importSave(text) { S = migrateSave(safeImport(text), DEFAULTS); save(); }
+export function exportSave() { return JSON.stringify({ format: 'slouch-save', exportedAt: new Date().toISOString(), save: S }, null, 2); }
+export function restoreNative(text) { if (text) { S = migrateSave(safeImport(text), DEFAULTS); save(); } }
 export function state() { return S; }
 export function resetAll() { S = structuredClone(DEFAULTS); save(); }
 
@@ -197,7 +192,7 @@ export function spend(n) {
 
 // ── day helpers ──
 export function dayStamp(d = new Date()) {
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number), [by, bm, bd] = b.split('-').map(Number);
@@ -281,6 +276,14 @@ export function dailyToday() {
 }
 
 // ── leaderboards ──
+export function scoreScope(mode, report=null) {
+  const world=report?.world||currentWorld();
+  const input=report?(report.touch?'manual':'camera'):(S.settings.input==='camera'?'camera':'manual');
+  const key=`v2:${world}:${input}:${mode}`;
+  S.boards[key] ||= [];S.best[key] ||= 0;return key;
+}
+export function dailyScores(report=null) { const d=dailyToday();d.scopes ||= {};return d.scopes[scoreScope('daily',report)] ||= {best:0,runs:0,list:[]}; }
+export function weeklyScores(report=null) { const w=weeklyNow();w.scopes ||= {};return w.scopes[scoreScope('weekly',report)] ||= {best:0,list:[]}; }
 export function submitScore(mode, tag, score) {
   const board = S.boards[mode];
   board.push({ tag, score, date: dayStamp() });
@@ -299,21 +302,14 @@ export function qualifiesForBoard(mode, score) {
 // ── run history / posture reports (keep 30) ──
 export function addReport(r) {
   S.history.unshift(r);
-  S.history = S.history.slice(0, 30);
-  // adaptive ROM: EMA of per-run maxima, floors keep gates reachable
-  const a = S.adaptive, k = 0.25;
-  for (const [key, val, floor] of [
-    ['yawL', r.rom.yawL, 12], ['yawR', r.rom.yawR, 12],
-    ['pitchU', r.rom.pitchU, 10], ['pitchD', r.rom.pitchD, 10],
-    ['rollL', r.rom.rollL, 10], ['rollR', r.rom.rollR, 10]]) {
-    if (val > 2) a[key] = Math.max(floor, a[key] + (val - a[key]) * k);
-  }
+  S.history = S.history.slice(0, 365);
+  // Comfort targets are explicit settings; incidental maxima never raise them.
   save();
 }
 
 // ── ghosts ──
-export function saveGhost(mode, score, dt, path) {
-  S.ghosts[mode] = { score, dt, path };
+export function saveGhost(mode, score, dt, path, scores) {
+  S.ghosts[mode] = { score, dt, path, scores };
   save();
 }
 
@@ -345,7 +341,7 @@ export function equipWorld(world) {
   }
   return false;
 }
-export function currentWorld() { return S.equippedWorld || 'space'; }
+export function currentWorld() { return S.equippedWorld || 'ocean'; }
 export function equipCosmetic(slot, id) {
   if (S.owned.includes(id)) { S.equipped[slot] = id; save(); return true; }
   return false;
@@ -353,7 +349,7 @@ export function equipCosmetic(slot, id) {
 export function themeColors() { return THEMES[S.equippedTheme]?.colors ?? THEMES.theme_space.colors; }
 export function cosmetics() {
   return {
-    skin: SKINS[S.equipped.skin] ?? SKINS.skin_crosswing,
+    skin: SKINS[S.equipped.skin] ?? SKINS.skin_quadra,
     trail: TRAILS[S.equipped.trail] ?? TRAILS.trail_theme,
     boom: BOOMS[S.equipped.boom] ?? BOOMS.boom_ember,
   };

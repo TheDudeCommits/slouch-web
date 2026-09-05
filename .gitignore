@@ -1,2 +1,13 @@
 .DS_Store
 node_modules/
+dist/
+vendor/
+output/
+.playwright-cli/
+.vercel/
+*.xcuserstate
+xcuserdata/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/CapApp-SPM/.build/
+.env*

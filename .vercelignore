@@ -1,0 +1,11 @@
+.git
+.env*
+.github
+node_modules
+dist
+vendor
+output
+.playwright-cli
+ios
+docs/previews
+assets/ships/crosswing.glb

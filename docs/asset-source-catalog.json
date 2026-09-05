@@ -1,0 +1,464 @@
+[
+  {
+    "group": "ocean",
+    "id": "769fHo3eEB",
+    "glb": "https://static.poly.pizza/f28280ed-888d-4d9b-9d13-af2baf36b749.glb",
+    "title": "Clownfish",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 162,
+    "files": [
+      "assets/packs/ocean/hero_clown.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "h6M5zlF5Yx",
+    "glb": "https://static.poly.pizza/6899676e-674a-4281-9d93-ff8ba5d53d28.glb",
+    "title": "Mandarin Fish",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 177,
+    "files": [
+      "assets/packs/ocean/hero_mandarin.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "CrDlkPLon0",
+    "glb": "https://static.poly.pizza/ace51e9d-d61b-4477-834a-8e6d0361c6a6.glb",
+    "title": "Yellow Tang",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 143,
+    "files": [
+      "assets/packs/ocean/hero_tang.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "1y2iPj1CFg7",
+    "glb": "https://static.poly.pizza/3dec2810-75ec-41ec-aecb-898c2018049f.glb",
+    "title": "Dolphin",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 29
+  },
+  {
+    "group": "ocean",
+    "id": "3H4CqcG6JGP",
+    "glb": "https://static.poly.pizza/c57736dd-dc8d-478d-b1f6-1163f58ad4c6.glb",
+    "title": "Seahorse",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 23
+  },
+  {
+    "group": "ocean",
+    "id": "6JBZkhu_id5",
+    "glb": "https://static.poly.pizza/d76cc416-4571-4c48-8d69-f1ae6dc4fa59.glb",
+    "title": "Shark",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 162,
+    "files": [
+      "assets/packs/ocean/shark.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "AyHTK3zUSG",
+    "glb": "https://static.poly.pizza/d2d374ea-eb1d-4659-8cc7-816a83b82470.glb",
+    "title": "Shark",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 76,
+    "files": [
+      "assets/packs/ocean/shark2.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "5p9B6IebY-A",
+    "glb": "https://static.poly.pizza/f6214f69-34e2-4a28-8986-1e7d6ca9b964.glb",
+    "title": "Orca",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 115
+  },
+  {
+    "group": "ocean",
+    "id": "MRjSlwCjHM",
+    "glb": "https://static.poly.pizza/0c4802f0-32f9-4a2a-90a5-56b94c33e37e.glb",
+    "title": "Anglerfish",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 178,
+    "files": [
+      "assets/packs/ocean/angler.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "9F8QJKUT77V",
+    "glb": "https://static.poly.pizza/81286501-750b-4d4b-9c41-2e3bbadcc9ae.glb",
+    "title": "Octopus",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 150
+  },
+  {
+    "group": "ocean",
+    "id": "6KQsV8qo5E0",
+    "glb": "https://static.poly.pizza/e5fe7f1f-0b18-4ead-a831-2b2bd946f3a2.glb",
+    "title": "Octopus",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 44,
+    "files": [
+      "assets/packs/ocean/octo1.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "flkOBUVpPHg",
+    "glb": "https://static.poly.pizza/94f4d93b-4f7b-43ef-9c15-38d48266c8e9.glb",
+    "title": "Octopus",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 112,
+    "files": [
+      "assets/packs/ocean/octo2.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "fo1MBzTFRZ3",
+    "glb": "https://static.poly.pizza/6cd8a022-0fec-43c5-87ab-d7f36a45eb91.glb",
+    "title": "Whale",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 173,
+    "files": [
+      "assets/packs/ocean/whale.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "e8rjQPyT1xL",
+    "glb": "https://static.poly.pizza/4e20c237-6511-41cf-9ac0-228e33863e8e.glb",
+    "title": "Sperm Whale",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 30,
+    "files": [
+      "assets/packs/ocean/scenic_whale.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "UyswwdHFiL",
+    "glb": "https://static.poly.pizza/82f664e7-bfae-4e17-a85c-c352db1a9b16.glb",
+    "title": "Coral Reef Set3",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 258,
+    "files": [
+      "assets/packs/ocean/coral2.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "74GL45Fvdh",
+    "glb": "https://static.poly.pizza/a9cdd3fc-df4b-437d-a3a0-c12cda93e250.glb",
+    "title": "Coral Reef Set",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 387,
+    "files": [
+      "assets/packs/ocean/coral1.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "3HEc6LvqCJd",
+    "glb": "https://static.poly.pizza/7296b910-cb6a-4384-b1fd-17f9bb03885f.glb",
+    "title": "Orange Coral",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 156,
+    "files": [
+      "assets/packs/ocean/coral3.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "5ECC8rIOZJl",
+    "glb": "https://static.poly.pizza/e9a93dde-bb25-4efe-8961-67ad3633fb82.glb",
+    "title": "kelp",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 25,
+    "files": [
+      "assets/packs/ocean/kelp.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "uYSDAQuNT9",
+    "glb": "https://static.poly.pizza/0759c070-9e46-4e13-aea4-dfc36dd8ea40.glb",
+    "title": "Sea Urchin",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 16,
+    "files": [
+      "assets/packs/ocean/urchin.glb"
+    ]
+  },
+  {
+    "group": "ocean",
+    "id": "3tgZD06mzCe",
+    "glb": "https://static.poly.pizza/ee04f1a6-b297-45d0-9aa1-5fd3115c6607.glb",
+    "title": "Pufferfish",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 91,
+    "files": [
+      "assets/packs/ocean/puffer.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "9OBTRVYUSmt",
+    "glb": "https://static.poly.pizza/78272c95-1b89-4afa-ba94-9d93e4dce0ee.glb",
+    "title": "Rabbit",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 48
+  },
+  {
+    "group": "jungle",
+    "id": "8_ZF1ZGRpk5",
+    "glb": "https://static.poly.pizza/3d1a8206-367c-4b31-992d-5d8e18c56a9f.glb",
+    "title": "Rabbit",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 30
+  },
+  {
+    "group": "jungle",
+    "id": "irZjWFARyl",
+    "glb": "https://static.poly.pizza/084b5ebe-c3eb-4e64-9b17-06e2d1e3da5d.glb",
+    "title": "Bunny",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 526,
+    "files": [
+      "assets/packs/jungle/hero_bunny.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "3SWesLY5grk",
+    "glb": "https://static.poly.pizza/59a43dc2-b71b-4614-a2ba-b7a07e44bb4e.glb",
+    "title": "Gray Rabbit",
+    "lic": "CC-BY",
+    "author": "my brother",
+    "kb": 32
+  },
+  {
+    "group": "jungle",
+    "id": "P1gU3Qkr9r",
+    "glb": "https://static.poly.pizza/f1d12388-e39b-4157-b32a-646a1d089fc4.glb",
+    "title": "Wolf",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 964,
+    "files": [
+      "assets/packs/jungle/wolf.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "7TSeDU7o6V8",
+    "glb": "https://static.poly.pizza/d34082c5-9ee7-4709-b0c2-7abb60a9389b.glb",
+    "title": "Wolf",
+    "lic": "CC-BY",
+    "author": "dook",
+    "kb": 89
+  },
+  {
+    "group": "jungle",
+    "id": "cx7dMDUDzhG",
+    "glb": "https://static.poly.pizza/37388238-7396-44d9-afb8-08e3a6a7294e.glb",
+    "title": "Wolf",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 24
+  },
+  {
+    "group": "jungle",
+    "id": "3XAJojWxSWz",
+    "glb": "https://static.poly.pizza/34e4de3e-50ac-400e-adab-a13a0825ee1a.glb",
+    "title": "Lion",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 1968,
+    "files": [
+      "assets/packs/jungle/lion.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "5A3w06FXUup",
+    "glb": "https://static.poly.pizza/460ff96a-ea48-4b39-b38c-d0c7daa06a3c.glb",
+    "title": "Tiger",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 222,
+    "files": [
+      "assets/packs/jungle/tiger.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "4fb-oMr2uUF",
+    "glb": "https://static.poly.pizza/1ba852c9-b39a-4869-b8da-b493e17ba989.glb",
+    "title": "Jaguar",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 1375,
+    "files": [
+      "assets/packs/jungle/jaguar.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "5y59KqZXxWf",
+    "glb": "https://static.poly.pizza/879f9033-2b44-4c9b-bc57-f10cd8ecdbbc.glb",
+    "title": "Cheetah",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 1719,
+    "files": [
+      "assets/packs/jungle/cheetah.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "40_5Xq467-U",
+    "glb": "https://static.poly.pizza/18add015-096c-4890-ba52-c1d9d6bf1910.glb",
+    "title": "Cobra",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 811
+  },
+  {
+    "group": "jungle",
+    "id": "1pi9DfAbsz0",
+    "glb": "https://static.poly.pizza/ebc080eb-4020-41e0-b80b-c479ea8ac31f.glb",
+    "title": "Anaconda",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 3801,
+    "files": [
+      "assets/packs/jungle/snake.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "dlW4hGKBpiS",
+    "glb": "https://static.poly.pizza/f55c02bf-a771-4962-8f9c-136cb131f636.glb",
+    "title": "Vine Covered Tree",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 4162
+  },
+  {
+    "group": "jungle",
+    "id": "dNWh762PN-6",
+    "glb": "https://static.poly.pizza/712dc981-3f74-4e74-b31d-d8060709759f.glb",
+    "title": "Big Tree",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 3328
+  },
+  {
+    "group": "jungle",
+    "id": "VYslw9DEi6",
+    "glb": "https://static.poly.pizza/88fb0209-5e1e-4cb0-9d11-112e6140ab13.glb",
+    "title": "Palm Trees",
+    "lic": "CC0",
+    "author": "Google",
+    "kb": 1095,
+    "files": [
+      "assets/packs/jungle/palms.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "L4E32Wee6C",
+    "glb": "https://static.poly.pizza/89d5c7b9-0735-4640-913d-87261dfecd32.glb",
+    "title": "Wood Log",
+    "lic": "CC0",
+    "author": "Google",
+    "kb": 14,
+    "files": [
+      "assets/packs/jungle/log.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "2ohXf_yaPki",
+    "glb": "https://static.poly.pizza/2be84497-5e2c-48d9-a960-16b511af6865.glb",
+    "title": "Tree Stump",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 41,
+    "files": [
+      "assets/packs/jungle/stump.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "3oFkNid6ofx",
+    "glb": "https://static.poly.pizza/ef21b5c7-934b-49f3-9763-771d176119ea.glb",
+    "title": "Carrot",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 15,
+    "files": [
+      "assets/packs/jungle/carrot.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "ZfDTFZ7YOy",
+    "glb": "https://static.poly.pizza/82b4408d-2dd8-43f6-be38-8b51bbc31e9c.glb",
+    "title": "Carrot",
+    "lic": "CC0",
+    "author": "dook",
+    "kb": 32
+  },
+  {
+    "group": "jungle",
+    "id": "56ym_pyVnel",
+    "glb": "https://static.poly.pizza/cba1e1c9-f4aa-4f12-8d58-2ba5baf1aa2b.glb",
+    "title": "Black bear",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 704,
+    "files": [
+      "assets/packs/jungle/bear.glb"
+    ]
+  },
+  {
+    "group": "jungle",
+    "id": "a27MA0rXyyj",
+    "glb": "https://static.poly.pizza/b8ca84f2-02b2-4c84-92c0-b5f8b0eee90e.glb",
+    "title": "Elephant",
+    "lic": "CC-BY",
+    "author": "Google",
+    "kb": 1069
+  }
+]

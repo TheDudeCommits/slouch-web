@@ -18,12 +18,12 @@ const WORLD_MUSIC = {
   jungle: {
     menu: ['jg_uku1', 'jg_advent'],
     run: ['jg_uku1', 'jg_uku2', 'jg_marimba', 'jg_advent'],
-    loops: null,   // no swap — the acoustic set carries boss moments
+    loops: ['jg_advent','jg_marimba'],
   },
   ocean: {
     menu: ['oc_deep', 'oc_coastal'],
     run: ['oc_chill', 'oc_vibes', 'oc_coconut', 'oc_coastal'],
-    loops: null,
+    loops: ['oc_deep','oc_vibes'],
   },
 };
 const tracks = {};        // name -> {el, gain}
@@ -98,7 +98,7 @@ export function stopMusic() {
 // temp layers: boss & wormhole swap in a retro loop, then restore the run track
 export function musicEvent(ev) {
   if (!ctx) return;
-  if (!(WORLD_MUSIC[sfxWorld] || WORLD_MUSIC.space).loops) return; // only Space swaps
+  if (!(WORLD_MUSIC[sfxWorld] || WORLD_MUSIC.space).loops) return;
   if (ev === 'boss' || ev === 'wormhole') {
     if (!stashed && current) stashed = current.name;
     playTrack(pickFrom('loops'), 0.6);

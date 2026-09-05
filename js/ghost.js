@@ -4,23 +4,24 @@
 import { state, saveGhost } from './state.js';
 
 const HZ = 10;
-const MAX_SAMPLES = 2400; // 4 minutes
+const MAX_SAMPLES = 9000; // 15 minutes; longer runs are not stored as truncated ghosts
 
 let rec = null;
 let play = null;
 
 // The ghost is invisible — it only powers the pace comparison ("+400 vs best").
 export function beginGhost(mode) {
-  rec = { mode, t: 0, next: 0, path: [] };
+  rec = { mode, t: 0, next: 0, path: [],scores:[] };
   const g = state().ghosts[mode];
-  play = g?.path?.length ? { ...g, t: 0 } : null;
+  play = state().settings.ghost && g?.scores?.length ? { ...g,t:0 } : null;
 }
 
-export function ghostTick(dt, x, y) {
+export function ghostTick(dt, x, y, score) {
   if (!rec) return;
   rec.t += dt;
   if (rec.t >= rec.next && rec.path.length < MAX_SAMPLES * 2) {
     rec.path.push(Math.round(x * 100) / 100, Math.round(y * 100) / 100);
+    rec.scores.push(Math.floor(score));
     rec.next += 1 / HZ;
   }
   if (play) play.t += dt;
@@ -41,19 +42,18 @@ export function ghostPos() {
 
 export function ghostBestScore() { return play?.score ?? null; }
 
-// score the ghost "would have" at elapsed time t (linear proration)
+// Interpolate recorded scores; a final score cannot describe an earlier moment.
 export function ghostPace(t) {
-  if (!play?.path?.length) return null;
-  const dur = (play.path.length / 2) / HZ;
-  if (dur < 5) return null;
-  return play.score * Math.min(1, t / dur);
+  if(!play?.scores?.length)return null;
+  const i=t*HZ,a=Math.floor(i);if(a>=play.scores.length-1)return null;
+  return play.scores[a]+(play.scores[a+1]-play.scores[a])*(i-a);
 }
 
 export function endGhost(score) {
   if (!rec) return;
   const prev = state().ghosts[rec.mode];
-  if (rec.path.length > 20 && (!prev || score > prev.score)) {
-    saveGhost(rec.mode, score, 1 / HZ, rec.path);
+  if (rec.t <= MAX_SAMPLES/HZ && rec.path.length > 20 && (!prev || score > prev.score)) {
+    saveGhost(rec.mode, score, 1 / HZ, rec.path,rec.scores);
   }
   rec = null;
   play = null;
