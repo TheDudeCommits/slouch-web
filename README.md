@@ -53,6 +53,14 @@ Select an Apple development team before signing for an iPhone. Simulator compila
 
 ## Release
 
+Vercel uses the committed `vercel.json` to build and serve `dist`. For a CLI preview deployment, supply the exact source revision because uploaded source does not include `.git`:
+
+```sh
+npx vercel deploy --target preview --build-env SLOUCH_BUILD_COMMIT="$(git rev-parse HEAD)"
+```
+
+Git-integrated Vercel builds use `VERCEL_GIT_COMMIT_SHA` automatically. Deployment metadata and the current trial link are recorded in [HANDOVER.md](HANDOVER.md).
+
 GitHub Actions builds and checks pull requests. The manual **Publish built web app** workflow uploads `dist` to Pages. Before publishing version 2, switch repository Settings → Pages → Source to **GitHub Actions**. Do not merge and continue serving raw `main` files with the old branch-based Pages setting.
 
 No App Store products, Game Center leaderboards, HealthKit records, or remote score service are configured. Stardust remains an earned game currency. Those integrations require a separate release decision and account configuration.

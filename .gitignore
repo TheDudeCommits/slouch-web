@@ -4,6 +4,7 @@ dist/
 vendor/
 output/
 .playwright-cli/
+.vercel/
 *.xcuserstate
 xcuserdata/
 ios/App/App/public/

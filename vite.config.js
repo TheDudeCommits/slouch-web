@@ -24,7 +24,9 @@ export default defineConfig({
       const hashes=Object.fromEntries(all.filter(p=>/^(assets|vendor)\//.test(p)&&!shell.includes(p)).map(p=>[p,createHash('sha256').update(readFileSync(`dist/${p}`)).digest('hex')]));
       const worker=readFileSync('sw.js','utf8').replace('__BUILD__',revision).replace('/*__SHELL__*/[]',JSON.stringify(shell)).replace('/*__HASHES__*/{}',JSON.stringify(hashes));
       writeFileSync('dist/sw.js', worker);
-      writeFileSync('dist/build.json', JSON.stringify({ version: '2.0.0', revision, commit: execSync('git rev-parse HEAD').toString().trim() }));
+      // CLI cloud builds omit .git; keep the exact source revision supplied by the release.
+      const commit=process.env.SLOUCH_BUILD_COMMIT||process.env.VERCEL_GIT_COMMIT_SHA||execSync('git rev-parse HEAD').toString().trim();
+      writeFileSync('dist/build.json', JSON.stringify({ version: '2.0.0', revision, commit }));
     },
   }],
 });
