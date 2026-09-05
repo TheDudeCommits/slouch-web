@@ -4,6 +4,8 @@
 
 Code revision: `5ddc5b5746c475245a04d6ccaf3e8b1b5ad58880`. [Draft PR #1](https://github.com/TheDudeCommits/slouch-web/pull/1); [GitHub CI passed](https://github.com/TheDudeCommits/slouch-web/actions/runs/33962800751). The PR tracks any later documentation-only revision.
 
+**Web release:** [Play Slouch](https://slouch-web.vercel.app). Source `98e5351cdaa3f52a1951d47784f7f331db740970`, deployment `dpl_HsbU2h58TPBfEPTpsVabTFD6bJPD`, Vercel **READY** with the canonical alias assigned. Vercel automatically made its first deployment Production. GitHub checks passed. Live unauthenticated desktop/phone Chromium QA launched all three worlds, verified advancing timers and pause/end/home, and recorded no page errors; the browser was closed. See HANDOVER for project/build details.
+
 ## Review the experience
 
 Start with a three-minute Ocean break: home, setup, travel corridor, protected gate, whale crossing and completion form the reference flow. Compare Jungle grounding/jumps and Space visibility. All worlds are included; former pack owners receive a once-only migration credit.
@@ -33,6 +35,6 @@ Final native log: `~/Library/Developer/XcodeBuildMCP/workspaces/Codex-ThreeJS-0f
 - Models are preserved/catalogued, but exact rights confirmation remains for parts of the inherited collection. Crosswing is excluded from distribution, not deleted from history.
 - Further model/material cleanup, LOD/compression experiments, animated collection previews, richer landmark composition and frame-time-driven automatic quality adaptation remain polish work guided by device/playtest evidence.
 - Competition remains local/versioned without an authoritative server. Cross-date event snapshots are not a validated global duel system. No purchases, Game Center configuration, HealthKit or cloud account sync were created.
-- No deployment, signing, TestFlight or App Store submission occurred. Built Pages publishing and the native project require the documented configuration/device gates.
+- Web deployment to Vercel is complete. Signing, TestFlight and App Store submission have not occurred. GitHub Pages remains on its previous version and has a separate built-publishing configuration gate.
 
 [iOS checklist](IOS-READINESS.md) · [Preserved plan](OVERHAUL-PLAN.md) · [Current handover](../HANDOVER.md)

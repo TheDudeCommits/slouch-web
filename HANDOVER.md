@@ -4,7 +4,17 @@ Updated **5 September 2026**. Repository: [TheDudeCommits/slouch-web](https://gi
 
 Implementation commit: **`5ddc5b5746c475245a04d6ccaf3e8b1b5ad58880`**. Review: [draft PR #1](https://github.com/TheDudeCommits/slouch-web/pull/1). Its [first GitHub build/regression run passed](https://github.com/TheDudeCommits/slouch-web/actions/runs/33962800751). Subsequent documentation-only commits record this publication metadata; check the PR for its latest head/checks.
 
-The user approved implementing the visual, playability and iOS recommendations. This branch contains a working v2 implementation and a compile-verified native foundation. **It has not been deployed publicly or distributed through TestFlight.** Physical iPhone acceptance and the release work below remain open. The old handover is preserved verbatim in [docs/HANDOVER-v1.md](docs/HANDOVER-v1.md); its CDN, root-serving, cache-bump and deployment instructions no longer apply to v2.
+The user approved implementation, then explicitly requested GitHub publication and Vercel deployment. **The v2 web game is live at [slouch-web.vercel.app](https://slouch-web.vercel.app).** The native foundation is compile-verified but has not been distributed through TestFlight. Physical iPhone acceptance and the remaining work below stay open. The old handover is preserved verbatim in [docs/HANDOVER-v1.md](docs/HANDOVER-v1.md); its CDN, root-serving and cache-bump instructions no longer apply to v2.
+
+## Verified Vercel release
+
+- Deployed source: **`98e5351cdaa3f52a1951d47784f7f331db740970`**, pushed to `codex/slouch-overhaul` in the existing GitHub repository. Main/legacy GitHub Pages were not changed.
+- Project: `slouch-web` / `prj_bsPZwvP47byR6JebBz3FVhyMwb8X`, team `team_9UHUI9xdsOl7LAy5xl8hUIV6`; connected to the GitHub repo.
+- Deployment: **`dpl_HsbU2h58TPBfEPTpsVabTFD6bJPD`**, verified **READY**, no alias error. Vercel automatically assigned this first Git-triggered deployment to **production**. Do not describe it as a preview-only release.
+- Canonical URL: **https://slouch-web.vercel.app**. Immutable URL: https://slouch-a7zo1rm53-amirs-projects-d9680079.vercel.app. Public game access does not require Vercel authentication.
+- Build: Node 24, `npm ci`, Vite production build and 23 shell checks; `dist` served. Source revision comes from the Git build environment or explicit `SLOUCH_BUILD_COMMIT` for CLI uploads without `.git`. Local environment credentials and native/QA outputs are excluded from uploads.
+- Live QA: unauthenticated Chromium at 1440×900 and 390×844; all three worlds launched, timers advanced, keyboard controls/pause/end/home worked, zero page errors. Captures: `output/playwright/vercel-*.png`. Test browser closed. Real-camera/device acceptance remains separate.
+- GitHub checks passed for the deployed revision. Subsequent documentation commits record this release; they need not be the revision behind the canonical production alias. Always inspect the alias before claiming a later release.
 
 ## Product and direction
 
@@ -80,7 +90,7 @@ Proposed bundle ID: `work.dude.slouch`. Signing team and App Store Connect recor
 2. Complete [physical-device acceptance](docs/IOS-READINESS.md): tracking parity, rotation, glasses/lighting, permission recovery, saves/sharing/reminders, interruptions, accessibility, offline first launch, thermal load and repeated five-minute sessions. Set the phone floor from measurements.
 3. Finish source-page/license-version confirmation for inherited ships, pickups, some trees and audio. `docs/asset-source-catalog.json` records source matches and unresolved attribution. No paid purchases or submissions occurred.
 4. Continue art polish after feedback. Current scenes reuse sourced inventory; commissioned asset cleanup/LODs, animated collection previews, richer landmark compositions and measured automatic quality adaptation remain production work. Alternative concept boards were superseded by implementing the recommended direction under the user's approval.
-5. To publish v2, change GitHub Pages Source to **GitHub Actions**, then run **Publish built web app** for the reviewed revision. The old branch-root setup cannot serve Vite source. Do not merge and assume the legacy deployment still works. The public site stays on v1 until a release is carried out.
+5. V2 is published on Vercel. If also updating GitHub Pages, change its Source to **GitHub Actions**, then run **Publish built web app** for the reviewed revision. The old branch-root setup cannot serve Vite source. Do not merge and assume that legacy deployment still works; GitHub Pages remains on v1 independently of the Vercel release.
 6. Configure signing/App Store and TestFlight after device and rights acceptance. StoreKit, Game Center/server-validated competition and account sync require product/account decisions; they are not implemented. HealthKit stays outside launch scope. Earned stardust is not a paid entitlement.
 
 Preserve Arctic, Neon Courier, Canyon, Sky, Haunted Hollow and zombie-runner in the backlog; accept the launch worlds before expanding them.

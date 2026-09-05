@@ -2,6 +2,8 @@
 
 A little movement. A world away.
 
+**[Play Slouch](https://slouch-web.vercel.app)**
+
 Slouch is a Three.js game for short desk breaks. Take a 1, 3, or 5 minute journey through an underwater reef, a forest trail, or an orbital belt using comfortable head movement, touch, or keyboard controls. Arcade challenges remain separate from finite breaks.
 
 ## Run and build
