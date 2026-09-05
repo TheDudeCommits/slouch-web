@@ -10,3 +10,4 @@ xcuserdata/
 ios/App/App/public/
 ios/App/App/capacitor.config.json
 ios/App/CapApp-SPM/.build/
+.env*
