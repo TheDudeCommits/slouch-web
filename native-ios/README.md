@@ -6,7 +6,7 @@ The original gameplay modules execute locally in **JavaScriptCore**. This is int
 
 ## Run
 
-1. Open `Slouch.xcodeproj` in Xcode. The converted models, original fonts and generated engine are committed; no conversion tools are needed to run.
+1. Open **`native-ios/Slouch.xcodeproj`** from the repository root in Xcode. The converted models, original fonts and generated engine are committed; no conversion tools are needed to run. The old `ios/App/App.xcodeproj` path belongs to the discarded Capacitor setup and is not this native app.
 2. Choose the **Slouch** scheme and an iPhone simulator, then Run.
 3. Choose Tech Neck or Casual. On a simulator, choose **USE TOUCH CONTROLS** when the camera fallback appears. Drag anywhere in the game to steer; drag upward to jump in Jungle. Pause is at the top right.
 4. For an iPhone, choose your Apple development team in Signing & Capabilities and run on a supported device. The app requests front-camera access. Set the device at eye height, sit tall, and let the automatic neutral-pose calibration finish.

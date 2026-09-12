@@ -32,6 +32,8 @@ private struct AnimationRoot: Component {}
     private var thresholdPipeline: MTLComputePipelineState?
     private var bloomTextures: [(MTLTexture,MTLTexture)] = []
     private var bloomSize = SIMD2<Int>.zero
+    private var viewportSize = CGSize.zero
+    private var viewportLayoutTime: Double?
     private var postFrames = 0
     private var glow: TextureResource?
     private var post = SIMD4<Float>(0,0,0.0025,0), fog = SIMD4<Float>(0.02,0.0235,0.0588,1)
@@ -366,6 +368,17 @@ private struct AnimationRoot: Component {}
     }
     func update(_ frame: FrameSnapshot, realTime: Double) {
         do {
+            // SwiftUI can resize ARView without invalidating its internal render surface.
+            if view.bounds.size != viewportSize {
+                viewportSize=view.bounds.size
+                viewportLayoutTime=realTime+0.5
+                view.setNeedsLayout();view.layoutIfNeeded()
+            }
+            // RealityKit may restore its previous surface during the rotation animation.
+            if let layoutTime=viewportLayoutTime,realTime>=layoutTime {
+                viewportLayoutTime=nil
+                view.setNeedsLayout();view.layoutIfNeeded()
+            }
             // RealityKit creates its active render-camera component after attachment.
             // Installing the callback during ARView initialization dereferences a nil camera.
             if view.window != nil && camera.isActive {
@@ -499,20 +512,38 @@ private struct AnimationRoot: Component {}
                 for (level,pair) in self.bloomTextures.enumerated() {
                     guard let encoder=context.commandBuffer.makeComputeCommandEncoder() else{return}
                     encoder.setComputePipelineState(threshold);encoder.setTexture(context.sourceColorTexture,index:0);encoder.setTexture(pair.0,index:1)
-                    encoder.dispatchThreads(MTLSize(width:pair.0.width,height:pair.0.height,depth:1),threadsPerThreadgroup:MTLSize(width:8,height:8,depth:1));encoder.endEncoding()
+                    // Uniform groups also work on simulator GPUs; the kernel bounds-checks padded threads.
+                    encoder.dispatchThreadgroups(MTLSize(width:(pair.0.width+7)/8,height:(pair.0.height+7)/8,depth:1),threadsPerThreadgroup:MTLSize(width:8,height:8,depth:1));encoder.endEncoding()
                     let blur=MPSImageGaussianBlur(device:device,sigma:Float(3+level*2));blur.edgeMode = .clamp
                     blur.encode(commandBuffer:context.commandBuffer,sourceTexture:pair.0,destinationTexture:pair.1)
                 }
             }
-            guard let encoder=context.commandBuffer.makeComputeCommandEncoder() else{return}
             var parameters=self.post;var fog=self.fog;var tint=self.speedTint;var inverseProjection=simd_inverse(context.projection)
+            var target=context.targetColorTexture
+            // Write through a linear view on every GPU. Simulator family support
+            // can report Apple families while validation still rejects sRGB writes.
+            let format: MTLPixelFormat
+            switch target.pixelFormat {
+            case .bgra8Unorm_srgb: format = .bgra8Unorm
+            case .rgba8Unorm_srgb: format = .rgba8Unorm
+            default: format = target.pixelFormat
+            }
+            if format != target.pixelFormat {
+                guard let compatible=target.makeTextureView(pixelFormat:format) else {
+                    let blit=context.commandBuffer.makeBlitCommandEncoder()
+                    blit?.copy(from:context.sourceColorTexture,to:context.targetColorTexture);blit?.endEncoding()
+                    return
+                }
+                target=compatible;parameters.w=1
+            }
+            guard let encoder=context.commandBuffer.makeComputeCommandEncoder() else{return}
             encoder.setComputePipelineState(pipeline)
-            encoder.setTexture(context.sourceColorTexture,index:0);encoder.setTexture(context.targetColorTexture,index:1);encoder.setTexture(context.sourceDepthTexture,index:2)
+            encoder.setTexture(context.sourceColorTexture,index:0);encoder.setTexture(target,index:1);encoder.setTexture(context.sourceDepthTexture,index:2)
             encoder.setBytes(&parameters,length:MemoryLayout<SIMD4<Float>>.stride,index:0);encoder.setBytes(&fog,length:MemoryLayout<SIMD4<Float>>.stride,index:1)
             encoder.setBytes(&inverseProjection,length:MemoryLayout<simd_float4x4>.stride,index:2)
             encoder.setBytes(&tint,length:MemoryLayout<SIMD4<Float>>.stride,index:3)
             for (index,pair) in self.bloomTextures.enumerated() {encoder.setTexture(pair.1,index:3+index)}
-            encoder.dispatchThreads(MTLSize(width:context.targetColorTexture.width,height:context.targetColorTexture.height,depth:1),threadsPerThreadgroup:MTLSize(width:8,height:8,depth:1));encoder.endEncoding()
+            encoder.dispatchThreadgroups(MTLSize(width:(size.x+7)/8,height:(size.y+7)/8,depth:1),threadsPerThreadgroup:MTLSize(width:8,height:8,depth:1));encoder.endEncoding()
         }
     }
 }

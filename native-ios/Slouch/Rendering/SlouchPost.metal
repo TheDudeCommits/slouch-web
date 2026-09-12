@@ -27,5 +27,7 @@ kernel void slouchPost(texture2d<float,access::sample> source [[texture(0)]],tex
  if(hyper>0.01){float2 d=float2(c.x*size.x/size.y,c.y);float streak=slouchHash(float2(floor(atan2(d.y,d.x)*60.0),floor(time*24.0)));float mask=smoothstep(0.06,0.42,r2)*step(0.82,streak)*hyper;col+=tint.rgb*mask*0.5;}
  col*=1-r2*(0.28-hyper*0.1);
  col+=(slouchHash(uv*float2(1917,1033)+fract(time))-0.5)*0.035;
+ // A linear texture view bypasses hardware sRGB encoding, so preserve it here.
+ if(params.w>0.5){col=max(col,0.0);col=select(1.055*pow(col,float3(1.0/2.4))-0.055,12.92*col,col<=0.0031308);}
  target.write(float4(col,1),gid);
 }

@@ -32,6 +32,10 @@ Early UI assertions failed because localized prices contain a comma and the shar
 - Portrait sky geometry left a black seam. Backgrounds now follow the native camera and fill its viewport; transparent ocean surface material is explicitly blended.
 - Blender's source material defaults rendered creatures metallic. Apply the original loader's matte/emissive corrections to native materials.
 - Returning from a backgrounded camera run could leave tracking stopped. Resume through fresh calibration while retaining the paused run.
+- Running from Xcode with Metal API validation exposed unsupported nonuniform thread dispatch and compute writes to an sRGB output texture. Both kernels now use padded uniform threadgroups; output uses a writable linear texture view with explicit sRGB encoding. Keep Metal validation enabled when checking Xcode Run. The texture-view approach follows [Apple's postprocess pixel-format guidance](https://developer.apple.com/documentation/realitykit/checking-the-pixel-format-of-a-postprocess-effect-s-output-texture), but is selected by actual texture format because the simulator can advertise Apple GPU families while rejecting sRGB compute writes.
+- Rotation could resize ARView while its internal render surface retained the old dimensions. Refresh layout when bounds change and after the rotation animation settles. Verified through Xcode's debugger and live portrait/landscape gameplay.
+
+Xcode GUI setup was verified separately after these fixes: open `native-ios/Slouch.xcodeproj`, choose **Slouch → iPhone 17 Pro**, and press **Command-R**. Metal API validation remains enabled. The app stays running through touch fallback, gameplay, pause/resume, collision results and rotation. The original `ios/App/App.xcodeproj` error came from opening the abandoned Capacitor directory.
 
 ## Remaining acceptance
 
