@@ -13,29 +13,29 @@ import UIKit
     var previewEnabled = false
     var touchX = 0.0
     var touchY = 0.0
-    private var raw = SIMD4<Double>.zero
-    private var neutral = SIMD4<Double>.zero
-    private var initializedPose = false
-    private var lostFrames = 0
-    private var previewFrame = 0
+    private var neutral = matrix_identity_float4x4
+    private var filter = HeadPoseFilter()
+    private var lastFrameTime = -Double.infinity
+    private var lastFaceTime = -Double.infinity
+    private var lastPreviewTime = -Double.infinity
+    private var orientation = UIInterfaceOrientation.portrait
     private let imageContext = CIContext()
-    private var samples: [SIMD4<Double>] = []
+    private var samples: [simd_float4x4] = []
     private var isCalibrating = false
     var pose: JSONValue {
-        let r = raw - neutral
+        let r = filter.value
         return .object(["ready": .bool(ready), "hasFace": .bool(hasFace), "usingTouch": .bool(usingTouch),
-                        "rYaw": .number(wrapped(r.x)), "rPitch": .number(wrapped(r.y)), "rRoll": .number(wrapped(r.z)), "rZ": .number(r.w),
+                        "rYaw": .number(r.x), "rPitch": .number(r.y), "rRoll": .number(r.z), "rZ": .number(r.w),
                         "touchX": .number(touchX), "touchY": .number(touchY)])
     }
-    private func wrapped(_ angle: Double) -> Double { atan2(sin(angle * .pi / 180), cos(angle * .pi / 180)) * 180 / .pi }
     func start() async -> Bool {
-        message="";hasFace=false;lostFrames=0
+        message="";hasFace=false;lastFrameTime = -.infinity;lastFaceTime = -.infinity;filter.reset()
         guard ARFaceTrackingConfiguration.isSupported else { message = "Head tracking needs a supported iPhone or iPad. You can play with touch controls."; return false }
         guard await AVCaptureDevice.requestAccess(for: .video) else { message = "Camera access is off. Enable it in iOS Settings or use touch controls."; return false }
         session.delegate = self
         let config = ARFaceTrackingConfiguration(); config.isLightEstimationEnabled = false
         session.run(config, options: [.resetTracking, .removeExistingAnchors])
-        usingTouch = false; ready = true; initializedPose = false
+        usingTouch = false; ready = true
         message = "Sit tall. Face the camera."
         return true
     }
@@ -47,34 +47,44 @@ import UIKit
         isCalibrating = false
         guard !Task.isCancelled else{return false}
         guard samples.count >= 5 else { message = "Face not found. Look toward the camera and try again."; return false }
-        neutral = samples.reduce(.zero,+) / Double(samples.count)
+        guard let center = HeadPose.center(samples) else { return false }
+        neutral = center; filter.reset()
         message = "CALIBRATED"; return true
     }
-    nonisolated func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        let face = frame.anchors.compactMap { $0 as? ARFaceAnchor }.first
-        let transform = face.map { simd_inverse(frame.camera.transform) * $0.transform }
-        let tracked = face?.isTracked ?? false
-        let buffer = frame.capturedImage
-        Task { @MainActor [weak self] in self?.consume(transform, tracked: tracked, buffer: buffer) }
-    }
-    private func consume(_ m: simd_float4x4?, tracked: Bool, buffer: CVPixelBuffer) {
-        previewFrame += 1
-        if previewEnabled && previewFrame % 6 == 0 {
-            let image = CIImage(cvPixelBuffer: buffer).oriented(.leftMirrored)
+    /// Pull the latest frame once per display tick. Do not enqueue a MainActor
+    /// task (and retain a camera buffer) for every AR callback under render load.
+    func update(at time: Double, orientation newOrientation: UIInterfaceOrientation) {
+        guard ready, !usingTouch else { return }
+        guard let frame = session.currentFrame, time - frame.timestamp < 0.4 else {
+            hasFace = false; return
+        }
+        if time - lastFaceTime > 0.4 { hasFace = false }
+        guard frame.timestamp > lastFrameTime else { return }
+        lastFrameTime = frame.timestamp
+        if newOrientation != .unknown && orientation != newOrientation {
+            orientation = newOrientation; filter.reset()
+            if isCalibrating { samples.removeAll() }
+        }
+        if previewEnabled && time - lastPreviewTime >= 0.12 {
+            lastPreviewTime = time
+            let imageOrientation: CGImagePropertyOrientation
+            switch orientation {
+            case .landscapeLeft: imageOrientation = .downMirrored
+            case .landscapeRight: imageOrientation = .upMirrored
+            case .portraitUpsideDown: imageOrientation = .rightMirrored
+            default: imageOrientation = .leftMirrored
+            }
+            let image = CIImage(cvPixelBuffer: frame.capturedImage).oriented(imageOrientation)
             if let cg = imageContext.createCGImage(image, from: image.extent) { preview = UIImage(cgImage: cg) }
         }
-        guard tracked, let m else { lostFrames += 1; if lostFrames > 12 { hasFace = false }; return }
-        lostFrames = 0; hasFace = true
-        let d = 180.0 / Double.pi
-        let p = SIMD4(Double(atan2(m.columns.2.x,m.columns.2.z))*d, Double(asin(max(-1,min(1,-m.columns.2.y))))*d, Double(atan2(m.columns.0.y,m.columns.1.y))*d,Double(m.columns.3.z)*100)
-        if !initializedPose { raw = p; initializedPose = true }
-        else {
-            for i in 0..<4 {
-                let delta = i < 3 ? wrapped(p[i]-raw[i]) : p[i]-raw[i]
-                raw[i] += delta * min(0.85,0.2+abs(delta)*(i == 3 ? 0.14 : 0.06))
-            }
-        }
-        if isCalibrating { samples.append(raw) }
+        guard let face = frame.anchors.compactMap({ $0 as? ARFaceAnchor }).first, face.isTracked else { return }
+        lastFaceTime = frame.timestamp; hasFace = true
+        // ARCamera.transform is sensor-oriented. The view matrix corrects it
+        // for the current interface orientation before neutral is measured.
+        let displayFromFace = frame.camera.viewMatrix(for: orientation) * face.transform
+        let relative = HeadPose.relative(displayFromFace: displayFromFace, neutral: neutral)
+        filter.update(relative, at: frame.timestamp)
+        if isCalibrating { samples.append(displayFromFace) }
     }
     nonisolated func session(_ session: ARSession, didFailWithError error: Error) {
         let description = error.localizedDescription

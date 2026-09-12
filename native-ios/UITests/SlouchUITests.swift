@@ -45,6 +45,18 @@ final class SlouchUITests:XCTestCase {
             app.terminate()
         }
     }
+    func testSpaceHyperdriveRendering() {
+        let app=launch(["-touch","-qa-world=space","-qa-hyper"])
+        app.buttons["play-techneck"].tap()
+        XCTAssertTrue(app.staticTexts["HYPERDRIVE"].firstMatch.waitForExistence(timeout:15))
+        let settled=Date().addingTimeInterval(1)
+        let ready=NSPredicate { _,_ in Date()>=settled }
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:ready,object:nil)],timeout:3),.completed)
+        capture("space-hyperdrive",app)
+        app.buttons["Pause"].tap()
+        XCTAssertTrue(app.buttons["RESUME"].waitForExistence(timeout:5))
+        app.terminate()
+    }
     func testCameraFallbackAndWorldPurchase() {
         let app=launch()
         app.buttons["play-techneck"].tap()

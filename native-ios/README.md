@@ -38,7 +38,7 @@ If Xcode reports that the Metal compiler is missing, install its Metal Toolchain
 - SwiftUI menu, HUD, pause, store, settings, local ranks, honors, lore, history, range-of-motion reports and daily goal rings.
 - Original licensed music, sound effects, textures, icons and world fonts. Native AVAudioEngine handles music, ambience, low-pass intensity and pitched sound effects.
 - Native Metal glow, chromatic aberration, grain, vignette, speed lines and distance fog; native particle glows, contact shadows, animated heroes, caustics and scrolling scenery.
-- ARKit face tracking, automatic calibration, mirrored-control setting, face-loss feedback and touch fallback. Interrupted camera sessions require fresh calibration before a paused camera run resumes.
+- ARKit face tracking with display-aligned, calibrated face axes and timestamped adaptive smoothing; automatic calibration, mirrored-control setting, face-loss feedback and touch fallback. Interrupted camera sessions require fresh calibration before a paused camera run resumes.
 - Native PNG report/duel cards and the iOS share sheet. Native duel URLs use `slouch://challenge?duel=…&s=…&by=…`; existing web duel links can be pasted into System. Universal Links are not configured.
 - Atomic local JSON saves, pause/background handling, optional four-hour break notifications and a confirmation before resetting progress.
 
@@ -97,6 +97,6 @@ Original audio, images and attribution are referenced directly from the reposito
 
 ## QA launch arguments
 
-Debug builds accept `-touch`, `-qa-world=space|ocean|jungle`, `-qa-hero=hero_pig|hero_bunny|hero_clown|hero_tang|hero_mandarin`, and `-qa-autoplay`. Any `-qa-` argument uses a separate **SlouchQA** save directory, resets that test save and grants test currency. Ordinary progress is untouched. `-qa-autoplay` invokes the original debug god mode, which deliberately makes the hero blink; it is not used by the collision-result test. QA hooks do not run in Release builds.
+Debug builds accept `-touch`, `-qa-world=space|ocean|jungle`, `-qa-hero=hero_pig|hero_bunny|hero_clown|hero_tang|hero_mandarin`, and `-qa-autoplay`, and `-qa-hyper`. Any `-qa-` argument uses a separate **SlouchQA** save directory, resets that test save and grants test currency. Ordinary progress is untouched. `-qa-autoplay` invokes the original debug god mode, which deliberately makes the hero blink; it is not used by the collision-result test. `-qa-hyper` supplies a synthetic four-centimeter chin tuck to exercise the real hyperdrive render path. QA hooks do not run in Release builds.
 
 See [HANDOVER.md](HANDOVER.md) for verification evidence and the physical-device acceptance checklist.

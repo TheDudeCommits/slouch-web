@@ -52,7 +52,8 @@ enum GameScreen: String { case loading, menu, calibrate, playing, paused, gameov
             kernel=try GameKernel(resources:resources,saveURL:saves)
             #if DEBUG
             if qa {
-                kernel!.context.evaluateScript("require('state').resetAll();require('state').addPoints(20000)")
+                try kernel!.call("reset")
+                kernel!.context.evaluateScript("require('state').addPoints(20000)")
                 let target=arguments.first{$0.hasPrefix("-qa-world=")}?.components(separatedBy:"=").last ?? "space"
                 if ["ocean","jungle"].contains(target) {try kernel!.call("buy",["world_"+target]);try kernel!.call("equip",["world_"+target])}
                 if let hero=arguments.first(where:{$0.hasPrefix("-qa-hero=")})?.components(separatedBy:"=").last,
@@ -63,6 +64,7 @@ enum GameScreen: String { case loading, menu, calibrate, playing, paused, gameov
             #endif
             catalog=kernel!.catalog;refresh()
             renderer=try WorldRenderer(resources:resources);renderer?.configure(save:save,catalog:catalog)
+            await renderer?.prepareMaterials()
             renderer?.onError = { [weak self] value in self?.fail(value) }
             audio=GameAudio(root:Bundle.main.resourceURL!.appendingPathComponent("assets"));audio?.volumes(save["settings"])
             tag=save["lastTag"].string
@@ -87,6 +89,7 @@ enum GameScreen: String { case loading, menu, calibrate, playing, paused, gameov
     }
     func tick(_ link: CADisplayLink) {
         guard let kernel,error == nil else{return}
+        tracker.update(at: link.timestamp, orientation: renderer?.view.window?.windowScene?.interfaceOrientation ?? .portrait)
         if screen == .calibrate && !isBusy && tracker.ready {
             if tracker.hasFace {
                 calibrationStable += min(0.05,link.targetTimestamp-link.timestamp)
@@ -95,7 +98,15 @@ enum GameScreen: String { case loading, menu, calibrate, playing, paused, gameov
             } else {calibrationStable=0;countdown=""}
         }
         do {
-            let frame=try kernel.tick(milliseconds:link.timestamp*1000,pose:tracker.pose)
+            var pose=tracker.pose
+            #if DEBUG
+            // Exercise the real hyperdrive engine/render path without a camera.
+            if ProcessInfo.processInfo.arguments.contains("-qa-hyper") {
+                pose = .object(["ready":.bool(true),"hasFace":.bool(true),"usingTouch":.bool(false),
+                                "rYaw":.number(0),"rPitch":.number(0),"rRoll":.number(0),"rZ":.number(-4)])
+            }
+            #endif
+            let frame=try kernel.tick(milliseconds:link.timestamp*1000,pose:pose)
             renderer?.update(frame,realTime:link.timestamp)
             frames += 1
             if frames%3 == 0 {hud=frame.ui}

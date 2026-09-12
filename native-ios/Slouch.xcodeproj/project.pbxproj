@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA9A073312AB46F192761A01 /* HeadPose.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9A073312AB46F192761A02 /* HeadPose.swift */; };
 		14824CC17905C10A5AD325C7 /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EF68D0B2D3FAC0873B8A068 /* ShareCard.swift */; };
 		1DF3385B636C7608D5967AC6 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5B409F33545025A181F642AA /* AppAssets.xcassets */; };
 		2B33A6F5BBB1CD6EB6E076B3 /* SlouchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */; };
@@ -43,6 +44,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CA9A073312AB46F192761A02 /* HeadPose.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadPose.swift; sourceTree = "<group>"; };
 		083A065FAEF860B53C2376A9 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = assets; path = ../assets; sourceTree = SOURCE_ROOT; };
 		1D3034FDDC37246763A50DF1 /* HeadTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadTracker.swift; sourceTree = "<group>"; };
 		1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchModel.swift; sourceTree = "<group>"; };
@@ -140,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				50539F4E9090939919F07532 /* GameKernel.swift */,
+				CA9A073312AB46F192761A02 /* HeadPose.swift */,
 				8FD53BD5E623E5322AE21511 /* JSONValue.swift */,
 				1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */,
 			);
@@ -275,6 +278,7 @@
 			files = (
 				C800E4097E41B33BC01EFAB4 /* GameAudio.swift in Sources */,
 				CBDD9A381B1E626654F3DF8F /* GameKernel.swift in Sources */,
+				CA9A073312AB46F192761A01 /* HeadPose.swift in Sources */,
 				39746AA37E8D858B5D75EC60 /* HeadTracker.swift in Sources */,
 				A629F869BF48B0CF303D1AAB /* JSONValue.swift in Sources */,
 				14824CC17905C10A5AD325C7 /* ShareCard.swift in Sources */,

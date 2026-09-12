@@ -18,7 +18,9 @@ private struct AnimationRoot: Component {}
     private var nodes: [Int: Entity] = [:], appearances: [Int: String] = [:]
     private var animations: [Int: (String,AnimationPlaybackController)] = [:]
     private var prototypes: [String: Entity] = [:], textures: [String: TextureResource] = [:]
-    private var decor: [(Entity,Float,Bool)] = [], particles: [(Entity,Float)] = []
+    private var decor: [(Entity,Float,Bool)] = []
+    private var clouds: [BillboardCloud] = []
+    private var additiveProgram: UnlitMaterial.Program?
     private var trail: [ModelEntity] = [], trailPath: [SIMD3<Float>] = []
     private var scrolling: [ModelEntity] = []
     private var lastGameTime: Double = 0
@@ -32,6 +34,7 @@ private struct AnimationRoot: Component {}
     private var thresholdPipeline: MTLComputePipelineState?
     private var bloomTextures: [(MTLTexture,MTLTexture)] = []
     private var bloomSize = SIMD2<Int>.zero
+    private var bloomBlurs: [MPSImageGaussianBlur] = []
     private var viewportSize = CGSize.zero
     private var viewportLayoutTime: Double?
     private var postFrames = 0
@@ -46,19 +49,32 @@ private struct AnimationRoot: Component {}
         manifest = try JSONDecoder().decode([String: AssetDefinition].self, from: Data(contentsOf: resources.appendingPathComponent("Models/manifest.json")))
         view.environment.background = .color(UIColor(hex:0x05060f))
         view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableCameraGrain]
-        view.environment.lighting.intensityExponent = 0.5
+        view.environment.lighting.intensityExponent = 0
         root.addChild(scenery); root.addChild(sky); root.addChild(camera); root.addChild(shield)
         camera.camera.fieldOfViewInDegrees = 72; camera.camera.near = 0.1; camera.camera.far = 3000
-        let sun = DirectionalLight(); sun.light.intensity = 2500; sun.light.color = UIColor(hex:0xfff4e0)
+        let sun = DirectionalLight(); sun.light.intensity = 1500; sun.light.color = UIColor(hex:0xfff4e0)
         sun.look(at: [0,0,-20], from: [6,12,6], relativeTo: nil); root.addChild(sun)
-        let fill = PointLight(); fill.position = [0,7,4]; fill.light.intensity = 1400; fill.light.attenuationRadius = 65; root.addChild(fill)
+        let fill = PointLight(); fill.position = [0,7,4]; fill.light.intensity = 500; fill.light.attenuationRadius = 65; root.addChild(fill)
         view.scene.addAnchor(root)
     }
+    func prepareMaterials() async {
+        var descriptor = UnlitMaterial.Program.Descriptor()
+        descriptor.blendMode = .add
+        descriptor.applyPostProcessToneMap = true
+        additiveProgram = await UnlitMaterial.Program(descriptor: descriptor)
+    }
+    private func additiveMaterial() -> UnlitMaterial {
+        var material = additiveProgram.map { UnlitMaterial(program: $0) } ?? UnlitMaterial()
+        material.writesDepth = false
+        material.faceCulling = .none
+        return material
+    }
     func configure(save: JSONValue, catalog: JSONValue) { self.save = save; self.catalog = catalog }
-    private func texture(_ name: String) throws -> TextureResource {
-        if let t = textures[name] { return t }
-        let t = try TextureResource.load(contentsOf: resources.deletingLastPathComponent().appendingPathComponent("assets/"+name), options: .init(semantic: .color))
-        textures[name] = t; return t
+    private func texture(_ name: String, normal: Bool = false) throws -> TextureResource {
+        let key = name + (normal ? ":normal" : ":color")
+        if let t = textures[key] { return t }
+        let t = try TextureResource.load(contentsOf: resources.deletingLastPathComponent().appendingPathComponent("assets/"+name), options: .init(semantic: normal ? .normal : .color))
+        textures[key] = t; return t
     }
     private func prototype(_ key: String, clip: String? = nil) throws -> Entity {
         let cache = key + ":" + (clip ?? "")
@@ -100,7 +116,7 @@ private struct AnimationRoot: Component {}
                 g.drawRadialGradient(CGGradient(colorsSpace:CGColorSpaceCreateDeviceRGB(),colors:colors as CFArray,locations:[0,0.35,1])!,startCenter:CGPoint(x:32,y:32),startRadius:0,endCenter:CGPoint(x:32,y:32),endRadius:32,options:.drawsAfterEndLocation)
             }
         }
-        var m=UnlitMaterial();m.color = .init(tint:color,texture:.init(glow!));m.blending = .transparent(opacity:.init(floatLiteral:opacity));m.faceCulling = .none
+        var m=additiveMaterial();m.color = .init(tint:color,texture:.init(glow!));m.blending = .transparent(opacity:.init(floatLiteral:opacity));m.faceCulling = .none
         return m
     }
     private func box(_ size: SIMD3<Float>, _ color: UIColor) -> ModelEntity {
@@ -115,7 +131,7 @@ private struct AnimationRoot: Component {}
             e = try model(n.id % 2 == 0 ? "rock__rock1" : "rock__rock2",radius:n.radius)
             var m = PhysicallyBasedMaterial()
             m.baseColor = .init(tint:UIColor(hex:catalog["THEMES"][save["equippedTheme"].string]["colors"]["rock"].int),texture:.init(try texture("rock/color.jpg")))
-            m.roughness = 0.95; m.metallic = 0.05; m.normal.texture = .init(try texture("rock/normal.jpg")); setMaterials(e,[m])
+            m.roughness = 0.95; m.metallic = 0.05; m.normal.texture = .init(try texture("rock/normal.jpg", normal: true)); setMaterials(e,[m])
         } else if n.kind == "gate" {
             e = try model("pickups__gate",radius:7.5); e.orientation = simd_quatf(angle:.pi/2,axis:[1,0,0])
             setMaterials(e,[UnlitMaterial(color:UIColor(hex:0xffb02c))])
@@ -260,12 +276,12 @@ private struct AnimationRoot: Component {}
     }
     private func rebuild(_ frame: FrameSnapshot) throws {
         nodes.values.forEach{$0.removeFromParent()};nodes.removeAll();appearances.removeAll();animations.removeAll()
-        scenery.children.removeAll();sky.children.removeAll();decor=[];particles=[];scrolling=[];backgroundPlane=nil
+        scenery.children.removeAll();sky.children.removeAll();decor=[];clouds=[];scrolling=[];backgroundPlane=nil
         contactShadow?.removeFromParent();contactShadow=nil
         explosions.forEach{$0.0.removeFromParent()};explosions=[]
         trail.forEach{$0.removeFromParent()};trail=[];trailPath=[]
         world=frame.world;revision=frame.revision
-        var shieldMaterial=UnlitMaterial(color:accent);shieldMaterial.blending = .transparent(opacity:.init(floatLiteral:0.12));shield.model?.materials=[shieldMaterial]
+        var shieldMaterial=additiveMaterial();shieldMaterial.color = .init(tint:accent);shieldMaterial.blending = .transparent(opacity:.init(floatLiteral:0.045));shield.model?.materials=[shieldMaterial]
         let env=catalog["PACKS"][world]["env"]
         speedTint=world == "space" ? SIMD4(0.55,0.85,1,1):rgba(UIColor(hex:env["accent"].int))
         if world == "space" { try backdrop() }
@@ -307,18 +323,12 @@ private struct AnimationRoot: Component {}
             }
         }
         let dustMaterial=try glowMaterial(world == "space" ? UIColor(hex:0x8fb8ff):UIColor(hex:env["particle"].int),opacity:0.5)
-        let dustMesh=MeshResource.generatePlane(width:0.14,height:0.14)
-        for _ in 0..<300 {
-            let p=ModelEntity(mesh:dustMesh,materials:[dustMaterial])
-            p.position=[.random(in: -22...22),.random(in: -13...13),.random(in: -210...10)];scenery.addChild(p);particles.append((p,Float.random(in:0.6...1.4)))
-        }
+        let dust = try BillboardCloud(count: 300, stars: false, material: dustMaterial)
+        scenery.addChild(dust.entity); clouds.append(dust)
         if world == "space" {
-            let starMesh=MeshResource.generatePlane(width:0.55,height:0.55),material=try glowMaterial(UIColor(hex:0xcfe4ff),opacity:0.7)
-            for _ in 0..<1200 {
-                let angle=Float.random(in:0...2 * .pi),radius=Float.random(in:24...154)
-                let p=ModelEntity(mesh:starMesh,materials:[material]);p.position=[cos(angle)*radius,sin(angle)*radius,.random(in: -550...50)]
-                scenery.addChild(p);particles.append((p,-1.35))
-            }
+            let stars = try BillboardCloud(count: 1200, stars: true,
+                                           material: glowMaterial(UIColor(hex:0xcfe4ff),opacity:0.7))
+            scenery.addChild(stars.entity); clouds.append(stars)
         }
         let trailMaterial=try glowMaterial(world == "ocean" ? UIColor(hex:0xcfeaff):accent),trailMesh=MeshResource.generatePlane(width:0.36,height:0.36)
         for _ in 0..<60 {let p=ModelEntity(mesh:trailMesh,materials:[trailMaterial]);root.addChild(p);trail.append(p)}
@@ -362,7 +372,7 @@ private struct AnimationRoot: Component {}
             }
         }
         for (file,size,distance) in [("lensflare0",Float(420),Float(0)),("lensflare3",80,0.55),("lensflare3",130,0.8),("lensflare3",55,1.05)] {
-            var material=UnlitMaterial();material.color = .init(tint:distance == 0 ? UIColor(hex:theme["sun"].int):.white,texture:.init(try texture("fx/"+file+".png")));material.blending = .transparent(opacity:.init(floatLiteral:0.85))
+            var material=additiveMaterial();material.readsDepth=false;material.color = .init(tint:distance == 0 ? UIColor(hex:theme["sun"].int):.white,texture:.init(try texture("fx/"+file+".png")));material.blending = .transparent(opacity:.init(floatLiteral:0.85))
             let flare=ModelEntity(mesh:.generatePlane(width:1,height:1),materials:[material]);sky.addChild(flare);lensFlares.append((flare,size,distance))
         }
     }
@@ -449,14 +459,11 @@ private struct AnimationRoot: Component {}
                     if swim {e.position.x += phase*dt;e.position.y += sin(elapsed+phase)*dt*1.2;if e.position.x>45 || e.position.z>0 {e.position=[.random(in: -50 ... -35),.random(in: -6...8),.random(in: -280 ... -80)]}}
                     else if e.position.z>20 {e.position.z-=460}
                 }
-                for (e,v) in particles {
-                    e.position.z += frame.speed*dt*(v<0 ? 1.35:world == "space" ? 1.6:1.1);if e.position.z>(v<0 ? 60:12){e.position.z -= v<0 ? 650:240};e.orientation=camera.orientation
-                    if world != "space" {e.position.y += (world == "ocean" ? 2.2:0.35)*dt*v;if e.position.y>14{e.position.y-=26}}
-                }
                 for i in explosions.indices {explosions[i].2-=dt;explosions[i].0.position += (explosions[i].1+[0,0,frame.speed*0.4])*dt;explosions[i].0.scale=SIMD3(repeating:max(0,explosions[i].2/1.4));explosions[i].0.orientation=camera.orientation}
                 explosions.filter{$0.2<=0}.forEach{$0.0.removeFromParent()};explosions.removeAll{$0.2<=0}
             }
             let c=frame.camera;camera.camera.fieldOfViewInDegrees=c.fov;camera.look(at:[c.lookX,c.lookY,-30],from:[c.x,c.y,c.z],relativeTo:nil);camera.orientation *= simd_quatf(angle:c.roll,axis:[0,0,1])
+            for cloud in clouds { cloud.update(dt: frame.paused ? 0 : dt, speed: frame.speed, world: world, orientation: camera.orientation) }
             if let background=backgroundPlane {
                 let height=2180*tan(c.fov * .pi/360),aspect=Float(view.bounds.width/max(1,view.bounds.height))
                 background.position=camera.position+camera.orientation.act([0,0,-1090]);background.orientation=camera.orientation;background.scale=[height*aspect,height,1]
@@ -495,6 +502,9 @@ private struct AnimationRoot: Component {}
     private func installPostprocess() {
         guard let device=MTLCreateSystemDefaultDevice(),let library=device.makeDefaultLibrary(),let fn=library.makeFunction(name:"slouchPost"),let state=try? device.makeComputePipelineState(function:fn) else {return}
         pipeline=state
+        bloomBlurs=(0..<5).map { level in
+            let blur=MPSImageGaussianBlur(device:device,sigma:Float(3+level*2));blur.edgeMode = .clamp;return blur
+        }
         if let threshold=library.makeFunction(name:"slouchBloomThreshold") {thresholdPipeline=try? device.makeComputePipelineState(function:threshold)}
         view.renderCallbacks.postProcess = { [weak self] context in
             guard let self,let pipeline=self.pipeline else{return}
@@ -514,8 +524,7 @@ private struct AnimationRoot: Component {}
                     encoder.setComputePipelineState(threshold);encoder.setTexture(context.sourceColorTexture,index:0);encoder.setTexture(pair.0,index:1)
                     // Uniform groups also work on simulator GPUs; the kernel bounds-checks padded threads.
                     encoder.dispatchThreadgroups(MTLSize(width:(pair.0.width+7)/8,height:(pair.0.height+7)/8,depth:1),threadsPerThreadgroup:MTLSize(width:8,height:8,depth:1));encoder.endEncoding()
-                    let blur=MPSImageGaussianBlur(device:device,sigma:Float(3+level*2));blur.edgeMode = .clamp
-                    blur.encode(commandBuffer:context.commandBuffer,sourceTexture:pair.0,destinationTexture:pair.1)
+                    self.bloomBlurs[level].encode(commandBuffer:context.commandBuffer,sourceTexture:pair.0,destinationTexture:pair.1)
                 }
             }
             var parameters=self.post;var fog=self.fog;var tint=self.speedTint;var inverseProjection=simd_inverse(context.projection)
@@ -585,4 +594,63 @@ private func frustum(height:Float,top:Float,bottom:Float,sides:Int) throws -> Me
     }
     var d=MeshDescriptor();d.positions=MeshBuffers.Positions(positions);d.primitives = .triangles(indices)
     return try MeshResource.generate(from:[d])
+}
+
+/// One mesh per field instead of 1,500 independently transformed entities.
+/// Particle count, wrap distances and motion still match the original scene.
+@MainActor private final class BillboardCloud {
+    struct Vertex { var position: SIMD3<Float>; var uv: SIMD2<Float> }
+    let entity: ModelEntity
+    private let mesh: LowLevelMesh
+    private var positions: [SIMD3<Float>]
+    private var drifts: [Float]
+    private let stars: Bool
+
+    init(count: Int, stars: Bool, material: UnlitMaterial) throws {
+        self.stars = stars
+        positions = (0..<count).map { _ in
+            if stars {
+                let angle=Float.random(in:0...2 * .pi), radius=Float.random(in:24...154)
+                return [cos(angle)*radius,sin(angle)*radius,.random(in: -550...50)]
+            }
+            return [.random(in: -22...22),.random(in: -13...13),.random(in: -210...10)]
+        }
+        drifts = (0..<count).map { _ in .random(in:0.6...1.4) }
+        let descriptor = LowLevelMesh.Descriptor(vertexCapacity: count*4, vertexAttributes: [
+            .init(semantic: .position, format: .float3, offset: MemoryLayout<Vertex>.offset(of: \Vertex.position)!),
+            .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Vertex>.offset(of: \Vertex.uv)!)
+        ], vertexLayouts: [.init(bufferIndex:0,bufferStride:MemoryLayout<Vertex>.stride)], indexCapacity:count*6)
+        mesh = try LowLevelMesh(descriptor: descriptor)
+        mesh.withUnsafeMutableIndices { bytes in
+            let indices=bytes.bindMemory(to:UInt32.self)
+            for i in 0..<count {
+                let b=UInt32(i*4)
+                for (j,index) in [b,b+1,b+2,b,b+2,b+3].enumerated() { indices[i*6+j]=index }
+            }
+        }
+        mesh.parts.replaceAll([.init(indexCount:count*6,bounds:.init(min:[-160,-160,-660],max:[160,160,65]))])
+        entity = ModelEntity(mesh:try MeshResource(from:mesh),materials:[material])
+        update(dt:0,speed:0,world:"space",orientation:simd_quatf(angle:0,axis:[0,0,1]))
+    }
+
+    func update(dt: Float, speed: Float, world: String, orientation: simd_quatf) {
+        let half:Float = stars ? 0.275 : 0.07
+        let right=orientation.act([half,0,0]), up=orientation.act([0,half,0])
+        let offsets=[-right-up,right-up,right+up,-right+up]
+        let uvs:[SIMD2<Float>]=[[0,1],[1,1],[1,0],[0,0]]
+        for i in positions.indices {
+            positions[i].z += speed*dt*(stars ? 1.35 : world == "space" ? 1.6 : 1.1)
+            if positions[i].z > (stars ? 60 : 12) { positions[i].z -= stars ? 650 : 240 }
+            if world != "space" {
+                positions[i].y += (world == "ocean" ? 2.2 : 0.35)*dt*drifts[i]
+                if positions[i].y > 14 { positions[i].y -= 26 }
+            }
+        }
+        mesh.replaceUnsafeMutableBytes(bufferIndex:0) { bytes in
+            let vertices=bytes.bindMemory(to:Vertex.self)
+            for i in positions.indices {
+                for corner in 0..<4 { vertices[i*4+corner] = Vertex(position:positions[i]+offsets[corner],uv:uvs[corner]) }
+            }
+        }
+    }
 }
