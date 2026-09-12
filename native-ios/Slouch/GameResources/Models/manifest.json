@@ -1,0 +1,794 @@
+{
+  "packs__jungle__bear": {
+    "source": "assets/packs/jungle/bear.glb",
+    "sha256": "1af9e1e3ddcd2ce59d3d54eb5652b2e170a3c1a1a40e51c39f89158a1922944e",
+    "size": [
+      6.684348106384277,
+      10.216385841369629,
+      16.130205154418945
+    ],
+    "center": [
+      0.0,
+      5.065675258636475,
+      1.7630395889282227
+    ],
+    "radius": 10.114823112958788,
+    "file": "packs__jungle__bear.usdz",
+    "clips": {}
+  },
+  "packs__jungle__carrot": {
+    "source": "assets/packs/jungle/carrot.glb",
+    "sha256": "2bc765298aca931542d385e21e8e5194e5be71b4c20922f8d0f83a3bef439e08",
+    "size": [
+      1.2121179103851318,
+      4.3346967697143555,
+      0.9403650164604187
+    ],
+    "center": [
+      0.08746400475502014,
+      0.03131544589996338,
+      -0.08030650019645691
+    ],
+    "radius": 2.2990820298033623,
+    "file": "packs__jungle__carrot.usdz",
+    "clips": {}
+  },
+  "packs__jungle__cheetah": {
+    "source": "assets/packs/jungle/cheetah.glb",
+    "sha256": "4209e580a8c0775f0677233eccdab3305806ff99b14073a16799cad17dbd6bbb",
+    "size": [
+      2.028398036956787,
+      7.0469560623168945,
+      12.26295280456543
+    ],
+    "center": [
+      0.0,
+      3.5234780311584473,
+      -1.4696426391601562
+    ],
+    "radius": 7.144123305598483,
+    "file": "packs__jungle__cheetah.usdz",
+    "clips": {}
+  },
+  "packs__jungle__hero_bunny": {
+    "source": "assets/packs/jungle/hero_bunny.glb",
+    "sha256": "d931c3599cb5c8ad67d6b850e68d0df84bb1373fa07edbfdb3c50ffe87dfcdd5",
+    "size": [
+      3.2224864959716797,
+      3.9023821353912354,
+      2.2980809211730957
+    ],
+    "center": [
+      -0.007085263729095459,
+      0.9511910676956177,
+      0.14904054999351501
+    ],
+    "radius": 2.7791267391198193,
+    "file": "packs__jungle__hero_bunny.usdz",
+    "clips": {
+      "Run": "packs__jungle__hero_bunny--Run.usdz",
+      "Jump_Land": "packs__jungle__hero_bunny--Jump_Land.usdz",
+      "Jump_Idle": "packs__jungle__hero_bunny--Jump_Idle.usdz",
+      "Jump": "packs__jungle__hero_bunny--Jump.usdz",
+      "Idle": "packs__jungle__hero_bunny--Idle.usdz",
+      "Duck": "packs__jungle__hero_bunny--Duck.usdz"
+    }
+  },
+  "packs__jungle__hero_pig": {
+    "source": "assets/packs/jungle/hero_pig.glb",
+    "sha256": "4bb5fc230a35db446fa2ea043f77dfc077f0b21d6e59d0235b15f01d01b05525",
+    "size": [
+      3.3036818504333496,
+      5.5860443115234375,
+      9.774822235107422
+    ],
+    "center": [
+      -0.000713050365447998,
+      1.7930221557617188,
+      0.3100712299346924
+    ],
+    "radius": 5.866544015191114,
+    "file": "packs__jungle__hero_pig.usdz",
+    "clips": {
+      "Jump": "packs__jungle__hero_pig--Jump.usdz",
+      "Idle": "packs__jungle__hero_pig--Idle.usdz"
+    }
+  },
+  "packs__jungle__jaguar": {
+    "source": "assets/packs/jungle/jaguar.glb",
+    "sha256": "d5c37ddfb199af080cb81f14d3b9d667164a9bba882ffbe4cbfaa92fb9206ab8",
+    "size": [
+      2.5115559101104736,
+      6.8427629470825195,
+      13.22459602355957
+    ],
+    "center": [
+      0.0,
+      3.4213814735412598,
+      0.0
+    ],
+    "radius": 7.550186386397191,
+    "file": "packs__jungle__jaguar.usdz",
+    "clips": {}
+  },
+  "packs__jungle__lion": {
+    "source": "assets/packs/jungle/lion.glb",
+    "sha256": "1830fe2ffb12312be7cfdbd1380a9c7f0cf61d2dd4d4bba82f074dca39cd6019",
+    "size": [
+      3.403019905090332,
+      6.76320219039917,
+      14.463834762573242
+    ],
+    "center": [
+      -0.0003400444984436035,
+      3.38136887550354,
+      -1.7097234725952148
+    ],
+    "radius": 8.162780850940091,
+    "file": "packs__jungle__lion.usdz",
+    "clips": {}
+  },
+  "packs__jungle__log": {
+    "source": "assets/packs/jungle/log.glb",
+    "sha256": "7c3489a6d7f39025dc86278f17ba005a62466061067a385fec88a61f79d03844",
+    "size": [
+      3.76882266998291,
+      1.093511700630188,
+      1.1090139150619507
+    ],
+    "center": [
+      -0.023302197456359863,
+      0.5272800326347351,
+      -0.09469448029994965
+    ],
+    "radius": 2.0389767040457865,
+    "file": "packs__jungle__log.usdz",
+    "clips": {}
+  },
+  "packs__jungle__palms": {
+    "source": "assets/packs/jungle/palms.glb",
+    "sha256": "340dd72ef14c2bf87ce19e92d22a7380350af6dbf42edabd6101bfa5dc13798a",
+    "size": [
+      25.908065795898438,
+      5.279971122741699,
+      5.23677921295166
+    ],
+    "center": [
+      113.12952423095703,
+      2.599790573120117,
+      -0.1960529088973999
+    ],
+    "radius": 13.477108337847755,
+    "file": "packs__jungle__palms.usdz",
+    "clips": {}
+  },
+  "packs__jungle__snake": {
+    "source": "assets/packs/jungle/snake.glb",
+    "sha256": "096db68cd990cc66ad750778a03c0ce305c16c2ac7fd9e02a0c6ecb4dac12d62",
+    "size": [
+      19.650188446044922,
+      4.452399253845215,
+      9.842610359191895
+    ],
+    "center": [
+      -0.12642192840576172,
+      1.7305625677108765,
+      0.0
+    ],
+    "radius": 11.211943939437644,
+    "file": "packs__jungle__snake.usdz",
+    "clips": {}
+  },
+  "packs__jungle__stump": {
+    "source": "assets/packs/jungle/stump.glb",
+    "sha256": "0cd8c064db03ab10178e6420f7e5b6ec9032ad6e2133ce357a5d8f49878bee3a",
+    "size": [
+      0.1797156035900116,
+      0.09456754475831985,
+      0.17374801635742188
+    ],
+    "center": [
+      0.008529353886842728,
+      -0.017499450594186783,
+      -0.00044428929686546326
+    ],
+    "radius": 0.13363110570060135,
+    "file": "packs__jungle__stump.usdz",
+    "clips": {}
+  },
+  "packs__jungle__tiger": {
+    "source": "assets/packs/jungle/tiger.glb",
+    "sha256": "7247cb1a4d28033d347cadbc8e053472773f441fd171fa9c56090497da9f7863",
+    "size": [
+      45.10529327392578,
+      123.08082580566406,
+      229.88690185546875
+    ],
+    "center": [
+      0.0,
+      -1.9073486328125e-06,
+      0.0
+    ],
+    "radius": 132.31719971005782,
+    "file": "packs__jungle__tiger.usdz",
+    "clips": {}
+  },
+  "packs__jungle__tree1": {
+    "source": "assets/packs/jungle/tree1.glb",
+    "sha256": "13a45f89430f2a171f25bf42516819bda1298d787da78d816abd2767c7d03c4e",
+    "size": [
+      1.6500489711761475,
+      1.741548776626587,
+      1.5202618837356567
+    ],
+    "center": [
+      -0.02052369713783264,
+      -0.37579357624053955,
+      0.04898136854171753
+    ],
+    "radius": 1.4201100052951117,
+    "file": "packs__jungle__tree1.usdz",
+    "clips": {}
+  },
+  "packs__jungle__tree2": {
+    "source": "assets/packs/jungle/tree2.glb",
+    "sha256": "38374eabf17b0662e0817ade17537b35e2b155be091634f20d7c52242995f5d5",
+    "size": [
+      7.077800273895264,
+      9.731877326965332,
+      6.576313018798828
+    ],
+    "center": [
+      -0.21796059608459473,
+      4.243372440338135,
+      -0.688623309135437
+    ],
+    "radius": 6.856613333158846,
+    "file": "packs__jungle__tree2.usdz",
+    "clips": {}
+  },
+  "packs__jungle__tree3": {
+    "source": "assets/packs/jungle/tree3.glb",
+    "sha256": "d533b2e7485a38bc7757ee9018780ffa7a92fe9f94b7cb147a118dd365222760",
+    "size": [
+      2.186159133911133,
+      2.4591028690338135,
+      2.0273711681365967
+    ],
+    "center": [
+      0.08285349607467651,
+      -0.5042455196380615,
+      -0.04932236671447754
+    ],
+    "radius": 1.9324021492054033,
+    "file": "packs__jungle__tree3.usdz",
+    "clips": {}
+  },
+  "packs__jungle__tree4": {
+    "source": "assets/packs/jungle/tree4.glb",
+    "sha256": "a3372137388d635447e3d279bf77d6c49aab1fbc20134282f45e85ee76ec5472",
+    "size": [
+      14.107099533081055,
+      13.16341781616211,
+      12.324705123901367
+    ],
+    "center": [
+      -0.04904341697692871,
+      6.581708908081055,
+      0.15124845504760742
+    ],
+    "radius": 11.44753454725922,
+    "file": "packs__jungle__tree4.usdz",
+    "clips": {}
+  },
+  "packs__jungle__wolf": {
+    "source": "assets/packs/jungle/wolf.glb",
+    "sha256": "f06e66930ef14279254c36b6471f9422142622b7745f68b222cd030aa8aed215",
+    "size": [
+      1.9021157026290894,
+      3.61846661567688,
+      5.260179042816162
+    ],
+    "center": [
+      0.0,
+      0.8092333078384399,
+      -0.08433723449707031
+    ],
+    "radius": 3.330946867715175,
+    "file": "packs__jungle__wolf.usdz",
+    "clips": {
+      "Idle": "packs__jungle__wolf--Idle.usdz",
+      "Gallop": "packs__jungle__wolf--Gallop.usdz"
+    }
+  },
+  "packs__ocean__angler": {
+    "source": "assets/packs/ocean/angler.glb",
+    "sha256": "cf839231b3e84a88ca9b57163c9e67183ba8ff12ef3823638137ddfda37434c0",
+    "size": [
+      3.8011929988861084,
+      3.4209227561950684,
+      5.450483322143555
+    ],
+    "center": [
+      0.021858692169189453,
+      0.7104613780975342,
+      -0.18685758113861084
+    ],
+    "radius": 3.7369623199331268,
+    "file": "packs__ocean__angler.usdz",
+    "clips": {
+      "Swimming_Normal": "packs__ocean__angler--Swimming_Normal.usdz",
+      "Swimming_Fast": "packs__ocean__angler--Swimming_Fast.usdz"
+    }
+  },
+  "packs__ocean__coral1": {
+    "source": "assets/packs/ocean/coral1.glb",
+    "sha256": "6e88ef745c36a30e62c251c6d4a5f99d072d241cb7ac42263aac81bbaf3687f0",
+    "size": [
+      7.437034606933594,
+      0.6518086194992065,
+      0.6235319375991821
+    ],
+    "center": [
+      -0.028106331825256348,
+      0.314950168132782,
+      -0.13803532719612122
+    ],
+    "radius": 3.74576858366243,
+    "file": "packs__ocean__coral1.usdz",
+    "clips": {}
+  },
+  "packs__ocean__coral2": {
+    "source": "assets/packs/ocean/coral2.glb",
+    "sha256": "41ea50085ae867a659050e0e7a38e86f7d46f0f6b822e93d8b3d7623fe631497",
+    "size": [
+      7.632744789123535,
+      2.143688201904297,
+      4.101247787475586
+    ],
+    "center": [
+      -0.03326833248138428,
+      1.0358803272247314,
+      -0.9909075498580933
+    ],
+    "radius": 4.463026609790614,
+    "file": "packs__ocean__coral2.usdz",
+    "clips": {}
+  },
+  "packs__ocean__coral3": {
+    "source": "assets/packs/ocean/coral3.glb",
+    "sha256": "905ef2c048ac0bda8de4d05eaedd2b428aae715b3d587a58e512b01972196b5d",
+    "size": [
+      0.3561418950557709,
+      0.46418699622154236,
+      0.3374239206314087
+    ],
+    "center": [
+      0.0275394469499588,
+      -0.06777830421924591,
+      0.024453751742839813
+    ],
+    "radius": 0.3376986503987685,
+    "file": "packs__ocean__coral3.usdz",
+    "clips": {}
+  },
+  "packs__ocean__hero_clown": {
+    "source": "assets/packs/ocean/hero_clown.glb",
+    "sha256": "d1d0b1f83848337299ef163b7ec5b207b5c34e3933da1367000e1dcd6d856bf1",
+    "size": [
+      4.408495903015137,
+      2.9574134349823,
+      5.193671226501465
+    ],
+    "center": [
+      -0.011892914772033691,
+      0.4787067174911499,
+      -0.891128659248352
+    ],
+    "radius": 3.7133323892241763,
+    "file": "packs__ocean__hero_clown.usdz",
+    "clips": {
+      "Swimming_Normal": "packs__ocean__hero_clown--Swimming_Normal.usdz",
+      "Swimming_Fast": "packs__ocean__hero_clown--Swimming_Fast.usdz"
+    }
+  },
+  "packs__ocean__hero_mandarin": {
+    "source": "assets/packs/ocean/hero_mandarin.glb",
+    "sha256": "b747a9e0e82ddddf7c785eb66b264d343e7c6c2d14befb812a540dcddd0afce1",
+    "size": [
+      2.6408019065856934,
+      2.2021594047546387,
+      4.366540431976318
+    ],
+    "center": [
+      -0.005032002925872803,
+      0.10107970237731934,
+      -0.685373067855835
+    ],
+    "radius": 2.778939348119702,
+    "file": "packs__ocean__hero_mandarin.usdz",
+    "clips": {
+      "Swimming_Normal": "packs__ocean__hero_mandarin--Swimming_Normal.usdz",
+      "Swimming_Fast": "packs__ocean__hero_mandarin--Swimming_Fast.usdz"
+    }
+  },
+  "packs__ocean__hero_tang": {
+    "source": "assets/packs/ocean/hero_tang.glb",
+    "sha256": "c5724eae43799510667e24d2f32508363cb52e5f57853880257e148bfaaadbcf",
+    "size": [
+      3.2412593364715576,
+      3.042654037475586,
+      4.48826265335083
+    ],
+    "center": [
+      0.0006271600723266602,
+      0.521327018737793,
+      -0.39650702476501465
+    ],
+    "radius": 3.1586392112779684,
+    "file": "packs__ocean__hero_tang.usdz",
+    "clips": {
+      "Swimming_Normal": "packs__ocean__hero_tang--Swimming_Normal.usdz",
+      "Swimming_Fast": "packs__ocean__hero_tang--Swimming_Fast.usdz"
+    }
+  },
+  "packs__ocean__kelp": {
+    "source": "assets/packs/ocean/kelp.glb",
+    "sha256": "971c92e5218c868c639d1974d512b22d10cde2f62e61893836f3fb81781394f5",
+    "size": [
+      2.0026016235351562,
+      2.8242998123168945,
+      2.3107998371124268
+    ],
+    "center": [
+      -44.50790023803711,
+      -14.478450775146484,
+      1.0194000005722046
+    ],
+    "radius": 2.081278366033029,
+    "file": "packs__ocean__kelp.usdz",
+    "clips": {}
+  },
+  "packs__ocean__octo1": {
+    "source": "assets/packs/ocean/octo1.glb",
+    "sha256": "ed0bbfd46466dfbd34a6889f957868f35d7bd7b4a7810eb0713cab512f0cb227",
+    "size": [
+      12.029184341430664,
+      8.688684463500977,
+      10.711475372314453
+    ],
+    "center": [
+      -1.7803804874420166,
+      5.337314605712891,
+      -0.4235224723815918
+    ],
+    "radius": 9.150549458333325,
+    "file": "packs__ocean__octo1.usdz",
+    "clips": {}
+  },
+  "packs__ocean__octo2": {
+    "source": "assets/packs/ocean/octo2.glb",
+    "sha256": "2185fc9735f35704010bf75a220a82551c1aba5d1e87c5d12ef9c6aa7b30f257",
+    "size": [
+      93.07586669921875,
+      57.33692932128906,
+      102.27723693847656
+    ],
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "radius": 74.85197632243921,
+    "file": "packs__ocean__octo2.usdz",
+    "clips": {}
+  },
+  "packs__ocean__puffer": {
+    "source": "assets/packs/ocean/puffer.glb",
+    "sha256": "2bfb39ab7a099ce93cef80fbbb7cb3bccc9e6d294755cbbe4925deb933e9f63b",
+    "size": [
+      381.9840087890625,
+      355.822998046875,
+      394.0559997558594
+    ],
+    "center": [
+      0.0,
+      1.00250244140625,
+      -20.119003295898438
+    ],
+    "radius": 327.0328401179689,
+    "file": "packs__ocean__puffer.usdz",
+    "clips": {}
+  },
+  "packs__ocean__shark": {
+    "source": "assets/packs/ocean/shark.glb",
+    "sha256": "5e42d1b316799910e428a12326fa1ed91c666be14c9b82aef7b848dc9a44ff9f",
+    "size": [
+      0.9217755794525146,
+      0.3021320104598999,
+      0.3681508004665375
+    ],
+    "center": [
+      -0.34415698051452637,
+      0.02804199606180191,
+      0.006146594882011414
+    ],
+    "radius": 0.5187699397402782,
+    "file": "packs__ocean__shark.usdz",
+    "clips": {}
+  },
+  "packs__ocean__shark2": {
+    "source": "assets/packs/ocean/shark2.glb",
+    "sha256": "6d5cf3cd7ea749583b622a306cfcae4de85432efcc74a1ec6f52e5430cf13aff",
+    "size": [
+      5.920205116271973,
+      5.187860012054443,
+      15.85052490234375
+    ],
+    "center": [
+      -0.001100778579711914,
+      1.0467784404754639,
+      -0.05770134925842285
+    ],
+    "radius": 8.848754922386123,
+    "file": "packs__ocean__shark2.usdz",
+    "clips": {
+      "Swim": "packs__ocean__shark2--Swim.usdz"
+    }
+  },
+  "packs__ocean__urchin": {
+    "source": "assets/packs/ocean/urchin.glb",
+    "sha256": "28f34c51a05cce667a9f170a380f601bb7b0919b385403c2f23ec5d3c414c04e",
+    "size": [
+      0.8207225203514099,
+      0.6897093057632446,
+      0.7579129934310913
+    ],
+    "center": [
+      -0.007139742374420166,
+      0.04844166338443756,
+      -0.05830909311771393
+    ],
+    "radius": 0.6564519265002554,
+    "file": "packs__ocean__urchin.usdz",
+    "clips": {}
+  },
+  "packs__ocean__whale": {
+    "source": "assets/packs/ocean/whale.glb",
+    "sha256": "a945542da925aac0a10252794a831919a303757439ce7e884231a5dacdebfda2",
+    "size": [
+      1.1204324960708618,
+      0.8102906942367554,
+      0.9876203536987305
+    ],
+    "center": [
+      -0.16905896365642548,
+      -0.11045795679092407,
+      -0.22055469453334808
+    ],
+    "radius": 0.8496078403502887,
+    "file": "packs__ocean__whale.usdz",
+    "clips": {}
+  },
+  "pickups__coin": {
+    "source": "assets/pickups/coin.glb",
+    "sha256": "7b4e95e9f9ec58e4ca0334759ceb7dc63ac0db4666dc443d0f07058298569944",
+    "size": [
+      0.745026171207428,
+      0.783366858959198,
+      0.23439964652061462
+    ],
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "radius": 0.5530982799393558,
+    "file": "pickups__coin.usdz",
+    "clips": {}
+  },
+  "pickups__crown": {
+    "source": "assets/pickups/crown.glb",
+    "sha256": "74a2d366d1ba835c4ba5fac63a61fd407142ab6f47f27f5d73133b38ff5616a2",
+    "size": [
+      2.1664180755615234,
+      0.9165229797363281,
+      2.359421968460083
+    ],
+    "center": [
+      0.0,
+      0.25718551874160767,
+      0.0
+    ],
+    "radius": 1.6658521842613503,
+    "file": "pickups__crown.usdz",
+    "clips": {}
+  },
+  "pickups__gate": {
+    "source": "assets/pickups/gate.glb",
+    "sha256": "93b32f20c7ebb1e929f57c946f74a9d1b054aa4359675274eb9459711a1f23b3",
+    "size": [
+      2.380801200866699,
+      0.20999982953071594,
+      0.9600006341934204
+    ],
+    "center": [
+      0.13319748640060425,
+      0.05389048159122467,
+      -0.015887901186943054
+    ],
+    "radius": 1.2878194248371517,
+    "file": "pickups__gate.usdz",
+    "clips": {}
+  },
+  "pickups__hourglass": {
+    "source": "assets/pickups/hourglass.glb",
+    "sha256": "f4c2451ba205d0423256078bea31f650e5ac396a99947c8ac206f269d30f0c1d",
+    "size": [
+      0.43080198764801025,
+      0.5272259712219238,
+      0.42936939001083374
+    ],
+    "center": [
+      -0.009493499994277954,
+      0.0713420957326889,
+      0.012696199119091034
+    ],
+    "radius": 0.4024660378323338,
+    "file": "pickups__hourglass.usdz",
+    "clips": {}
+  },
+  "pickups__magnet": {
+    "source": "assets/pickups/magnet.glb",
+    "sha256": "ac985a57745c1928bbf169b5b3df6af17e15fb89fd0cac93e34d76909c6f1565",
+    "size": [
+      228.4907684326172,
+      194.0679473876953,
+      40.0
+    ],
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "radius": 151.22036770678412,
+    "file": "pickups__magnet.usdz",
+    "clips": {}
+  },
+  "pickups__star": {
+    "source": "assets/pickups/star.glb",
+    "sha256": "0e14eb8279f64fd8dc3de7332efbd35235d39d3a0a21cc12c4d06211af370138",
+    "size": [
+      1.284820318222046,
+      1.2422587871551514,
+      0.6049995422363281
+    ],
+    "center": [
+      -5.960464477539063e-08,
+      0.603049635887146,
+      0.0022466331720352173
+    ],
+    "radius": 0.9433974027373294,
+    "file": "pickups__star.usdz",
+    "clips": {}
+  },
+  "rock__rock1": {
+    "source": "assets/rock/rock1.glb",
+    "sha256": "b302046e7573af7ba32d72a4602159181958e7b59e975b80901333fae91b9d78",
+    "size": [
+      3.095444440841675,
+      3.6087839603424072,
+      2.830105781555176
+    ],
+    "center": [
+      -0.260949969291687,
+      1.43671715259552,
+      -0.1708582043647766
+    ],
+    "radius": 2.7665229675784655,
+    "file": "rock__rock1.usdz",
+    "clips": {}
+  },
+  "rock__rock2": {
+    "source": "assets/rock/rock2.glb",
+    "sha256": "c601f06428037dca25ca91d31f9923df8f9aaeeec90506d9329f7214568e9caf",
+    "size": [
+      2.7418267726898193,
+      2.7110300064086914,
+      2.5185129642486572
+    ],
+    "center": [
+      -0.4053064286708832,
+      0.88202303647995,
+      0.07093417644500732
+    ],
+    "radius": 2.302726920312361,
+    "file": "rock__rock2.usdz",
+    "clips": {}
+  },
+  "ships__crosswing": {
+    "source": "assets/ships/crosswing.glb",
+    "sha256": "432198574f2255a9f3edcb285e38e493a62147a2c1e2ec0abc74714f23f25dcf",
+    "size": [
+      3.1511390209198,
+      1.8328137397766113,
+      2.3673250675201416
+    ],
+    "center": [
+      -0.05312049388885498,
+      0.09858417510986328,
+      -0.6640514135360718
+    ],
+    "radius": 2.1733103338538005,
+    "file": "ships__crosswing.usdz",
+    "clips": {}
+  },
+  "ships__lance": {
+    "source": "assets/ships/lance.glb",
+    "sha256": "5c4d5f828437c104d682550904977bc827e245d96ef8158926ed354c6d3e64b1",
+    "size": [
+      676.9354248046875,
+      255.9263916015625,
+      742.711669921875
+    ],
+    "center": [
+      0.0,
+      0.0,
+      65.11279296875
+    ],
+    "radius": 518.4979517573454,
+    "file": "ships__lance.usdz",
+    "clips": {}
+  },
+  "ships__quadra": {
+    "source": "assets/ships/quadra.glb",
+    "sha256": "47b55a7fc11e046db0c286d7d67667d3b801b61ad6737d003d893cf7aa1842bf",
+    "size": [
+      465.5558166503906,
+      240.15286254882812,
+      633.7608642578125
+    ],
+    "center": [
+      0.0,
+      8.59701919555664,
+      49.09706115722656
+    ],
+    "radius": 411.1169118807629,
+    "file": "ships__quadra.usdz",
+    "clips": {}
+  },
+  "ships__shadow": {
+    "source": "assets/ships/shadow.glb",
+    "sha256": "0e699ed02f678197eb01b82fddf3a33f6464cd95af2d4033c1257d13dfa3d853",
+    "size": [
+      337.11956787109375,
+      252.6827392578125,
+      422.301513671875
+    ],
+    "center": [
+      0.0,
+      26.446895599365234,
+      0.0
+    ],
+    "radius": 298.2602598691074,
+    "file": "ships__shadow.usdz",
+    "clips": {}
+  },
+  "ships__viper": {
+    "source": "assets/ships/viper.glb",
+    "sha256": "0eff43e730655b0658ce6ad44fe42ca42d82318d392bba4f2c15e475b98ed985",
+    "size": [
+      637.2915649414062,
+      229.53451538085938,
+      773.347900390625
+    ],
+    "center": [
+      0.0,
+      34.238311767578125,
+      101.74055480957031
+    ],
+    "radius": 514.0266590849155,
+    "file": "ships__viper.usdz",
+    "clips": {}
+  }
+}

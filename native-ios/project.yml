@@ -1,0 +1,69 @@
+name: Slouch
+options:
+  bundleIdPrefix: work.dude
+  deploymentTarget:
+    iOS: '18.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    DEVELOPMENT_TEAM: ''
+targets:
+  Slouch:
+    type: application
+    platform: iOS
+    sources:
+      - path: Slouch
+        excludes: [GameResources]
+      - path: Slouch/GameResources
+        type: folder
+        buildPhase: resources
+      - path: ../assets
+        type: folder
+        buildPhase: resources
+    info:
+      path: Slouch/Info.plist
+      properties:
+        CFBundleDisplayName: Slouch
+        NSCameraUsageDescription: Slouch uses the front camera on your device to steer with your head and detect chin tucks. Camera images are never uploaded or saved.
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        CFBundleURLTypes:
+          - CFBundleURLName: work.dude.slouch.duel
+            CFBundleURLSchemes: [slouch]
+        UIAppFonts: [GameResources/Fonts/ZenDots-Regular.ttf, GameResources/Fonts/ChakraPetch-Regular.ttf, GameResources/Fonts/ChakraPetch-SemiBold.ttf, GameResources/Fonts/ChakraPetch-Bold.ttf, GameResources/Fonts/Baloo2.ttf, GameResources/Fonts/Fredoka.ttf]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: work.dude.slouch.native
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+  SlouchTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Slouch
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  SlouchUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Slouch
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Slouch:
+    build:
+      targets:
+        Slouch: all
+    test:
+      targets: [SlouchTests, SlouchUITests]

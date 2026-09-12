@@ -1,0 +1,593 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14824CC17905C10A5AD325C7 /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EF68D0B2D3FAC0873B8A068 /* ShareCard.swift */; };
+		1DF3385B636C7608D5967AC6 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5B409F33545025A181F642AA /* AppAssets.xcassets */; };
+		2B33A6F5BBB1CD6EB6E076B3 /* SlouchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */; };
+		35F791358D51B3B2ACC0A3CF /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 083A065FAEF860B53C2376A9 /* assets */; };
+		39746AA37E8D858B5D75EC60 /* HeadTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D3034FDDC37246763A50DF1 /* HeadTracker.swift */; };
+		3D332DEABAEA44172828EEAC /* WorldRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD326B2E478120CFCA4A1C42 /* WorldRenderer.swift */; };
+		446D8589BA154B69D57BAE3E /* SlouchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9511FE929679567565C8312 /* SlouchApp.swift */; };
+		5D5ED0A1ACDA877C912DFA26 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E62B205443EAA0FEB898017 /* Style.swift */; };
+		909EBB0AFF29D7CDFDE4FBEF /* SlouchPost.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6A9C970F2A55B63437F055A4 /* SlouchPost.metal */; };
+		A629F869BF48B0CF303D1AAB /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FD53BD5E623E5322AE21511 /* JSONValue.swift */; };
+		ACAD3A7BD15073CEAA3B19E9 /* SlouchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E018D65DF4C4C73F3D49F7C /* SlouchRootView.swift */; };
+		B62F98ECD4BA041A6C38E4F0 /* GameResources in Resources */ = {isa = PBXBuildFile; fileRef = 3AACD5A902E6A721D74D9095 /* GameResources */; };
+		C800E4097E41B33BC01EFAB4 /* GameAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B5E7292314C42553F4D2FD /* GameAudio.swift */; };
+		CBDD9A381B1E626654F3DF8F /* GameKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50539F4E9090939919F07532 /* GameKernel.swift */; };
+		D5AF2CD560027E1ED142DEBD /* GameKernelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628690331C077545F81305B4 /* GameKernelTests.swift */; };
+		E3179DC7ACF7C72F10B99DAD /* SlouchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B7EC7FA606A61205B405712 /* SlouchUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		27B41DBFC1F8AB8DDF0CBEA8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9CE11A40B17937896ADC1AB6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AEFF7DB0F31599539A67642C;
+			remoteInfo = Slouch;
+		};
+		EBC9E9083FDECF313A5AE0DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9CE11A40B17937896ADC1AB6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AEFF7DB0F31599539A67642C;
+			remoteInfo = Slouch;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		083A065FAEF860B53C2376A9 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = assets; path = ../assets; sourceTree = SOURCE_ROOT; };
+		1D3034FDDC37246763A50DF1 /* HeadTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadTracker.swift; sourceTree = "<group>"; };
+		1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchModel.swift; sourceTree = "<group>"; };
+		2AC5C6D241C51B772B006BE0 /* SlouchUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SlouchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AACD5A902E6A721D74D9095 /* GameResources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameResources; path = Slouch/GameResources; sourceTree = SOURCE_ROOT; };
+		3E018D65DF4C4C73F3D49F7C /* SlouchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchRootView.swift; sourceTree = "<group>"; };
+		50539F4E9090939919F07532 /* GameKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameKernel.swift; sourceTree = "<group>"; };
+		5B409F33545025A181F642AA /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
+		5B7EC7FA606A61205B405712 /* SlouchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchUITests.swift; sourceTree = "<group>"; };
+		5D2FAB62E0A7D68DFBEBB789 /* Slouch.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Slouch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		628690331C077545F81305B4 /* GameKernelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameKernelTests.swift; sourceTree = "<group>"; };
+		6A9C970F2A55B63437F055A4 /* SlouchPost.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SlouchPost.metal; sourceTree = "<group>"; };
+		6E62B205443EAA0FEB898017 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
+		8EF68D0B2D3FAC0873B8A068 /* ShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCard.swift; sourceTree = "<group>"; };
+		8FD53BD5E623E5322AE21511 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
+		CAB41E2D9A56507F090ED961 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		CD326B2E478120CFCA4A1C42 /* WorldRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldRenderer.swift; sourceTree = "<group>"; };
+		CD671D62621F84CC6607A809 /* SlouchTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SlouchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9B5E7292314C42553F4D2FD /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
+		F9511FE929679567565C8312 /* SlouchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		06B7EFF28F7E1F276EA28334 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				5B7EC7FA606A61205B405712 /* SlouchUITests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		0DB4547FAB7FEC4027ED6F03 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				628690331C077545F81305B4 /* GameKernelTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		1E0C8A5DDB56F44AA6064E7D /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				6A9C970F2A55B63437F055A4 /* SlouchPost.metal */,
+				CD326B2E478120CFCA4A1C42 /* WorldRenderer.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		2D3E78A430C5E50E1EC1428B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5D2FAB62E0A7D68DFBEBB789 /* Slouch.app */,
+				CD671D62621F84CC6607A809 /* SlouchTests.xctest */,
+				2AC5C6D241C51B772B006BE0 /* SlouchUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		40BE8895AFB0F2FFB1D4EE2B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D9B5E7292314C42553F4D2FD /* GameAudio.swift */,
+				1D3034FDDC37246763A50DF1 /* HeadTracker.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		45ACE606293992CF6E7D84E1 /* Slouch */ = {
+			isa = PBXGroup;
+			children = (
+				5B409F33545025A181F642AA /* AppAssets.xcassets */,
+				CAB41E2D9A56507F090ED961 /* Info.plist */,
+				F9511FE929679567565C8312 /* SlouchApp.swift */,
+				A6314689DE5777B65B3F6E29 /* Core */,
+				1E0C8A5DDB56F44AA6064E7D /* Rendering */,
+				40BE8895AFB0F2FFB1D4EE2B /* Services */,
+				BEAFD976304BD54ADFEBC597 /* Views */,
+			);
+			path = Slouch;
+			sourceTree = "<group>";
+		};
+		488AC3E030FD5F9F2E3AF2CC = {
+			isa = PBXGroup;
+			children = (
+				083A065FAEF860B53C2376A9 /* assets */,
+				3AACD5A902E6A721D74D9095 /* GameResources */,
+				45ACE606293992CF6E7D84E1 /* Slouch */,
+				0DB4547FAB7FEC4027ED6F03 /* Tests */,
+				06B7EFF28F7E1F276EA28334 /* UITests */,
+				2D3E78A430C5E50E1EC1428B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A6314689DE5777B65B3F6E29 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				50539F4E9090939919F07532 /* GameKernel.swift */,
+				8FD53BD5E623E5322AE21511 /* JSONValue.swift */,
+				1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		BEAFD976304BD54ADFEBC597 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				8EF68D0B2D3FAC0873B8A068 /* ShareCard.swift */,
+				3E018D65DF4C4C73F3D49F7C /* SlouchRootView.swift */,
+				6E62B205443EAA0FEB898017 /* Style.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9CA7F204B4A8C9445099A6A2 /* SlouchTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 579FB23A147E60F1D370DE75 /* Build configuration list for PBXNativeTarget "SlouchTests" */;
+			buildPhases = (
+				A6F2FBF6AFBEBF611D102BFB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				560F5BCD40B811C2D63A157C /* PBXTargetDependency */,
+			);
+			name = SlouchTests;
+			packageProductDependencies = (
+			);
+			productName = SlouchTests;
+			productReference = CD671D62621F84CC6607A809 /* SlouchTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AEFF7DB0F31599539A67642C /* Slouch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 89D7B3F5CF4FA5F6B7186948 /* Build configuration list for PBXNativeTarget "Slouch" */;
+			buildPhases = (
+				14B779EA8A2DD01969B78294 /* Sources */,
+				264C4EA0A8A3F208B226EC10 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Slouch;
+			packageProductDependencies = (
+			);
+			productName = Slouch;
+			productReference = 5D2FAB62E0A7D68DFBEBB789 /* Slouch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B8385FDE7F4576847D9D275C /* SlouchUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 92C20A7618164DD9EEAEC06B /* Build configuration list for PBXNativeTarget "SlouchUITests" */;
+			buildPhases = (
+				41EBCCA8D412B1C4E5C05E7B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5CEC291646C03532224FB077 /* PBXTargetDependency */,
+			);
+			name = SlouchUITests;
+			packageProductDependencies = (
+			);
+			productName = SlouchUITests;
+			productReference = 2AC5C6D241C51B772B006BE0 /* SlouchUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9CE11A40B17937896ADC1AB6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					9CA7F204B4A8C9445099A6A2 = {
+						DevelopmentTeam = "";
+					};
+					AEFF7DB0F31599539A67642C = {
+						DevelopmentTeam = "";
+					};
+					B8385FDE7F4576847D9D275C = {
+						DevelopmentTeam = "";
+						TestTargetID = AEFF7DB0F31599539A67642C;
+					};
+				};
+			};
+			buildConfigurationList = FA814BB2A215B072DE8A822A /* Build configuration list for PBXProject "Slouch" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 488AC3E030FD5F9F2E3AF2CC;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2D3E78A430C5E50E1EC1428B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AEFF7DB0F31599539A67642C /* Slouch */,
+				9CA7F204B4A8C9445099A6A2 /* SlouchTests */,
+				B8385FDE7F4576847D9D275C /* SlouchUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		264C4EA0A8A3F208B226EC10 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1DF3385B636C7608D5967AC6 /* AppAssets.xcassets in Resources */,
+				B62F98ECD4BA041A6C38E4F0 /* GameResources in Resources */,
+				35F791358D51B3B2ACC0A3CF /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		14B779EA8A2DD01969B78294 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C800E4097E41B33BC01EFAB4 /* GameAudio.swift in Sources */,
+				CBDD9A381B1E626654F3DF8F /* GameKernel.swift in Sources */,
+				39746AA37E8D858B5D75EC60 /* HeadTracker.swift in Sources */,
+				A629F869BF48B0CF303D1AAB /* JSONValue.swift in Sources */,
+				14824CC17905C10A5AD325C7 /* ShareCard.swift in Sources */,
+				446D8589BA154B69D57BAE3E /* SlouchApp.swift in Sources */,
+				2B33A6F5BBB1CD6EB6E076B3 /* SlouchModel.swift in Sources */,
+				909EBB0AFF29D7CDFDE4FBEF /* SlouchPost.metal in Sources */,
+				ACAD3A7BD15073CEAA3B19E9 /* SlouchRootView.swift in Sources */,
+				5D5ED0A1ACDA877C912DFA26 /* Style.swift in Sources */,
+				3D332DEABAEA44172828EEAC /* WorldRenderer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		41EBCCA8D412B1C4E5C05E7B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E3179DC7ACF7C72F10B99DAD /* SlouchUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6F2FBF6AFBEBF611D102BFB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5AF2CD560027E1ED142DEBD /* GameKernelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		560F5BCD40B811C2D63A157C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AEFF7DB0F31599539A67642C /* Slouch */;
+			targetProxy = 27B41DBFC1F8AB8DDF0CBEA8 /* PBXContainerItemProxy */;
+		};
+		5CEC291646C03532224FB077 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AEFF7DB0F31599539A67642C /* Slouch */;
+			targetProxy = EBC9E9083FDECF313A5AE0DF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0AA29066B8ABD4FBA01CDF21 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.SlouchUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Slouch;
+			};
+			name = Debug;
+		};
+		37257BB9A4765A0628B0569E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		54698747F6535625725A3ACD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.SlouchUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Slouch;
+			};
+			name = Release;
+		};
+		89F59A64102E793512D2BEF5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Slouch/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.slouch.native;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A7E5C0005C895B8309BA6FBC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Slouch/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.slouch.native;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A9704BDD3B059B6CCD891644 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.SlouchTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Slouch.app/Slouch";
+			};
+			name = Debug;
+		};
+		B335285CD795BCB8C4228216 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = work.dude.SlouchTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Slouch.app/Slouch";
+			};
+			name = Release;
+		};
+		D04AB8533980AAF74121651E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		579FB23A147E60F1D370DE75 /* Build configuration list for PBXNativeTarget "SlouchTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A9704BDD3B059B6CCD891644 /* Debug */,
+				B335285CD795BCB8C4228216 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		89D7B3F5CF4FA5F6B7186948 /* Build configuration list for PBXNativeTarget "Slouch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				89F59A64102E793512D2BEF5 /* Debug */,
+				A7E5C0005C895B8309BA6FBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		92C20A7618164DD9EEAEC06B /* Build configuration list for PBXNativeTarget "SlouchUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0AA29066B8ABD4FBA01CDF21 /* Debug */,
+				54698747F6535625725A3ACD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA814BB2A215B072DE8A822A /* Build configuration list for PBXProject "Slouch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D04AB8533980AAF74121651E /* Debug */,
+				37257BB9A4765A0628B0569E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9CE11A40B17937896ADC1AB6 /* Project object */;
+}
