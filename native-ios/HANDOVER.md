@@ -37,13 +37,15 @@ Early UI assertions failed because localized prices contain a comma and the shar
 
 Xcode GUI setup was verified separately after these fixes: open `native-ios/Slouch.xcodeproj`, choose **Slouch → iPhone 17 Pro**, and press **Command-R**. Metal API validation remains enabled. The app stays running through touch fallback, gameplay, pause/resume, collision results and rotation. The original `ios/App/App.xcodeproj` error came from opening the abandoned Capacitor directory.
 
+The owner then selected a signing team and the connected iPhone in Xcode. Xcode reported the device debug build running successfully. Those signing changes remain local in `Slouch.xcodeproj/project.pbxproj`; do not overwrite them by regenerating from the team-neutral `project.yml`. Device launch is verified, but the physical tracking and performance checks below are still open.
+
 ## Remaining acceptance
 
 1. On a supported physical iPhone, verify camera permission allow/deny, automatic face acquisition, neutral calibration, correct yaw/roll/pitch signs in both orientations, and measured chin-tuck/slouch distances. The physical ARKit mapping is implemented but unverified.
 2. Check face loss, camera interruption, lock/unlock, background/foreground, audio interruption, recalibration and touch fallback during a real run.
 3. Compare native and original visuals on the same device/world/hero. RealityKit lighting and bloom are not pixel-equivalent to Three.js. The flare is translated into native sprites; final owner visual acceptance remains open.
 4. Play sustained sessions in all worlds; record frame time, memory, heat and battery behavior on the oldest supported hardware. Simulator screenshots are not device-performance evidence.
-5. Choose an Apple signing team, archive for device, and distribute through TestFlight. No signing account, TestFlight build or App Store submission was configured in this task.
+5. Archive for device and distribute through TestFlight using the owner's signing team. No TestFlight build or App Store submission has been completed.
 6. Resolve the original handover's Crosswing IP warning and audit attribution before public store distribution. No asset was replaced because this task requested the exact existing game.
 
 The app intentionally retains local ranks and an in-game stardust store. Native service expansion (Game Center, HealthKit, StoreKit, cloud saves, Universal Links) is future scope. See README for exact run and regeneration commands.

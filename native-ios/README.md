@@ -46,7 +46,7 @@ If Xcode reports that the Metal compiler is missing, install its Metal Toolchain
 
 The original simulation is preserved and tested. Rendering is a **native translation**, not a pixel-identical Three.js image: RealityKit lighting/material response and post-tone-map bloom differ from the original WebGL pipeline. The original lens-flare textures and positions are translated to native camera-facing sprites. Final visual matching still needs review on the intended phone.
 
-Simulator checks validate touch interaction and application behavior. They **do not validate ARKit face tracking**, real neck movement, camera orientation/signs, centimeter thresholds, heat, battery use or sustained device frame rate. This build has not been tested on a physical iPhone or submitted to TestFlight/App Store.
+Simulator checks validate touch interaction and application behavior. They **do not validate ARKit face tracking**, real neck movement, camera orientation/signs, centimeter thresholds, heat, battery use or sustained device frame rate. A subsequent Xcode setup verified debug build and launch on the owner's connected iPhone; physical tracking and sustained gameplay testing remain open. No TestFlight/App Store submission has been completed.
 
 The requested game still uses local leaderboards and earned currency. Game Center, HealthKit, cloud sync, StoreKit purchases and downloadable packs were future items in the original handover, not existing game features; they are not added here. Existing browser saves do not automatically migrate into the native app's sandbox.
 
