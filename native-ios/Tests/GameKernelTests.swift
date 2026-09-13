@@ -67,10 +67,12 @@ extension GameKernelTests {
     }
 
     func testPhysicalHeadTransformsMoveShipInPlayerDirectionInEveryOrientation() throws {
-        // Face +X is the player's LEFT. Positive roll tips their head RIGHT.
+        // Horizontal fixtures follow the corrected native camera handedness.
+        // The previous fixtures encoded the same wrong sign as the adapter;
+        // owner feedback from the physical phone exposed that assumption.
         let moves: [(String, SIMD3<Float>, Float, Int, Float)] = [
-            ("casual",[0,1,0],-13,0,1), ("casual",[0,1,0],13,0,-1),
-            ("techneck",[0,0,1],20,0,1), ("techneck",[0,0,1],-20,0,-1),
+            ("casual",[0,1,0],13,0,1), ("casual",[0,1,0],-13,0,-1),
+            ("techneck",[0,0,1],-20,0,1), ("techneck",[0,0,1],20,0,-1),
             ("casual",[1,0,0],-15,1,1), ("casual",[1,0,0],15,1,-1),
             ("techneck",[1,0,0],-20,1,1), ("techneck",[1,0,0],20,1,-1)
         ]
@@ -135,3 +137,64 @@ extension GameKernelTests {
         XCTAssertEqual(filter.update([3,0,0,0],at:2).x,3)
     }
 }
+
+
+extension GameKernelTests {
+    func testNativeHorizontalConversionPreservesPitchDepthAndMirrorPreference() throws {
+        var center=matrix_identity_float4x4;center.columns.3.z = -0.5
+        var sample=rotation(9,[1,0,0])*rotation(12,[0,1,0])*rotation(-16,[0,0,1])
+        sample.columns.3.z = -0.54
+        let native=HeadPose.angles(sample)
+        let converted=HeadPose.relative(displayFromFace:sample,neutral:center)
+        XCTAssertEqual(converted.x,-native.x,accuracy:0.001)
+        XCTAssertEqual(converted.z,-native.z,accuracy:0.001)
+        XCTAssertEqual(converted.y,native.y,accuracy:0.001)
+        XCTAssertEqual(converted.w,-4,accuracy:0.001)
+        for mode in ["casual","techneck"] {
+            var xs:[Float]=[],ys:[Float]=[]
+            for mirror in [true,false] {
+                let host=try host();try host.call("setting",["mirror",mirror]);try host.call("start",[mode,123,0])
+                let face:JSONValue = .object(["hasFace":.bool(true),"usingTouch":.bool(false),
+                    "rYaw":.number(converted.x),"rPitch":.number(converted.y),"rRoll":.number(converted.z),"rZ":.number(converted.w)])
+                let frame=try host.tick(milliseconds:16,pose:face)
+                let ship=try XCTUnwrap(frame.nodes.first{$0.kind == "ship"})
+                xs.append(ship.p[0]);ys.append(ship.p[1])
+            }
+            XCTAssertGreaterThan(xs[0],0);XCTAssertEqual(xs[0],-xs[1],accuracy:0.001)
+            XCTAssertEqual(ys[0],ys[1],accuracy:0.001)
+        }
+    }
+}
+
+#if canImport(UIKit)
+import UIKit
+import CoreImage
+
+extension GameKernelTests {
+    func testCameraPreviewFlipsOnlyHorizontalPresentationInEveryOrientation() {
+        // Asymmetric pixel labels catch a horizontal flip, a vertical flip,
+        // and an accidental extra quarter turn independently.
+        let pixels:[UInt8]=[20,0,0,255, 50,0,0,255, 80,0,0,255,
+                            110,0,0,255, 140,0,0,255, 170,0,0,255]
+        let space=CGColorSpaceCreateDeviceRGB()
+        let source=CIImage(bitmapData:Data(pixels),bytesPerRow:12,size:CGSize(width:3,height:2),format:.RGBA8,colorSpace:space)
+        let context=CIContext(options:[.workingColorSpace:NSNull(),.outputColorSpace:NSNull()])
+        func raster(_ image:CIImage)->[UInt8] {
+            var bytes=[UInt8](repeating:0,count:Int(image.extent.width*image.extent.height)*4)
+            bytes.withUnsafeMutableBytes { context.render(image,toBitmap:$0.baseAddress!,rowBytes:Int(image.extent.width)*4,bounds:image.extent,format:.RGBA8,colorSpace:space) }
+            return bytes
+        }
+        let previous:[(UIInterfaceOrientation,CGImagePropertyOrientation)]=[
+            (.portrait,.leftMirrored),(.portraitUpsideDown,.rightMirrored),
+            (.landscapeLeft,.downMirrored),(.landscapeRight,.upMirrored)]
+        for (orientation,oldOrientation) in previous {
+            let before=source.oriented(oldOrientation),after=CameraPreview.oriented(source,for:orientation)
+            XCTAssertEqual(before.extent.size,after.extent.size)
+            let old=raster(before),new=raster(after),width=Int(after.extent.width),height=Int(after.extent.height)
+            for y in 0..<height { for x in 0..<width {
+                XCTAssertEqual(new[(y*width+x)*4],old[(y*width+(width-1-x))*4],"Preview orientation \(orientation.rawValue)")
+            }}
+        }
+    }
+}
+#endif

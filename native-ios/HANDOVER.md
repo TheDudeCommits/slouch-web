@@ -72,3 +72,17 @@ Validation: 12 original source/engine checks; 8 macOS SwiftPM cases; full iOS su
 Physical re-test: start a fresh camera run and let calibration finish. In Tech Neck, right tilt should steer right; in Casual, looking right should steer right. Looking up should move upward in either mode. Compare small resting movements with a deliberate turn, then try face loss/reacquisition and phone rotation. Device performance, thermal behavior and the owner's visual acceptance remain separate from simulator tests. Preserve the owner's local Xcode signing and scheme changes.
 
 The updated Debug and Release simulator builds both succeed. The attempted Xcode Run to the selected iPhone was blocked because macOS was locked; the owner was asked to unlock it. Do not treat the prior device launch as validation of these new controls.
+
+
+## Horizontal inversion follow-up (2026-09-13)
+
+The owner tested the previous build on the phone and reported that left/right steering and the calibration camera preview were still inverted. This supersedes the earlier synthetic direction assumptions; the previous tests were not physical-device acceptance.
+
+- `HeadPose.relative` now negates native yaw and roll exactly once when adapting the calibrated camera pose to the web game's input convention. Pitch, depth, adaptive filtering and engine code are unchanged. The original mirror-control preference still acts downstream, and touch input bypasses this camera conversion.
+- `CameraPreview.oriented` replaces the mirrored EXIF orientations with rotation-only equivalents. Compared with the previous build, the resulting preview is horizontally flipped in every interface orientation with no additional quarter turn or vertical flip. SwiftUI applies no second mirror.
+- The horizontal transform fixtures were corrected rather than retaining the original incorrect sign assumption. A separate integration test checks both Tech Neck and Casual, verifies the existing mirror preference, and checks that pitch and tuck depth are preserved.
+- An iOS Core Image regression uses a nonsymmetric 3-by-2 pixel image to compare old/new output for all four orientations. It verifies every output pixel is the horizontal reflection of the previous output at the same vertical position.
+
+Validation: **10/10 iOS unit tests**, **9/9 macOS SwiftPM tests**, **12/12 original engine/source checks**, and `git diff --check`. Simulator result bundle: `test_sim_2026-09-13T08-03-36-660Z_pid79337_dbda5d98.xcresult`. Actual head movement and camera framing still require owner confirmation after the updated device build and a fresh calibration.
+
+The corrected device build reached Xcode's launch step on Amir’s iPhone. Xcode requested that the owner unlock the phone before Slouch could launch. The macOS session was accessible; this is the phone lock, not the earlier Mac lock.

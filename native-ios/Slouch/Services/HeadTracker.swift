@@ -67,14 +67,7 @@ import UIKit
         }
         if previewEnabled && time - lastPreviewTime >= 0.12 {
             lastPreviewTime = time
-            let imageOrientation: CGImagePropertyOrientation
-            switch orientation {
-            case .landscapeLeft: imageOrientation = .downMirrored
-            case .landscapeRight: imageOrientation = .upMirrored
-            case .portraitUpsideDown: imageOrientation = .rightMirrored
-            default: imageOrientation = .leftMirrored
-            }
-            let image = CIImage(cvPixelBuffer: frame.capturedImage).oriented(imageOrientation)
+            let image = CameraPreview.oriented(CIImage(cvPixelBuffer: frame.capturedImage), for: orientation)
             if let cg = imageContext.createCGImage(image, from: image.extent) { preview = UIImage(cgImage: cg) }
         }
         guard let face = frame.anchors.compactMap({ $0 as? ARFaceAnchor }).first, face.isTracked else { return }
@@ -92,5 +85,21 @@ import UIKit
     }
     nonisolated func sessionWasInterrupted(_ session: ARSession) {
         Task { @MainActor [weak self] in self?.hasFace = false; self?.message = "Camera interrupted. Recalibrate to continue." }
+    }
+}
+
+
+/// Apply rotation once, with the horizontal presentation verified relative to
+/// the previous device build. Do not mirror again in the SwiftUI image view.
+enum CameraPreview {
+    static func oriented(_ image: CIImage, for orientation: UIInterfaceOrientation) -> CIImage {
+        let imageOrientation: CGImagePropertyOrientation
+        switch orientation {
+        case .landscapeLeft: imageOrientation = .down
+        case .landscapeRight: imageOrientation = .up
+        case .portraitUpsideDown: imageOrientation = .left
+        default: imageOrientation = .right
+        }
+        return image.oriented(imageOrientation)
     }
 }

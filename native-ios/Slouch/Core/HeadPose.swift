@@ -1,8 +1,8 @@
 import Foundation
 import simd
 
-/// ARKit's +X is the viewer's right (the player's left). Keep the web
-/// contract: +yaw = look left, +pitch = look down, +roll = tilt right.
+/// Convert the native camera pose to the original game input contract:
+/// +yaw = look left, +pitch = look down, +roll = tilt right.
 enum HeadPose {
     static func wrap(_ degrees: Double) -> Double {
         atan2(sin(degrees * .pi / 180), cos(degrees * .pi / 180)) * 180 / .pi
@@ -24,6 +24,11 @@ enum HeadPose {
         // reverse pitch/yaw or couple a head tilt into the other controls.
         let rotation = simd_quatf(neutral).inverse * simd_quatf(displayFromFace)
         var pose = angles(simd_float4x4(rotation))
+        // Native camera yaw/roll have the opposite horizontal handedness from
+        // the web input. Device feedback confirmed both axes were reversed.
+        // Convert here once; the engine's mirror preference still applies later.
+        pose.x = -pose.x
+        pose.z = -pose.z
         // Positive means closer/slouching; negative means farther/chin tuck.
         pose.w = Double(abs(neutral.columns.3.z) - abs(displayFromFace.columns.3.z)) * 100
         return pose
