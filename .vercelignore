@@ -1,0 +1,24 @@
+# Publish the static web game only. Native code and local files stay off Vercel.
+*
+!assets/
+!assets/**
+!css/
+!css/**
+!js/
+!js/**
+!icons/
+!icons/**
+!vendor/
+!vendor/**
+!index.html
+!manifest.webmanifest
+!sw.js
+!HANDOVER.md
+!README.md
+!TECHNECK.md
+!docs/
+!docs/*.md
+!native-ios/
+native-ios/*
+!native-ios/HANDOVER.md
+!native-ios/README.md

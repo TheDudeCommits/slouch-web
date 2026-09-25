@@ -1,6 +1,8 @@
 # Native iOS handover
 
-Date: 2026-09-12. Branch: `codex/slouch-swiftui`. Baseline: `670ed9dea09979131c9cb0c485370605f0d285a8`.
+Updated: 2026-09-25. Branch: `codex/slouch-swiftui`. Baseline: `670ed9dea09979131c9cb0c485370605f0d285a8`.
+
+Start with [the root handover](../HANDOVER.md) for the current branch, hosting and next-session checklist. The dated sections below preserve the implementation and test history.
 
 The user rejected the earlier web overhaul and requested the **original game** as native SwiftUI plus native 3D. This directory is the new implementation. Do not revive the rejected overhaul or use the ignored old `ios/` Capacitor project. Root `js/`, `css/`, `assets/`, `index.html` and the web deployment remain unchanged.
 
@@ -17,7 +19,7 @@ The user rejected the earlier web overhaul and requested the **original game** a
 The iPhone 17 Pro simulator was booted and tested with explicit user authorization. Xcode 26.6, iOS 26.5 runtime.
 
 - 12 Node checks cover original source hashes, all converted models/required clips, original RNG/FNV arithmetic, pools/bounds, control signs/dead zones, 2.8 cm hyper threshold/cooldown, grounded ballistic jump, pause timing, touch exclusion from posture reports, boons/powerups/bosses, saved progression and all five modes.
-- 8 XCTest cases execute the original engine and native pose math, including save round-trips, rejected purchases, 32 physical-transform/direction combinations, calibrated face axes, angle wrap, chin-tuck depth, jitter, stale frames, and 30/60/120 Hz filtering. They pass on macOS SwiftPM and the iOS simulator.
+- The latest test set has 9 cross-platform XCTest cases and one additional iOS-only camera-preview case. It covers the original engine, save round-trips, purchases, direction/mirror mapping, angle wrap, chin-tuck depth, jitter, stale frames and 30/60/120 Hz filtering. Latest simulator validation was 10/10 on 2026-09-13; macOS validation was rerun 9/9 on 2026-09-25.
 - Simulator UI checks launch all three worlds, drag to steer/jump, pause/resume/quit, rotate portrait/landscape, use the unavailable-camera fallback, buy/equip Ocean, and wait for an actual collision before opening results/report and the native share sheet.
 - Runtime screenshots are exported to ignored `output/qa/`. XCTest result bundles retain screenshots and recordings. Test QA data is isolated from normal saves.
 - Original web source hash checks and `git diff --check` pass. No web deployment was performed for this native port.
@@ -37,7 +39,7 @@ Early UI assertions failed because localized prices contain a comma and the shar
 
 Xcode GUI setup was verified separately after these fixes: open `native-ios/Slouch.xcodeproj`, choose **Slouch → iPhone 17 Pro**, and press **Command-R**. Metal API validation remains enabled. The app stays running through touch fallback, gameplay, pause/resume, collision results and rotation. The original `ios/App/App.xcodeproj` error came from opening the abandoned Capacitor directory.
 
-The owner then selected a signing team and the connected iPhone in Xcode. Xcode reported the device debug build running successfully. Those signing changes remain local in `Slouch.xcodeproj/project.pbxproj`; do not overwrite them by regenerating from the team-neutral `project.yml`. Device launch is verified, but the physical tracking and performance checks below are still open.
+The owner then selected a signing team and the connected iPhone in Xcode. Xcode reported the device debug build running successfully. Those signing and shared-scheme changes were local during testing and are now included in the 2026-09-25 publish. Do not overwrite them by regenerating from the team-neutral `project.yml`. The earlier device launch was verified, but acceptance of the subsequent control fixes and physical performance is still open.
 
 ## Remaining acceptance
 
@@ -86,3 +88,12 @@ The owner tested the previous build on the phone and reported that left/right st
 Validation: **10/10 iOS unit tests**, **9/9 macOS SwiftPM tests**, **12/12 original engine/source checks**, and `git diff --check`. Simulator result bundle: `test_sim_2026-09-13T08-03-36-660Z_pid79337_dbda5d98.xcresult`. Actual head movement and camera framing still require owner confirmation after the updated device build and a fresh calibration.
 
 The corrected device build reached Xcode's launch step on Amir’s iPhone. Xcode requested that the owner unlock the phone before Slouch could launch. The macOS session was accessible; this is the phone lock, not the earlier Mac lock.
+
+
+## Handover and repository publish (2026-09-25)
+
+The owner requested all latest changes be pushed and deployed, with a GitHub handover link for another session. The remaining Xcode project and shared scheme changes are included: selected app signing team, explicit product file types, Xcode upgrade settings, script sandboxing/string-symbol settings, and the shared-scheme normalization. No gameplay implementation changed in this session.
+
+The root handover now reflects the native app and current branch. The August web handover is preserved in `docs/WEB_HANDOVER_2026-08-25.md`. Repository ignore rules now persist the former local-only exclusions, and a Vercel upload allowlist separates static web delivery from native/build/private local files.
+
+Fresh verification: **12/12 source/engine checks**, **9/9 macOS SwiftPM tests**, Xcode project plist and scheme XML validation. The last physical acceptance remains unresolved as described above; there was no new phone run or TestFlight release in this publish session.

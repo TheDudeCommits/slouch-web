@@ -1,2 +1,9 @@
 .DS_Store
 node_modules/
+.env*
+!.env.example
+.vercel/
+.playwright-cli/
+dist/
+ios/
+output/

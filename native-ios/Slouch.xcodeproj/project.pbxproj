@@ -48,13 +48,13 @@
 		083A065FAEF860B53C2376A9 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = assets; path = ../assets; sourceTree = SOURCE_ROOT; };
 		1D3034FDDC37246763A50DF1 /* HeadTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadTracker.swift; sourceTree = "<group>"; };
 		1FF349FE637DE8BE4C2CAD2C /* SlouchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchModel.swift; sourceTree = "<group>"; };
-		2AC5C6D241C51B772B006BE0 /* SlouchUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SlouchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2AC5C6D241C51B772B006BE0 /* SlouchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SlouchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AACD5A902E6A721D74D9095 /* GameResources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GameResources; path = Slouch/GameResources; sourceTree = SOURCE_ROOT; };
 		3E018D65DF4C4C73F3D49F7C /* SlouchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchRootView.swift; sourceTree = "<group>"; };
 		50539F4E9090939919F07532 /* GameKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameKernel.swift; sourceTree = "<group>"; };
 		5B409F33545025A181F642AA /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
 		5B7EC7FA606A61205B405712 /* SlouchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchUITests.swift; sourceTree = "<group>"; };
-		5D2FAB62E0A7D68DFBEBB789 /* Slouch.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Slouch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5D2FAB62E0A7D68DFBEBB789 /* Slouch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Slouch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		628690331C077545F81305B4 /* GameKernelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameKernelTests.swift; sourceTree = "<group>"; };
 		6A9C970F2A55B63437F055A4 /* SlouchPost.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SlouchPost.metal; sourceTree = "<group>"; };
 		6E62B205443EAA0FEB898017 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
@@ -62,7 +62,7 @@
 		8FD53BD5E623E5322AE21511 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		CAB41E2D9A56507F090ED961 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CD326B2E478120CFCA4A1C42 /* WorldRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldRenderer.swift; sourceTree = "<group>"; };
-		CD671D62621F84CC6607A809 /* SlouchTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SlouchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD671D62621F84CC6607A809 /* SlouchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SlouchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9B5E7292314C42553F4D2FD /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		F9511FE929679567565C8312 /* SlouchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlouchApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -223,12 +223,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					9CA7F204B4A8C9445099A6A2 = {
-						DevelopmentTeam = "";
-					};
-					AEFF7DB0F31599539A67642C = {
 						DevelopmentTeam = "";
 					};
 					B8385FDE7F4576847D9D275C = {
@@ -379,6 +376,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -393,6 +391,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -422,6 +421,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = Z7P3Y82YKT;
 				INFOPLIST_FILE = Slouch/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -439,6 +439,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = Z7P3Y82YKT;
 				INFOPLIST_FILE = Slouch/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -524,6 +525,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -545,6 +547,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;

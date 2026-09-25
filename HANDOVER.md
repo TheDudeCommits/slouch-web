@@ -1,73 +1,84 @@
-# SLOUCH — Session Handover
+# Slouch — session handover
 
-**Last updated:** 2026-08-25 · **Live:** https://thedudecommits.github.io/slouch-web/ · **Repo:** github.com/TheDudeCommits/slouch-web
-**Local:** `/Users/amir/Claude/slouch` · Deploy = push to `main`, GitHub Pages (legacy build, ~40-60s). Bump `CACHE` version in `sw.js` on every deploy or clients keep the old build.
+Updated **2026-09-25**. Start here in the next session. This replaces the August web-only handover; that document is preserved as [historical web notes](docs/WEB_HANDOVER_2026-08-25.md).
 
-## What this is
+## Repository and current scope
 
-A head-tracked endless dodger that turns tech-neck physiotherapy into flight controls. MediaPipe Face Landmarker (on-device) reads yaw/pitch/roll/z; lateral tilts steer, chin up/down climbs or jumps, **chin-tuck = hyperdrive boost**, held rotations open Stretch Gates, slouching forward drains your multiplier. Static web app, no build step: Three.js + MediaPipe from CDN, ES modules, PWA w/ service worker. End goal: **App Store native app** (not started).
+- Repository: [TheDudeCommits/slouch-web](https://github.com/TheDudeCommits/slouch-web).
+- Working branch: **`codex/slouch-swiftui`**. Use this branch, not `main`, to continue the native app. `main` remains the original web baseline.
+- Local checkout: **`/Users/amir/Claude/slouch`**. The Codex task's `/Users/amir/Codex-ThreeJS` working directory is unrelated.
+- Open **`native-ios/Slouch.xcodeproj`**, scheme **Slouch**, bundle **`work.dude.slouch.native`**, minimum iOS 18. The ignored `ios/App/App.xcodeproj` belongs to an abandoned Capacitor attempt and is not a valid project.
+- Native implementation details, test history and open checks: [native-ios/HANDOVER.md](native-ios/HANDOVER.md). Run/regeneration instructions: [native-ios/README.md](native-ios/README.md).
 
-## The three worlds
+The user rejected the visual overhaul and asked to restore the original game, then requested a fully native SwiftUI + native 3D port. Preserve the original assets, worlds and gameplay. Do not revive the rejected overhaul or replace the native implementation with a WebView.
 
-| | Space (base) | Open Ocean (2500✦ pack) | Jungle Rush (3000✦ pack) |
-|---|---|---|---|
-| Hero | 5 starfighter skins | Clownfish / Tang / Mandarin (animated) | Bunny / **Piggy 1500✦** (animated) |
-| Physics | zero-g free float | free swim; corals/kelp/urchins/octopus grow FROM seabed; only pufferfish floats | grounded; ballistic jump (impulse 19+ty·13, gravity 46); everything rooted vertical, feet-on-ground via measured halfH |
-| Voice | HYPERDRIVE / FLY AGAIN | RIPTIDE / SWIM AGAIN | SUPERHOP / HOP AGAIN |
-| Music | synthwave ONLY here | coastal/tropical (oc_*) | ukulele/marimba (jg_*) |
-| UI skin | Zen Dots, cyan | Fredoka, aqua (body.world-ocean) | Baloo 2, leaf green (body.world-jungle) |
+## What exists
 
-Placement rules are documented at the top of `js/packs.js` — every future world must define its own.
+The original web game is a static Three.js + MediaPipe PWA with no build step. It includes Space, Open Ocean and Jungle Rush; Tech Neck, Casual, Daily, Weekly and Duel modes; local progression, an in-game stardust store, posture reports, music and sound.
 
-## File map (all in `js/`)
+The iOS app uses SwiftUI for menus/HUD, RealityKit for 3D, ARKit for tracking, AVAudioEngine for audio, and Metal/MPS for effects. The seven original gameplay modules execute locally in **JavaScriptCore** to preserve simulation behavior. This is a native UI and renderer, but the simulation has not been rewritten in Swift. No browser runtime or downloaded executable code is used.
 
-- `main.js` — screens, store, missions/ranks/codex UI, applyWorldSkin(), auto-calibration (face stable 0.7s → capture → launch, no button)
-- `game.js` — loop, controls (sign conventions in readControls comment), sectors, boss, boons (lean to choose), graze trains, hitboxes (radius×0.72), spawnPattern() neck-workout formations, `game._debug` (god(), forceBoss(), forceSector(), forcePowerup(), forceBoon()) for tests
-- `world.js` — Three scene, pools (asteroids/enemies/boss are Groups with `userData.holder` swapped per world), applyWorldPack(), hero anim state machine, danger markers, dunes/caustics/rays/decor, post shader (CA/vignette 0.28/grain/speed-lines tinted per world)
-- `packs.js` — world manifests + WORLD_TEXT lexicon + loader (lazy: packs download only when owned+equipped; ~2-4MB each) + spawnCreature (skeleton-aware)
-- `audio.js` — WORLD_MUSIC pools per world, ambience beds (setAmbience), sampled SFX with per-world overrides (SFX_WORLD), flow→lowpass filter. SFX master 0.2 (user wants subtle)
-- `state.js` — localStorage save, THEMES (space palettes), WORLD_PACKS, SKINS/TRAILS/BOOMS/UPGRADES, JUNGLE_HEROES/OCEAN_HEROES, streaks/goals/missions/xp/lore
-- `content.js` — boons, weekday mutators, missions, 12 lore signals, ranks
-- others: `head.js` (tracking), `report.js` (posture report + share card), `ghost.js` (invisible pace ghost), `achievements.js`, `rng.js`
+All 45 original GLBs have committed USDZ conversions, plus 19 animation variants. Fonts, audio and assets are available offline. Keep the bundle directory named **`GameResources`**; changing it to `Resources` previously broke bundle classification and installation.
 
-## Hard-won engine gotchas (do not relearn these)
+Root `js/`, `css/`, `assets/` and `index.html` remain identical to web baseline **`670ed9dea09979131c9cb0c485370605f0d285a8`**. The rejected overhaul was reverted in `3fd08ba`; that historical branch is not the native working branch.
 
-1. **Skinned model bounds**: armatures can carry their own scale — measure via `SkinnedMesh.computeBoundingBox()` skeleton-applied union (done in loadPack), never `Box3.setFromObject` (pig rendered at 1/10 size).
-2. **Some rigs break under SkeletonUtils.clone** (the pig) → heroes use `orig:true` (original scene, cached mixer, absolute centering). Set `frustumCulled=false` on all skinned meshes.
-3. **Grounded heroes**: ship origin rides at groundY+1.1; drop model by `dims.y/2 − 1.1` so feet touch, add contact shadow (loadHeroShip), bounce gait via `animSpeed`/`bounce` in hero def.
-4. God-mode (`_debug.god()`) makes the ship BLINK — screenshot tests must wait for `world.ship.visible`.
-5. Headless swiftshader renders darker than real devices — trust the user's phone screenshots for brightness.
-6. Head sign conventions (verified on device): rYaw>0=head LEFT, rPitch>0=head DOWN, rRoll>0=tilt RIGHT.
+## Latest functional changes
 
-## Asset pipelines (all repeatable)
+- **`5476127`** — horizontal input/preview follow-up. The owner reported that the previous native build still reversed left/right and the pre-game preview. `HeadPose.relative` now negates native yaw and roll once before passing them to the original engine. Pitch, depth and smoothing are preserved. `CameraPreview.oriented` changes the preview's horizontal presentation in all four orientations without introducing a vertical flip or extra rotation.
+- **`df5ebc8`** — native tracking and rendering repair. Pull the latest AR frame each display tick; use calibrated face-relative rotations and timestamped adaptive filtering. Use additive flare/glow blending to remove black rectangles; reduce bloom and color separation; replace broad flashing hyperdrive wedges with fine moving streaks. Batch 1,500 particles into two meshes and cache blur objects.
+- **`acd335c`** — Xcode/Metal validation and rotation repair. Padded compute threadgroups and a writable linear texture view avoid simulator validation failures; refresh ARView layout after rotation. Keep Metal validation enabled.
+- **`f0932f2`** — initial native port.
 
-- **poly.pizza models**: pages are JS-rendered and rate-limit curl — load in headless chromium (playwright-core + cached chromium at `~/Library/Caches/ms-playwright/chromium_headless_shell-1234/...`), regex `static.poly.pizza/[uuid].glb`. Check license text on page (CC0/CC-BY; attribute in `assets/ATTRIBUTION.txt`).
-- **Pixabay music/SFX**: load track page headless (fresh context per page), read `document.querySelectorAll('audio,source')` src for the cdn mp3. Convert: `afconvert -f m4af -d aac -b 96000` (music) / 80k (sfx) / 64k (ambience).
-- **Skyboxes**: drive wwwtyro.github.io/space-3d headless (seed input + Enter, read `texture-<face>` canvases). Seeds per theme recorded in memory.
-- **Heavy glbs**: `npx gltf-transform resize --width 512 --height 512` (in slouch-packs-staging) shrinks Google Poly models 3-10×.
-- **Textures**: ambientCG zips (`https://ambientcg.com/get?file=Name_1K-JPG.zip`), resize with `sips`.
-- Staged leftovers (unused candidate models, contact sheets): `/Users/amir/Claude/slouch-packs-staging/`.
+The previous synthetic direction tests used the wrong horizontal assumption. The 2026-09-13 correction supersedes those assumptions; passing unit tests is not proof that the latest build feels correct on a phone.
 
-## Testing recipe
+## First action next session
 
-Serve locally (`python3 -m http.server 8901 -d .`), playwright-core headless with `--enable-unsafe-swiftshader` (+ `--autoplay-policy=no-user-gesture-required` for audio tests). Seed localStorage via addInitScript (`slouch.save.v1`), deny getUserMedia to force the touch path, tap `#btn-cam-touch`. Screenshot-verify EVERY visual change; run a space regression after pack work.
+Build and run the current branch on the owner's **unlocked, connected iPhone**, then start a new camera run and recalibrate. With default mirror controls enabled, verify:
 
-## The user's standards (violate at your peril)
+1. Tech Neck: tilt right → move right; tilt left → move left.
+2. Casual: look right → move right; look left → move left.
+3. Look up/down → move up/down. In Jungle, the original grounded jump rules still apply.
+4. Preview left/right movement feels natural, both portrait and landscape; chin tuck activates hyperdrive.
+5. Face loss/reacquisition, background/resume and rotation do not leave stale controls.
 
-- **Bright, happy, uplifting** — three separate gloom complaints. Exposure sweet spot ~1.18–1.24; check vignette/fog before shipping.
-- **No AI-generated-looking assets** — everything sourced (poly.pizza/Kenney/OGA/Pixabay/ambientCG) and credited; procedural only for effects (rays, caustics, gradients w/ dithering).
-- **Environment is the #1 visual priority**; density in depth rows, color variation per prop, everything obeying world physics (nothing floats/tilts without reason).
-- **Minimal UI text**, visuals-first, no emojis, frameless, strict palette per world skin.
-- **SFX = subtle indicators** (master 0.2); music per world only.
-- Obstacles must read: subtle pulsing danger halo; scenery deliberately muted.
+The latest recorded physical-device attempt on 2026-09-13 reached launch but stopped at **“Unlock Amir’s iPhone to Continue.”** No later user confirmation of the corrected controls or camera preview has been recorded. Do not report device acceptance as complete. Also verify sustained frame rate, heat and memory on hardware, and obtain owner approval of the native visuals. No TestFlight/App Store release exists.
 
-## Backlog (user-approved, in rough priority)
+## Files to inspect
 
-1. **Per-world "danger" music** for boss moments in Ocean/Jungle (currently no swap outside Space).
-2. **Future world packs approved**: Arctic penguin, Neon Courier, Canyon podracer, Sky paper plane, Haunted Hollow, and a **zombie-runner** (Into the Dead style — user's own idea, likes it).
-3. More heroes per world (pipeline is trivial now: manifest entry + JUNGLE_HEROES/OCEAN_HEROES row).
-4. **Native iOS path**: Capacitor wrap → ARKit tracking, Game Center, HealthKit, IAP (packs = On-Demand Resources). **⚠️ swap the Crosswing default skin before App Store — it's a fan X-wing (Lucasfilm IP)**; Quadra/Vanguard are safe originals.
-5. Global leaderboards/tournaments need a small backend (all boards are local).
-6. Ocean "stretch ring" gate could be themed (currently gold chevron everywhere).
+| Area | Files |
+|---|---|
+| Native input and smoothing | `native-ios/Slouch/Core/HeadPose.swift`, `native-ios/Slouch/Services/HeadTracker.swift` |
+| Native rendering/effects | `native-ios/Slouch/Rendering/WorldRenderer.swift`, `native-ios/Slouch/Rendering/SlouchPost.metal` |
+| App lifecycle, frame loop, calibration | `native-ios/Slouch/Core/SlouchModel.swift` |
+| SwiftUI screens | `native-ios/Slouch/Views/SlouchRootView.swift` |
+| Original simulation bridge | `native-ios/Slouch/Core/GameKernel.swift`, `native-ios/Slouch/GameResources/runtime.js` |
+| Tests | `native-ios/Tests/GameKernelTests.swift`, `native-ios/UITests/SlouchUITests.swift`, `native-ios/Scripts/test-engine.mjs` |
+| Web behavior/reference | `js/game.js`, `js/head.js`, `js/world.js`, `js/packs.js`, `js/state.js` |
 
-Detailed change history: `git log` (v1→v16 in commit messages) and the assistant memory file (`slouch-game.md` in the memory dir) which mirrors these lessons.
+The renderer consumes simulation snapshots/events; it must not mutate authoritative gameplay state. Original control contract: positive `rYaw` = look left, positive `rPitch` = look down, positive `rRoll` = tilt right. The native adapter performs its horizontal sign conversion before the original engine applies the saved mirror preference. Touch controls bypass that camera conversion.
+
+## Validation and Xcode configuration
+
+On **2026-09-25**, the 12 original source/engine checks and all 9 macOS SwiftPM tests passed again. The Xcode project plist and shared scheme XML validate, and `git diff --check` passes. No new gameplay code was changed in this handover/publish session.
+
+Recorded earlier evidence: 10/10 iOS unit tests on 2026-09-13, including an asymmetric Core Image preview test for all orientations; the full simulator UI suite on 2026-09-12 covered all three worlds, touch steering, pause/resume, rotation, camera fallback, purchases, real collisions, reports and sharing. Debug and Release simulator builds passed then. Simulator QA does not validate live ARKit camera direction or physical-device performance.
+
+```sh
+cd /Users/amir/Claude/slouch
+node native-ios/Scripts/test-engine.mjs
+swift test --package-path native-ios
+open native-ios/Slouch.xcodeproj
+```
+
+The owner's previously local Xcode project and shared scheme changes are included in this publish. The app target uses the owner's development team; another developer must select their own team. Credentials and provisioning profiles are not committed. **`native-ios/project.yml` remains a team-neutral generator specification**: do not regenerate casually, because that would replace the checked-in signing and Xcode settings. Keep UI tests serial (`-parallel-testing-enabled NO`) when using the command line.
+
+## Hosting and delivery
+
+- Existing production web game: [slouch-web.vercel.app](https://slouch-web.vercel.app/). Its restored-original deployment was verified through Vercel as `READY` on 2026-09-25: `dpl_GqFi2ZBPKswjiD9s3pbuoeKS7Soz`, source `3fd08ba05a70557ab52bab0f8cde0235ab797d61`.
+- Vercel project: **slouch-web**, project ID `prj_bsPZwvP47byR6JebBz3FVhyMwb8X`, team `team_9UHUI9xdsOl7LAy5xl8hUIV6`.
+- This branch is published as a **Preview**, separate from the production alias. See [Vercel project deployments](https://vercel.com/amirs-projects-d9680079/slouch-web) for deployment status.
+- `.vercelignore` publishes only static web files and handover documentation. It excludes the native app/build products, abandoned `ios/`, stale `dist/`, local environment files and QA output. Never deploy the rejected stale `dist/` build.
+- Vercel serves the web game only. Native iOS delivery requires Xcode or a separately authorized TestFlight/App Store workflow.
+- GitHub Pages on `main` is a legacy web entry point and does not contain this branch's native work. Share the GitHub handover link **on `codex/slouch-swiftui`** for the next session.
+
+Existing asset attribution lives in `assets/ATTRIBUTION.txt`. The historical Crosswing/IP concern and broader App Store/service work remain open; consult the native handover before planning public distribution.
