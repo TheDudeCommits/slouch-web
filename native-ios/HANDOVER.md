@@ -97,3 +97,5 @@ The owner requested all latest changes be pushed and deployed, with a GitHub han
 The root handover now reflects the native app and current branch. The August web handover is preserved in `docs/WEB_HANDOVER_2026-08-25.md`. Repository ignore rules now persist the former local-only exclusions, and a Vercel upload allowlist separates static web delivery from native/build/private local files.
 
 Fresh verification: **12/12 source/engine checks**, **9/9 macOS SwiftPM tests**, Xcode project plist and scheme XML validation. The last physical acceptance remains unresolved as described above; there was no new phone run or TestFlight release in this publish session.
+
+GitHub publish `2884efc1c346ba1d911ca6fbc6d571f3bb17aa52` includes all previously local Xcode changes. Its static web preview is [https://slouch-fakpvts61-amirs-projects-d9680079.vercel.app](https://slouch-fakpvts61-amirs-projects-d9680079.vercel.app) (`dpl_4jKFBhb7iiga9qwfgJTXWFui9QA3`), verified `READY` through Vercel with matching branch and commit metadata. This is a web preview, not an iOS/TestFlight release. Later documentation-only publishes can be found in the linked Vercel project.

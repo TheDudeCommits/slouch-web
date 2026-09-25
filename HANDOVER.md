@@ -5,6 +5,7 @@ Updated **2026-09-25**. Start here in the next session. This replaces the August
 ## Repository and current scope
 
 - Repository: [TheDudeCommits/slouch-web](https://github.com/TheDudeCommits/slouch-web).
+- Share this continuation link: [current HANDOVER.md on the native branch](https://github.com/TheDudeCommits/slouch-web/blob/codex/slouch-swiftui/HANDOVER.md).
 - Working branch: **`codex/slouch-swiftui`**. Use this branch, not `main`, to continue the native app. `main` remains the original web baseline.
 - Local checkout: **`/Users/amir/Claude/slouch`**. The Codex task's `/Users/amir/Codex-ThreeJS` working directory is unrelated.
 - Open **`native-ios/Slouch.xcodeproj`**, scheme **Slouch**, bundle **`work.dude.slouch.native`**, minimum iOS 18. The ignored `ios/App/App.xcodeproj` belongs to an abandoned Capacitor attempt and is not a valid project.
@@ -76,7 +77,7 @@ The owner's previously local Xcode project and shared scheme changes are include
 
 - Existing production web game: [slouch-web.vercel.app](https://slouch-web.vercel.app/). Its restored-original deployment was verified through Vercel as `READY` on 2026-09-25: `dpl_GqFi2ZBPKswjiD9s3pbuoeKS7Soz`, source `3fd08ba05a70557ab52bab0f8cde0235ab797d61`.
 - Vercel project: **slouch-web**, project ID `prj_bsPZwvP47byR6JebBz3FVhyMwb8X`, team `team_9UHUI9xdsOl7LAy5xl8hUIV6`.
-- This branch is published as a **Preview**, separate from the production alias. See [Vercel project deployments](https://vercel.com/amirs-projects-d9680079/slouch-web) for deployment status.
+- This branch is published as a **Preview**, separate from the production alias. Verified publish snapshot: [https://slouch-fakpvts61-amirs-projects-d9680079.vercel.app](https://slouch-fakpvts61-amirs-projects-d9680079.vercel.app), deployment `dpl_4jKFBhb7iiga9qwfgJTXWFui9QA3`, `READY`, source `2884efc1c346ba1d911ca6fbc6d571f3bb17aa52`. Subsequent documentation-only publishes retain the same game source; see [Vercel project deployments](https://vercel.com/amirs-projects-d9680079/slouch-web) for the newest deployment. Verification here uses Vercel status/commit metadata; a new browser gameplay session was not run for this documentation/configuration publish.
 - `.vercelignore` publishes only static web files and handover documentation. It excludes the native app/build products, abandoned `ios/`, stale `dist/`, local environment files and QA output. Never deploy the rejected stale `dist/` build.
 - Vercel serves the web game only. Native iOS delivery requires Xcode or a separately authorized TestFlight/App Store workflow.
 - GitHub Pages on `main` is a legacy web entry point and does not contain this branch's native work. Share the GitHub handover link **on `codex/slouch-swiftui`** for the next session.
